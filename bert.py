@@ -156,30 +156,44 @@ class BertModel(BertPreTrainedModel):
 
         self.init_weights()
 
-    def embed(self, input_ids):
+    def embed(self, input_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Convert input token IDs into their corresponding embeddings, which correspond to the sum of
+        word embeddings, positional embeddings, and token type embeddings.
+
+        Args:
+            input_ids (torch.Tensor): Tensor of token IDs with shape [batch_size, seq_length].
+                This represents the input sequences of token IDs.
+
+        Returns:
+            embeddings (torch.Tensor): Hidden states corresponding to the combined embeddings of shape
+                [batch_size, seq_length, hidden_size], which will be used as input to the BERT layers.
+        """
+
         input_shape = input_ids.size()
         seq_length = input_shape[1]
 
         # Get word embedding from self.word_embedding into input_embeds.
-        inputs_embeds = None
-        ### TODO
-        raise NotImplementedError
+        inputs_embeds = self.word_embedding(input_ids)
 
         # Get position index and position embedding from self.pos_embedding into pos_embeds.
         pos_ids = self.position_ids[:, :seq_length]
 
-        pos_embeds = None
-        ### TODO
-        raise NotImplementedError
+        pos_embeds = self.pos_embedding(pos_ids)
+
         # Get token type ids, since we are not considering token type,
         # this is just a placeholder.
         tk_type_ids = torch.zeros(input_shape, dtype=torch.long, device=input_ids.device)
         tk_type_embeds = self.tk_type_embedding(tk_type_ids)
 
-        ### TODO
-        raise NotImplementedError
         # Add three embeddings together; then apply embed_layer_norm and dropout and
         # return the hidden states.
+
+        hidden_state_embeds = inputs_embeds + pos_embeds + tk_type_embeds
+        hidden_state_embeds = self.embed_layer_norm(hidden_state_embeds)
+        hidden_state_embeds = self.embed_dropout(hidden_state_embeds)
+
+        return hidden_state_embeds
 
     def encode(self, hidden_states, attention_mask):
         """
