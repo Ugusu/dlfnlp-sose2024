@@ -47,7 +47,6 @@ class BertSelfAttention(nn.Module):
         # adding tokens with a large negative number.
 
         ### TODO
-        raise NotImplementedError
         # Normalize the scores.
         # Multiply the attention scores to the value and get back V'.
         # Next, we need to concat multi-heads and recover the original shape
