@@ -193,7 +193,10 @@ def evaluate_model(model, test_loader, device, tokenizer):
 
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Evaluating"):
-            input_ids, attention_mask, labels = batch['input_ids'].to(device), batch['attention_mask'].to(device), batch['labels'].to(device)
+            input_ids, attention_mask, labels = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
 
             # Generate paraphrases
             outputs = model.generate(
@@ -215,6 +218,8 @@ def evaluate_model(model, test_loader, device, tokenizer):
 
             predictions.extend(pred_text)
             references.extend([[r] for r in ref_text])
+
+    model.train()
 
     # Calculate BLEU score
     bleu_score = bleu.corpus_score(predictions, references)
