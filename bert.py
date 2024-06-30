@@ -86,29 +86,43 @@ class BertLayer(nn.Module):
         self.out_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.out_dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def add_norm(self, input, output, dense_layer, dropout, ln_layer):
+    def add_norm(self, input: torch.Tensor, output: torch.Tensor, dense_layer: nn.Linear, dropout: nn.Dropout, ln_layer: nn.LayerNorm) -> torch.Tensor:
         """
         Apply residual connection to any layer and normalize the output.
         This function is applied after the multi-head attention layer or the feed forward layer.
 
-        input: the input of the previous layer
-        output: the output of the previous layer
-        dense_layer: used to transform the output
-        dropout: the dropout to be applied
-        ln_layer: the layer norm to be applied
+        Args:
+            input (torch.Tensor): the input of the previous layer
+            output (torch.Tensor): the output of the previous layer
+            dense_layer (nn.Linear): used to transform the output
+            dropout (nn.Dropout): the dropout to be applied
+            ln_layer (nn.LayerNorm): the layer norm to be applied
+        
+        Returns:
+            torch.Tensor: Result after the residual addition and normalization.
         """
-        ### TODO
-        raise NotImplementedError
+
+        result = dense_layer(output)
+        result = dropout(result)
+        resutl = result + input
+        result = ln_layer(result)
+
+        return result
+
         # Hint: Remember that BERT applies dropout to the output of each sub-layer,
         # before it is added to the sub-layer input and normalized.
 
-    def forward(self, hidden_states, attention_mask):
+    def forward(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         """
         A single pass of the bert layer.
 
-        hidden_states: either from the embedding layer (first bert layer) or from the previous bert layer
-        as shown in the left of Figure 1 of https://arxiv.org/pdf/1706.03762.pdf.
-        attention_mask: the mask for the attention layer
+        Args:
+            hidden_states (torch.Tensor): either from the embedding layer (first bert layer) or from the previous bert layer
+                as shown in the left of Figure 1 of https://arxiv.org/pdf/1706.03762.pdf.
+            attention_mask (torch.Tensor): the mask for the attention layer
+
+        Returns:
+            torch.Tensor: Output of a single block.
 
         each block consists of
         1. a multi-head attention layer (BertSelfAttention)
@@ -116,9 +130,15 @@ class BertLayer(nn.Module):
         3. a feed forward layer
         4. a add-norm that takes the input and output of the feed forward layer
         """
-        ### TODO
-        raise NotImplementedError
 
+        attention_result = self.self_attention(hidden_states, attention_mask)
+        attention_result = self.add_norm(hidden_states, attention_result, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
+        result = self.interm_dense(attention_result)
+        result = self.interm_af(result)
+        result = self.add_norm(attention_result, result, self.out_dense, self.out_dropout, self.out_layer_norm)
+
+        return result
+        
 
 class BertModel(BertPreTrainedModel):
     """
