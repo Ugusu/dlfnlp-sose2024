@@ -12,8 +12,10 @@ from transformers import AutoTokenizer, BartForConditionalGeneration
 
 from optimizer import AdamW
 
-
 TQDM_DISABLE = False
+
+# define the local path to the data
+data_path = os.path.join(os.getcwd(), 'data')
 
 
 def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='facebook/bart-large'):
@@ -30,15 +32,33 @@ def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='faceb
     # Prepare the sentences
     sentences = []
     for _, row in dataset.iterrows():
-        if 'sentence_1' not in row or 'segment_location' not in row or 'paraphrase_type' not in row:
-            raise ValueError("Missing columns in the dataset. Required columns: 'sentence_1', 'segment_location', 'paraphrase_type'")
-        
-        sentence_1 = row['sentence_1']
-        segment_location = row['segment_location']
-        paraphrase_type = row['paraphrase_type']
 
-        formatted_sentence = f"{sentence_1} {tokenizer.sep_token} {segment_location} {tokenizer.sep_token} {paraphrase_type}"
-        sentences.append(formatted_sentence)
+        if 'sentence1' in row and 'sentence2' in row and 'paraphrase_types' in row and 'sentence1_segment_location' in row and 'sentence2_segment_location' in row:
+            test_data = False
+        elif 'sentence1' in row and 'paraphrase_types' in row and 'sentence1_segment_location' in row and 'id' in row:
+            test_data = True
+        else:
+            raise ValueError("Missing columns in the dataset.")
+        
+        if test_data:
+            sentence_1 = row['sentence1']
+            segment_location_1 = row['sentence1_segment_location']
+            paraphrase_types = row['paraphrase_types']
+            sentence_2 = ""
+            segment_location_2 = [0]
+
+        else:
+            sentence_1 = row['sentence1']
+            sentence_2 = row['sentence2']
+            segment_location_1 = row['sentence1_segment_location']
+            segment_location_2 = row['sentence2_segment_location']
+            paraphrase_types = row['paraphrase_types']
+
+        formatted_sentence_1 = f"{sentence_1} {tokenizer.sep_token} {segment_location_1} {tokenizer.sep_token} {paraphrase_types}"
+        sentences.append(formatted_sentence_1)
+
+        formatted_sentence_2 = f"{sentence_2} {tokenizer.sep_token} {segment_location_2} {tokenizer.sep_token} {paraphrase_types}"
+        sentences.append(formatted_sentence_2)
 
     # Tokenize the sentences
     encodings = tokenizer(sentences, truncation=True, padding=True, max_length=max_length, return_tensors='pt')
@@ -48,10 +68,9 @@ def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='faceb
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     return data_loader
-    raise NotImplementedError
 
 
-def train_model(model, train_data, dev_data, device, tokenizer, epochs=3, learning_rate=5e-5, output_dir="output"):
+def train_model(model, train_data, device, tokenizer, epochs=3, learning_rate=5e-5, output_dir="output"):
     """
     Train the model. Return and save the model.
     """
@@ -92,19 +111,19 @@ def train_model(model, train_data, dev_data, device, tokenizer, epochs=3, learni
 
         # Evaluate on the development set
         model.eval()
-        dev_loss = 0
+        train_loss = 0
         with torch.no_grad():
-            for batch in tqdm(dev_data, desc="Evaluating"):
+            for batch in tqdm(train_data, desc="Evaluating"):
                 input_ids = batch[0].to(device)
                 attention_mask = batch[1].to(device)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
                 loss = outputs.loss
 
-                dev_loss += loss.item()
+                train_loss += loss.item()
 
-        avg_dev_loss = dev_loss / len(dev_data)
-        print(f"Average Validation Loss: {avg_dev_loss:.4f}")
+        avg_loss = train_loss / len(train_loss)
+        print(f"Average Validation Loss: {avg_loss:.4f}")
 
         # Save the model checkpoint
         if not os.path.exists(output_dir):
@@ -119,8 +138,6 @@ def train_model(model, train_data, dev_data, device, tokenizer, epochs=3, learni
     tokenizer.save_pretrained(output_dir)
 
     return model
-
-    raise NotImplementedError
 
 
 def test_model(test_data, test_ids, device, model, tokenizer):
@@ -158,7 +175,6 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     })
 
     return result_df
-    raise NotImplementedError
 
 
 def evaluate_model(model, test_data, device, tokenizer):
@@ -229,24 +245,22 @@ def finetune_paraphrase_generation(args):
     model.to(device)
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large")
 
-    train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
-    dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
-    test_dataset = pd.read_csv("data/etpc-paraphrase-generation-test-student.csv", sep="\t")
+    train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
+    test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
 
     # You might do a split of the train data into train/validation set here
     # ...
 
     train_data = transform_data(train_dataset)
-    dev_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, dev_data, device, tokenizer)
+    model = train_model(model, train_data, device, tokenizer)
 
     print("Training finished.")
 
-    bleu_score = evaluate_model(model, dev_data, device, tokenizer)
+    bleu_score = evaluate_model(model, train_data, device, tokenizer)
     print(f"The BLEU-score of the model is: {bleu_score:.3f}")
 
     test_ids = test_dataset["id"]
@@ -257,6 +271,8 @@ def finetune_paraphrase_generation(args):
 
 
 if __name__ == "__main__":
+    # use cuda if available
+
     args = get_args()
     seed_everything(args.seed)
     finetune_paraphrase_generation(args)
