@@ -21,7 +21,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='facebook/bart-large'):
+def transform_data(dataset, max_length=256, batch_size=256, tokenizer_name='facebook/bart-large'):
     """
     Turn the data to the format you want to use.
     Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
@@ -182,7 +182,7 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     return result_df
 
 
-def evaluate_model(model, test_loader, device, tokenizer, batch_size=16):
+def evaluate_model(model, test_loader, device, tokenizer):
     """
     You can use your train/validation set to evaluate models performance with the BLEU score.
     """
@@ -275,17 +275,5 @@ def finetune_paraphrase_generation(args):
 
 if __name__ == "__main__":
     args = get_args()
-    # use cuda
-    args.use_gpu = True
-    if args.use_gpu:
-        assert torch.cuda.is_available(), "CUDA is not available on this device"
-
-    torch.cuda.empty_cache()
-
-    # print gpu model
-    print(f"GPU model: {torch.cuda.get_device_name()}")
-    # print gpu memory
-    print(torch.cuda.memory_summary(device=None, abbreviated=False))
-    print(f"GPU memory allocated: {torch.cuda.memory_allocated() / 1024 ** 3:.2f} GB")
     seed_everything(args.seed)
     finetune_paraphrase_generation(args)
