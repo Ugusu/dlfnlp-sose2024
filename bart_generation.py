@@ -1,3 +1,4 @@
+from torch.optim.lr_scheduler import StepLR
 import argparse
 import os
 import random
@@ -6,9 +7,11 @@ import numpy as np
 import pandas as pd
 import torch
 from sacrebleu.metrics import BLEU
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, random_split
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
+from sklearn.model_selection import train_test_split
+
 
 from optimizer import AdamW
 
@@ -70,22 +73,24 @@ def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='faceb
     return data_loader
 
 
-def train_model(model, train_data, device, tokenizer, epochs=3, learning_rate=5e-5, output_dir="output"):
+def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=5e-5, output_dir="output"):
     """
     Train the model. Return and save the model.
     """
     # Set model to training mode
     model.train()
 
-    # Prepare the optimizer
+    # Prepare the optimizer and scheduler
     optimizer = AdamW(model.parameters(), lr=learning_rate)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.1)  # Adjust parameters as needed
 
     # Training loop
     for epoch in range(epochs):
+        scheduler.step()  # Update learning rate
         print(f"Epoch {epoch + 1}/{epochs}")
         epoch_loss = 0
 
-        for batch in tqdm(train_data, desc="Training"):
+        for batch in tqdm(train_loader, desc="Training"):
             # Move the batch to the device
             input_ids = batch[0].to(device)
             attention_mask = batch[1].to(device)
@@ -94,7 +99,7 @@ def train_model(model, train_data, device, tokenizer, epochs=3, learning_rate=5e
             optimizer.zero_grad()
 
             # Forward pass
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             loss = outputs.loss
 
             # Backward pass
@@ -106,23 +111,23 @@ def train_model(model, train_data, device, tokenizer, epochs=3, learning_rate=5e
             # Accumulate the loss
             epoch_loss += loss.item()
 
-        avg_epoch_loss = epoch_loss / len(train_data)
+        avg_epoch_loss = epoch_loss / len(train_loader)
         print(f"Average Training Loss: {avg_epoch_loss:.4f}")
 
         # Evaluate on the development set
         model.eval()
         train_loss = 0
         with torch.no_grad():
-            for batch in tqdm(train_data, desc="Evaluating"):
+            for batch in tqdm(val_loader, desc="Evaluating"):
                 input_ids = batch[0].to(device)
                 attention_mask = batch[1].to(device)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 loss = outputs.loss
 
                 train_loss += loss.item()
 
-        avg_loss = train_loss / len(train_loss)
+        avg_loss = train_loss / len(train_loader)
         print(f"Average Validation Loss: {avg_loss:.4f}")
 
         # Save the model checkpoint
@@ -177,7 +182,7 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     return result_df
 
 
-def evaluate_model(model, test_data, device, tokenizer):
+def evaluate_model(model, test_loader, device, tokenizer, batch_size=16):
     """
     You can use your train/validation set to evaluate models performance with the BLEU score.
     """
@@ -187,11 +192,8 @@ def evaluate_model(model, test_data, device, tokenizer):
     references = []
 
     with torch.no_grad():
-        for batch in test_data:
-            input_ids, attention_mask, labels = batch
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-            labels = labels.to(device)
+        for batch in tqdm(test_loader, desc="Evaluating"):
+            input_ids, attention_mask, labels = batch['input_ids'].to(device), batch['attention_mask'].to(device), batch['labels'].to(device)
 
             # Generate paraphrases
             outputs = model.generate(
@@ -213,8 +215,6 @@ def evaluate_model(model, test_data, device, tokenizer):
 
             predictions.extend(pred_text)
             references.extend([[r] for r in ref_text])
-
-    model.train()
 
     # Calculate BLEU score
     bleu_score = bleu.corpus_score(predictions, references)
@@ -240,6 +240,8 @@ def get_args():
 
 
 def finetune_paraphrase_generation(args):
+    # clear cache
+    torch.cuda.empty_cache()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
     model.to(device)
@@ -249,14 +251,15 @@ def finetune_paraphrase_generation(args):
     test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
 
     # You might do a split of the train data into train/validation set here
-    # ...
+    train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.2, random_state=args.seed)
 
     train_data = transform_data(train_dataset)
+    val_data = transform_data(val_dataset)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, device, tokenizer)
+    model = train_model(model, train_data, val_data, device, tokenizer)
 
     print("Training finished.")
 
@@ -271,8 +274,18 @@ def finetune_paraphrase_generation(args):
 
 
 if __name__ == "__main__":
-    # use cuda if available
-
     args = get_args()
+    # use cuda
+    args.use_gpu = True
+    if args.use_gpu:
+        assert torch.cuda.is_available(), "CUDA is not available on this device"
+
+    torch.cuda.empty_cache()
+
+    # print gpu model
+    print(f"GPU model: {torch.cuda.get_device_name()}")
+    # print gpu memory
+    print(torch.cuda.memory_summary(device=None, abbreviated=False))
+    print(f"GPU memory allocated: {torch.cuda.memory_allocated() / 1024 ** 3:.2f} GB")
     seed_everything(args.seed)
     finetune_paraphrase_generation(args)
