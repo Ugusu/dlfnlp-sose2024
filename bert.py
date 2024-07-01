@@ -104,7 +104,7 @@ class BertLayer(nn.Module):
 
         result = dense_layer(output)
         result = dropout(result)
-        resutl = result + input
+        result = result + input
         result = ln_layer(result)
 
         return result
