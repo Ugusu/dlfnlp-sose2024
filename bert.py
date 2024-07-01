@@ -37,38 +37,44 @@ class BertSelfAttention(nn.Module):
 
     def attention(self, key, query, value, attention_mask):
         # each attention is calculated following eq (1) of https://arxiv.org/pdf/1706.03762.pdf.
-        # attention scores are calculated by multiplying queries and keys
-        # and get back a score matrix S of [bs, num_attention_heads, seq_len, seq_len]
-        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
-        # and k-th token, given by i-th attention head before normalizing the scores,
-        # use the attention mask to mask out the padding token scores.
-
         # Note again: in the attention_mask non-padding tokens are marked with 0 and
         # adding tokens with a large negative number.
 
         ### TODO
-        # Normalize the scores.
-        # Multiply the attention scores to the value and get back V'.
-        # Next, we need to concat multi-heads and recover the original shape
-        # [bs, seq_len, num_attention_heads * attention_head_size = hidden_size].
-
+        
+        
+        
+        # attention scores are calculated by multiplying queries and keys
+        
         scores = torch.matmul(query, key.transpose(-2, -1))
+
+        # get back a score matrix S of shape [bs, num_attention_heads, seq_len, seq_len]
+        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
+        # and k-th token, given by i-th attention head before normalizing the scores
+        
         scale = torch.sqrt(torch.tensor(self.attention_head_size, dtype=torch.float32))
         scores = scores / scale
 
+        # use the attention mask to mask out the padding token scores.
+        
         broadcasted_mask = attention_mask.expand(bs, num_attention_heads, seq_len, seq_len)
-
         scores = scores + broadcasted_mask
         
-        # Step 3: Apply softmax to get the normalized attention scores
-        attention_probs = F.softmax(scores, dim=-1)  # [bs, num_attention_heads, seq_len, seq_len]
+        # Normalize the scores.
+        
+        attention_probs = F.softmax(scores, dim=-1) 
 
-
-        # Step 4: Compute the attention output by multiplying the attention probs with the value tensor
+        # Multiply the attention scores to the value and get back V' with shape 
+        #[bs, num_attention_heads, seq_len, attention_head_size]    
+        
         attention_output = torch.matmul(attention_probs, value) 
-
-       
-        attention_output = attention_output.transpose(1, 2)  # [bs, seq_len, num_attention_heads, attention_head_size]
+        
+         
+        
+        # Next, we need to concat multi-heads and recover the original shape
+        # [bs, seq_len, num_attention_heads * attention_head_size = hidden_size].
+        
+        attention_output = attention_output.transpose(1, 2) 
         attention_output = attention_output.contiguous().view(attention_output.size(0), attention_output.size(1), self.all_head_size)  # [bs, seq_len, all_head_size]
 
         return attention_output
