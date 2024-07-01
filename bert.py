@@ -35,7 +35,7 @@ class BertSelfAttention(nn.Module):
         proj = proj.transpose(1, 2)
         return proj
 
-    def attention(self, key, query, value, attention_mask):
+    def attention(self, key: torch.Tensor, query: torch.Tensor, value: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         # each attention is calculated following eq (1) of https://arxiv.org/pdf/1706.03762.pdf.
         # Note again: in the attention_mask non-padding tokens are marked with 0 and
         # adding tokens with a large negative number.
