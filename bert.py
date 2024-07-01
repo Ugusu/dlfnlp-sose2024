@@ -65,7 +65,7 @@ class BertSelfAttention(nn.Module):
         # Next, we need to concat multi-heads and recover the original shape
         # [bs, seq_len, num_attention_heads * attention_head_size = hidden_size].
         attention_output = attention_output.transpose(1, 2) 
-        attention_output = attention_output.contiguous().view(attention_output.size(0), attention_output.size(1), self.all_head_size)  # [bs, seq_len, all_head_size]
+        attention_output = attention_output.contiguous().view(attention_output.size(0), attention_output.size(1), self.all_head_size) 
 
         return attention_output
 
