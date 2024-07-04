@@ -21,7 +21,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset, max_length=256, batch_size=256, tokenizer_name='facebook/bart-large'):
+def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='facebook/bart-large'):
     """
     Turn the data to the format you want to use.
     Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
@@ -73,7 +73,7 @@ def transform_data(dataset, max_length=256, batch_size=256, tokenizer_name='face
     return data_loader
 
 
-def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=5e-5, output_dir="output"):
+def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=1e-5, output_dir="output"):
     """
     Train the model. Return and save the model.
     """
@@ -81,66 +81,48 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, le
     model.train()
 
     # Prepare the optimizer and scheduler
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
     optimizer = AdamW(model.parameters(), lr=learning_rate)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.1)  # Adjust parameters as needed
 
-    # Training loop
+    best_val_loss = float("inf")
     for epoch in range(epochs):
-        scheduler.step()  # Update learning rate
         print(f"Epoch {epoch + 1}/{epochs}")
-        epoch_loss = 0
 
+        # Train the model
         for batch in tqdm(train_loader, desc="Training"):
-            # Move the batch to the device
-            input_ids = batch[0].to(device)
-            attention_mask = batch[1].to(device)
+            input_ids, attention_mask = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
 
-            # Clear any previously calculated gradients
             optimizer.zero_grad()
 
-            # Forward pass
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = outputs.loss
-
-            # Backward pass
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+            loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
             loss.backward()
-
-            # Update parameters
             optimizer.step()
 
-            # Accumulate the loss
-            epoch_loss += loss.item()
+            print(f"Loss: {loss.item()}")
 
-        avg_epoch_loss = epoch_loss / len(train_loader)
-        print(f"Average Training Loss: {avg_epoch_loss:.4f}")
-
-        # Evaluate on the development set
+        # Evaluate the model
+        val_loss = 0
         model.eval()
-        train_loss = 0
         with torch.no_grad():
-            for batch in tqdm(val_loader, desc="Evaluating"):
-                input_ids = batch[0].to(device)
-                attention_mask = batch[1].to(device)
+            for batch in tqdm(val_loader, desc="Validation"):
+                input_ids, attention_mask = batch
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                loss = outputs.loss
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+                loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
+                val_loss += loss.item()
 
-                train_loss += loss.item()
+        val_loss = val_loss / len(val_loader)
+        print(f"Validation loss: {val_loss}")
 
-        avg_loss = train_loss / len(train_loader)
-        print(f"Average Validation Loss: {avg_loss:.4f}")
-
-        # Save the model checkpoint
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        model.save_pretrained(os.path.join(output_dir, f"checkpoint-epoch-{epoch + 1}"))
-        tokenizer.save_pretrained(os.path.join(output_dir, f"checkpoint-epoch-{epoch + 1}"))
-
-        model.train()  # Set model back to train mode
-
-    # Save the final model
-    model.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            # Save the model
+            model.save_pretrained(output_dir)
 
     return model
 
