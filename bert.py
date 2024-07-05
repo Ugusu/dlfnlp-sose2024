@@ -40,8 +40,6 @@ class BertSelfAttention(nn.Module):
         # Note again: in the attention_mask non-padding tokens are marked with 0 and
         # adding tokens with a large negative number.
 
-        ### TODO
-        
         # attention scores are calculated by multiplying queries and keys
         scores = torch.matmul(query, key.transpose(-2, -1))
 
@@ -52,12 +50,13 @@ class BertSelfAttention(nn.Module):
         scores = scores / scale
 
         # use the attention mask to mask out the padding token scores.
-        broadcasted_mask = attention_mask.expand(bs, num_attention_heads, seq_len, seq_len)
+        broadcasted_mask = attention_mask.expand(scores.size(0), scores.size(1), scores.size(2), scores.size(3))
         scores = scores + broadcasted_mask
         
         # Normalize the scores.
         attention_probs = F.softmax(scores, dim=-1) 
-
+        attention_probs = self.dropout(attention_probs)
+        
         # Multiply the attention scores to the value and get back V' with shape 
         #[bs, num_attention_heads, seq_len, attention_head_size]    
         attention_output = torch.matmul(attention_probs, value) 
