@@ -66,6 +66,8 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
 
         ### TODO
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+
         self.sentiment_classifier = nn.Linear(
             in_features=BERT_HIDDEN_SIZE,     # Mapping the 768-dimension output embedding to...
             out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
@@ -108,6 +110,9 @@ class MultitaskBERT(nn.Module):
             input_ids=input_ids,
             attention_mask=attention_mask
         )
+
+        # Apply dropout
+        pooled_output = self.dropout(pooled_output)
 
         # Compute logits for sentiment classification
         logits: torch.Tensor = self.sentiment_classifier(input=pooled_output)
