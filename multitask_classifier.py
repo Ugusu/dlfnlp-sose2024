@@ -85,16 +85,34 @@ class MultitaskBERT(nn.Module):
         ### TODO
         raise NotImplementedError
 
-    def predict_sentiment(self, input_ids, attention_mask):
+    def predict_sentiment(self,
+                          input_ids: torch.Tensor,
+                          attention_mask: torch.Tensor
+                          ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
         There are 5 sentiment classes:
         (0 - negative, 1- somewhat negative, 2- neutral, 3- somewhat positive, 4- positive)
         Thus, your output should contain 5 logits for each sentence.
         Dataset: SST
+
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs of shape (batch_size, seq_len).
+            attention_mask (torch.Tensor): Tensor of attention masks of shape (batch_size, seq_len).
+
+        Returns:
+            torch.Tensor: Logits for each sentiment class for each sentence of shape (batch_size, 5).
         """
-        ### TODO
-        raise NotImplementedError
+        # Get the pooled output from the forward method (CLS token's hidden state by default)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        # Compute logits for sentiment classification
+        logits: torch.Tensor = self.sentiment_classifier(input=pooled_output)
+
+        return logits
 
     def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
