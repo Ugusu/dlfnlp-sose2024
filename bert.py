@@ -102,12 +102,12 @@ class BertLayer(nn.Module):
             torch.Tensor: Result after the residual addition and normalization.
         """
 
-        result = dense_layer(output)
-        result = dropout(result)
-        result = result + input
-        result = ln_layer(result)
+        dense_layer_output = dense_layer(output)
+        post_dropout_output = dropout(dense_layer_output)
+        residual_add_output = post_dropout_output + input
+        normalized_output = ln_layer(residual_add_output)
 
-        return result
+        return normalized_output
 
         # Hint: Remember that BERT applies dropout to the output of each sub-layer,
         # before it is added to the sub-layer input and normalized.
@@ -132,12 +132,12 @@ class BertLayer(nn.Module):
         """
 
         attention_result = self.self_attention(hidden_states, attention_mask)
-        attention_result = self.add_norm(hidden_states, attention_result, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
-        result = self.interm_dense(attention_result)
-        result = self.interm_af(result)
-        result = self.add_norm(attention_result, result, self.out_dense, self.out_dropout, self.out_layer_norm)
+        add_norm_attention_result = self.add_norm(hidden_states, attention_result, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
+        feed_forward_result = self.interm_dense(add_norm_attention_result)
+        feed_forward_result = self.interm_af(feed_forward_result)
+        add_norm_feed_forward_result = self.add_norm(add_norm_attention_result, feed_forward_result, self.out_dense, self.out_dropout, self.out_layer_norm)
 
-        return result
+        return add_norm_feed_forward_result
         
 
 class BertModel(BertPreTrainedModel):
