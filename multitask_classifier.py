@@ -64,7 +64,14 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
+
         ### TODO
+        self.sentiment_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,     # Mapping the 768-dimension output embedding to...
+            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
+        )
+
+        # classifiers for the other tasks...
         raise NotImplementedError
 
     def forward(self, input_ids, attention_mask):
