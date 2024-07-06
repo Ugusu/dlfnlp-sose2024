@@ -67,16 +67,32 @@ class MultitaskBERT(nn.Module):
         ### TODO
         raise NotImplementedError
 
-    def forward(self, input_ids, attention_mask):
-        """Takes a batch of sentences and produces embeddings for them."""
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                return_pooler_output: bool = True
+                ) -> torch.Tensor:
+        """
+        Processes input sentences and produces embeddings using the BERT model.
 
-        # The final BERT embedding is the hidden state of [CLS] token (the first token).
-        # See BertModel.forward() for more details.
-        # Here, you can start by just returning the embeddings straight from BERT.
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs.
+            attention_mask (torch.Tensor): Tensor of attention masks.
+            return_pooler_output (bool): If True, return the pooled output (CLS token's hidden state); otherwise, return the sequence of hidden states.
+
+        Returns:
+            torch.Tensor: Pooled output or sequence of hidden states.
+        """
+
         # When thinking of improvements, you can later try modifying this
         # (e.g., by adding other layers).
-        ### TODO
-        raise NotImplementedError
+
+        outputs = self.bert(input_ids, attention_mask=attention_mask)
+
+        if return_pooler_output:
+            return outputs["pooler_output"]  # CLS token output
+        else:
+            return outputs["last_hidden_state"]  # Sequence of hidden states
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
