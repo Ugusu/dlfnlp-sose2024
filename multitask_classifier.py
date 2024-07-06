@@ -78,7 +78,8 @@ class MultitaskBERT(nn.Module):
         Args:
             input_ids (torch.Tensor): Tensor of input token IDs.
             attention_mask (torch.Tensor): Tensor of attention masks.
-            return_pooler_output (bool): If True, return the pooled output (CLS token's hidden state); otherwise, return the sequence of hidden states.
+            return_pooler_output (bool, optional): If True (default), return the pooled output (CLS token's hidden
+                                                   state); otherwise, return the sequence of hidden states.
 
         Returns:
             torch.Tensor: Pooled output or sequence of hidden states.
