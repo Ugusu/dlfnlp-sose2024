@@ -183,7 +183,8 @@ def train_multitask(args):
     # to transform the the data labels into binaries (as required in the bart_detection.py script)
 
     if args.task == "qqp" or args.task == "multitask":
-        # Each data point: [seq_1, seq_2, label, id].
+        # Each data point: [id, seq_1, seq_2, label].
+        # Dataset: [token_ids_1, token_type_ids_1, attention_mask_1, token_ids_2, token_type_ids_2, attention_mask_2, labels, sent_ids].
         quora_train_data = SentencePairDataset(quora_train_data, args)
         quora_dev_data = SentencePairDataset(quora_dev_data, args)
 
