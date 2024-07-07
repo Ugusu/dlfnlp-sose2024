@@ -124,12 +124,12 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embeding = self.forward(all_input_ids, all_attention_mask)
-        embeding = self.dropout(embeding)
+        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.dropout(embedding)
 
-        is_paraphrase = self.paraphrase_classifier(embeding)
+        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
 
-        return is_paraphrase
+        return is_paraphrase_logit: torch.Tensor
 
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
