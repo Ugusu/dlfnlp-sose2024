@@ -177,6 +177,27 @@ def train_multitask(args):
             collate_fn=sst_dev_data.collate_fn,
         )
 
+    
+    # STS dataset
+    if args.task == "sts" or args.task == "multitask":
+        sts_train_data = SentencePairDataset(sts_train_data, args)
+        sts_dev_data = SentencePairDataset(sts_dev_data, args)
+
+        sts_train_dataloader = DataLoader(
+            sts_train_data,
+            shuffle=True,
+            batch_size=args.batch_size,
+            collate_fn=sts_train_data.collate_fn,
+        )
+        sts_dev_dataloader = DataLoader(
+            sts_dev_data,
+            shuffle=False,
+            batch_size=args.batch_size,
+            collate_fn=sts_dev_data.collate_fn,
+        )
+
+
+
     ### TODO
     #   Load data for the other datasets
     # If you are doing the paraphrase type detection with the minBERT model as well, make sure
