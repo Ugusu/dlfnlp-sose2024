@@ -171,7 +171,7 @@ class MultitaskBERT(nn.Module):
 
         is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
 
-        return is_paraphrase_logit: torch.Tensor
+        return is_paraphrase_logit
 
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
