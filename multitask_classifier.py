@@ -65,6 +65,15 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
         ### TODO
+        
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        
+        self.similarity_prediction = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,
+            out_features=1,
+        )
+
+        
         raise NotImplementedError
 
     def forward(self, input_ids, attention_mask):
@@ -99,7 +108,7 @@ class MultitaskBERT(nn.Module):
         ### TODO
         raise NotImplementedError
 
-    def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+    def predict_similarity(self, input_ids_1: torch.Tensor, attention_mask_1: torch.Tensor, input_ids_2: torch.Tensor, attention_mask_2: torch.Tensor) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
         Since the similarity label is a number in the interval [0,5], your output should be normalized to the interval [0,5];
@@ -107,6 +116,9 @@ class MultitaskBERT(nn.Module):
         Dataset: STS
         """
         ### TODO
+
+
+        
         raise NotImplementedError
 
     def predict_paraphrase_types(
