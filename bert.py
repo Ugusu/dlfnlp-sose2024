@@ -35,23 +35,38 @@ class BertSelfAttention(nn.Module):
         proj = proj.transpose(1, 2)
         return proj
 
-    def attention(self, key, query, value, attention_mask):
+    def attention(self, key: torch.Tensor, query: torch.Tensor, value: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         # each attention is calculated following eq (1) of https://arxiv.org/pdf/1706.03762.pdf.
-        # attention scores are calculated by multiplying queries and keys
-        # and get back a score matrix S of [bs, num_attention_heads, seq_len, seq_len]
-        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
-        # and k-th token, given by i-th attention head before normalizing the scores,
-        # use the attention mask to mask out the padding token scores.
-
         # Note again: in the attention_mask non-padding tokens are marked with 0 and
         # adding tokens with a large negative number.
 
-        ### TODO
-        raise NotImplementedError
+        # attention scores are calculated by multiplying queries and keys
+        scores = torch.matmul(query, key.transpose(-2, -1))
+
+        # get back a score matrix S of shape [bs, num_attention_heads, seq_len, seq_len]
+        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
+        # and k-th token, given by i-th attention head before normalizing the scores
+        scale = torch.sqrt(torch.tensor(self.attention_head_size, dtype=torch.float32))
+        scores = scores / scale
+
+        # use the attention mask to mask out the padding token scores.
+        broadcasted_mask = attention_mask.expand(scores.size(0), scores.size(1), scores.size(2), scores.size(3))
+        scores = scores + broadcasted_mask
+        
         # Normalize the scores.
-        # Multiply the attention scores to the value and get back V'.
+        attention_probs = F.softmax(scores, dim=-1) 
+        attention_probs = self.dropout(attention_probs)
+        
+        # Multiply the attention scores to the value and get back V' with shape 
+        #[bs, num_attention_heads, seq_len, attention_head_size]    
+        attention_output = torch.matmul(attention_probs, value) 
+        
         # Next, we need to concat multi-heads and recover the original shape
         # [bs, seq_len, num_attention_heads * attention_head_size = hidden_size].
+        attention_output = attention_output.transpose(1, 2) 
+        attention_output = attention_output.contiguous().view(attention_output.size(0), attention_output.size(1), self.all_head_size) 
+
+        return attention_output
 
     def forward(self, hidden_states, attention_mask):
         """
@@ -86,29 +101,43 @@ class BertLayer(nn.Module):
         self.out_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.out_dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def add_norm(self, input, output, dense_layer, dropout, ln_layer):
+    def add_norm(self, input: torch.Tensor, output: torch.Tensor, dense_layer: nn.Linear, dropout: nn.Dropout, ln_layer: nn.LayerNorm) -> torch.Tensor:
         """
         Apply residual connection to any layer and normalize the output.
         This function is applied after the multi-head attention layer or the feed forward layer.
 
-        input: the input of the previous layer
-        output: the output of the previous layer
-        dense_layer: used to transform the output
-        dropout: the dropout to be applied
-        ln_layer: the layer norm to be applied
+        Args:
+            input (torch.Tensor): the input of the previous layer
+            output (torch.Tensor): the output of the previous layer
+            dense_layer (nn.Linear): used to transform the output
+            dropout (nn.Dropout): the dropout to be applied
+            ln_layer (nn.LayerNorm): the layer norm to be applied
+        
+        Returns:
+            torch.Tensor: Result after the residual addition and normalization.
         """
-        ### TODO
-        raise NotImplementedError
+
+        dense_layer_output = dense_layer(output)
+        post_dropout_output = dropout(dense_layer_output)
+        residual_add_output = post_dropout_output + input
+        normalized_output = ln_layer(residual_add_output)
+
+        return normalized_output
+
         # Hint: Remember that BERT applies dropout to the output of each sub-layer,
         # before it is added to the sub-layer input and normalized.
 
-    def forward(self, hidden_states, attention_mask):
+    def forward(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         """
         A single pass of the bert layer.
 
-        hidden_states: either from the embedding layer (first bert layer) or from the previous bert layer
-        as shown in the left of Figure 1 of https://arxiv.org/pdf/1706.03762.pdf.
-        attention_mask: the mask for the attention layer
+        Args:
+            hidden_states (torch.Tensor): either from the embedding layer (first bert layer) or from the previous bert layer
+                as shown in the left of Figure 1 of https://arxiv.org/pdf/1706.03762.pdf.
+            attention_mask (torch.Tensor): the mask for the attention layer
+
+        Returns:
+            torch.Tensor: Output of a single block.
 
         each block consists of
         1. a multi-head attention layer (BertSelfAttention)
@@ -116,9 +145,15 @@ class BertLayer(nn.Module):
         3. a feed forward layer
         4. a add-norm that takes the input and output of the feed forward layer
         """
-        ### TODO
-        raise NotImplementedError
 
+        attention_result = self.self_attention(hidden_states, attention_mask)
+        add_norm_attention_result = self.add_norm(hidden_states, attention_result, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
+        feed_forward_result = self.interm_dense(add_norm_attention_result)
+        feed_forward_result = self.interm_af(feed_forward_result)
+        add_norm_feed_forward_result = self.add_norm(add_norm_attention_result, feed_forward_result, self.out_dense, self.out_dropout, self.out_layer_norm)
+
+        return add_norm_feed_forward_result
+        
 
 class BertModel(BertPreTrainedModel):
     """
