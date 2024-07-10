@@ -73,7 +73,11 @@ class MultitaskBERT(nn.Module):
             out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
         )
 
-        # classifiers for the other tasks...
+        self.paraphrase_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,
+            out_features=1,
+        )
+
         raise NotImplementedError
 
     def forward(self,
@@ -136,15 +140,39 @@ class MultitaskBERT(nn.Module):
 
         return logits
 
-    def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+    def predict_paraphrase(self, input_ids_1: torch.Tensor, attention_mask_1: torch.Tensor, input_ids_2: torch.Tensor, attention_mask_2: torch.Tensor) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit for predicting whether they are paraphrases.
         Note that your output should be unnormalized (a logit); it will be passed to the sigmoid function
         during evaluation, and handled as a logit by the appropriate loss function.
         Dataset: Quora
+
+        Args:
+            input_ids_1 (torch.Tensor): The tensor of input token IDs of the 1st sequences of shape (batch_size, seq_len).
+            attention_mask_1 (torch.Tensor): The tensor of attention masks of the 1st sequences of shape (batch_size, seq_len).
+            input_ids_2 (torch.Tensor):The tensor of input token IDs of the 2nd sequences of shape (batch_size, seq_len).
+            attention_mask_2 (torch.Tensor): The tensor of attention masks of the 2nd sequences of shape (batch_size, seq_len).
+
+        Returns:
+            torch.Tensor: The logit predictions if the sequence pairs are paraphrases of shape (batch_size, 1).
         """
-        ### TODO
-        raise NotImplementedError
+
+        # Context:
+        # {input_ids, attention_mask}_{1,2}[:, 0] are [CLS] tokens.
+        # {input_ids, attention_mask}_{1,2}[:, -1] are [SEP] tokens.
+        # Removing [CLS] token from the 2nd sequences. Concatenating sequences.
+        # Final shape (batch_size, seq_1_len+seq_2_len-1).
+        # [ [CLS] ...seq_1... [SEP] ...seq_2... [SEP] ].
+        all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
+        all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
+
+        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.dropout(embedding)
+
+        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
+
+        return is_paraphrase_logit: torch.Tensor
+
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
