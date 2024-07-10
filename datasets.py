@@ -241,7 +241,12 @@ class SentencePairTestDataset(Dataset):
         return batched_data
 
 
-def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filename, split="train"):
+def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filename, split="train", subset_size=None):
+    def load_subset(data, subset_size):
+        if subset_size:
+            return data[:subset_size]
+        return data
+
     sst_data = []
     num_labels = {}
     if split == "test":
@@ -260,6 +265,7 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
                     num_labels[label] = len(num_labels)
                 sst_data.append((sent, label, sent_id))
 
+    sst_data = load_subset(sst_data, subset_size)
     print(f"Loaded {len(sst_data)} {split} examples from {sst_filename}")
 
     quora_data = []
@@ -291,6 +297,7 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
                 except:
                     pass
 
+    quora_data = load_subset(quora_data, subset_size)
     print(f"Loaded {len(quora_data)} {split} examples from {quora_filename}")
 
     sts_data = []
@@ -318,6 +325,7 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
                     )
                 )
 
+    sts_data = load_subset(sts_data, subset_size)
     print(f"Loaded {len(sts_data)} {split} examples from {sts_filename}")
 
     etpc_data = []
@@ -349,6 +357,7 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
                 except:
                     pass
 
+    etpc_data = load_subset(etpc_data, subset_size)
     print(f"Loaded {len(etpc_data)} {split} examples from {etpc_filename}")
 
     return sst_data, num_labels, quora_data, sts_data, etpc_data

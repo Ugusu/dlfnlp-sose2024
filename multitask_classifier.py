@@ -219,10 +219,10 @@ def train_multitask(args):
     # Load data
     # Create the data and its corresponding datasets and dataloader:
     sst_train_data, _, quora_train_data, sts_train_data, etpc_train_data = load_multitask_data(
-        args.sst_train, args.quora_train, args.sts_train, args.etpc_train, split="train"
+        args.sst_train, args.quora_train, args.sts_train, args.etpc_train, split="train", subset_size=args.subset_size
     )
     sst_dev_data, _, quora_dev_data, sts_dev_data, etpc_dev_data = load_multitask_data(
-        args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train"
+        args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train", subset_size=args.subset_size
     )
 
     sst_train_dataloader = None
@@ -409,6 +409,9 @@ def get_args():
     )
     parser.add_argument("--use_gpu", action="store_true")
 
+    # Add this line to include subset_size
+    parser.add_argument("--subset_size", type=int, default=None, help="Number of examples to load from each dataset for testing")
+
     args, _ = parser.parse_known_args()
 
     # Dataset paths
@@ -424,14 +427,9 @@ def get_args():
     parser.add_argument("--sts_dev", type=str, default="data/sts-similarity-dev.csv")
     parser.add_argument("--sts_test", type=str, default="data/sts-similarity-test-student.csv")
 
-    # TODO
-    # You should split the train data into a train and dev set first and change the
-    # default path of the --etpc_dev argument to your dev set.
     parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
     parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev.csv")
-    parser.add_argument(
-        "--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv"
-    )
+    parser.add_argument("--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv")
 
     # Output paths
     parser.add_argument(
