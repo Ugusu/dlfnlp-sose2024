@@ -64,10 +64,14 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
-        ### TODO
 
-        ### TODO: Resolve conflicts when merging. Most probably combination resolve.
+        ### TODO
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+
+        self.sentiment_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,     # Mapping the 768-dimension output embedding to...
+            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
+        )
 
         self.paraphrase_classifier = nn.Linear(
             in_features=BERT_HIDDEN_SIZE,
@@ -76,27 +80,65 @@ class MultitaskBERT(nn.Module):
 
         raise NotImplementedError
 
-    def forward(self, input_ids, attention_mask):
-        """Takes a batch of sentences and produces embeddings for them."""
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                return_pooler_output: bool = True
+                ) -> torch.Tensor:
+        """
+        Processes input sentences and produces embeddings using the BERT model.
 
-        # The final BERT embedding is the hidden state of [CLS] token (the first token).
-        # See BertModel.forward() for more details.
-        # Here, you can start by just returning the embeddings straight from BERT.
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs.
+            attention_mask (torch.Tensor): Tensor of attention masks.
+            return_pooler_output (bool, optional): If True (default), return the pooled output (CLS token's hidden
+                                                   state); otherwise, return the sequence of hidden states.
+
+        Returns:
+            torch.Tensor: Pooled output or sequence of hidden states.
+        """
+
         # When thinking of improvements, you can later try modifying this
         # (e.g., by adding other layers).
-        ### TODO
-        raise NotImplementedError
 
-    def predict_sentiment(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids, attention_mask=attention_mask)
+
+        if return_pooler_output:
+            return outputs["pooler_output"]  # CLS token output
+        else:
+            return outputs["last_hidden_state"]  # Sequence of hidden states
+
+    def predict_sentiment(self,
+                          input_ids: torch.Tensor,
+                          attention_mask: torch.Tensor
+                          ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
         There are 5 sentiment classes:
         (0 - negative, 1- somewhat negative, 2- neutral, 3- somewhat positive, 4- positive)
         Thus, your output should contain 5 logits for each sentence.
         Dataset: SST
+
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs of shape (batch_size, seq_len).
+            attention_mask (torch.Tensor): Tensor of attention masks of shape (batch_size, seq_len).
+
+        Returns:
+            torch.Tensor: Logits for each sentiment class for each sentence of shape (batch_size, 5).
         """
-        ### TODO
-        raise NotImplementedError
+        # Get the pooled output from the forward method (CLS token's hidden state by default)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        # Apply dropout
+        pooled_output = self.dropout(pooled_output)
+
+        # Compute logits for sentiment classification
+        logits: torch.Tensor = self.sentiment_classifier(input=pooled_output)
+
+        return logits
 
     def predict_paraphrase(self, input_ids_1: torch.Tensor, attention_mask_1: torch.Tensor, input_ids_2: torch.Tensor, attention_mask_2: torch.Tensor) -> torch.Tensor:
         """
