@@ -117,9 +117,16 @@ class MultitaskBERT(nn.Module):
         """
         ### TODO
 
+        all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
+        all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
+        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.dropout(embedding)
+
+        similarity_logit: torch.Tensor = self.similarity_prediction(embedding)
+
+        return similarity_logit
         
-        raise NotImplementedError
 
     def predict_paraphrase_types(
         self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2
@@ -252,8 +259,37 @@ def train_multitask(args):
 
         if args.task == "sts" or args.task == "multitask":
             # Trains the model on the sts dataset
-            ### TODO
-            raise NotImplementedError
+
+            for batch in tqdm(
+                sts_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
+            ):
+                b_ids_1, b_ids_2, b_mask_1, b_mask_2, b_labels = (
+                    batch["token_ids_1"],
+                    batch["token_ids_2"],
+                    batch["attention_mask_1"],
+                    batch["attention_mask_2"],
+                    batch["labels"],
+                )
+
+                
+                b_ids_1 = b_ids_1.to(device)
+                b_ids_2 = b_ids_2.to(device)
+                b_mask_1 = b_mask_1.to(device)
+                b_mask_2 = b_mask_2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
+                normalized_logits = torch.sigmoid(logits) * 5
+                loss = F.mse_loss(normalized_logits, b_labels.view(-1,1))
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
+
+            
+            
 
         if args.task == "qqp" or args.task == "multitask":
             # Trains the model on the qqp dataset
