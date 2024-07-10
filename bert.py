@@ -35,23 +35,38 @@ class BertSelfAttention(nn.Module):
         proj = proj.transpose(1, 2)
         return proj
 
-    def attention(self, key, query, value, attention_mask):
+    def attention(self, key: torch.Tensor, query: torch.Tensor, value: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         # each attention is calculated following eq (1) of https://arxiv.org/pdf/1706.03762.pdf.
-        # attention scores are calculated by multiplying queries and keys
-        # and get back a score matrix S of [bs, num_attention_heads, seq_len, seq_len]
-        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
-        # and k-th token, given by i-th attention head before normalizing the scores,
-        # use the attention mask to mask out the padding token scores.
-
         # Note again: in the attention_mask non-padding tokens are marked with 0 and
         # adding tokens with a large negative number.
 
-        ### TODO
-        raise NotImplementedError
+        # attention scores are calculated by multiplying queries and keys
+        scores = torch.matmul(query, key.transpose(-2, -1))
+
+        # get back a score matrix S of shape [bs, num_attention_heads, seq_len, seq_len]
+        # S[*, i, j, k] represents the (unnormalized) attention score between the j-th
+        # and k-th token, given by i-th attention head before normalizing the scores
+        scale = torch.sqrt(torch.tensor(self.attention_head_size, dtype=torch.float32))
+        scores = scores / scale
+
+        # use the attention mask to mask out the padding token scores.
+        broadcasted_mask = attention_mask.expand(scores.size(0), scores.size(1), scores.size(2), scores.size(3))
+        scores = scores + broadcasted_mask
+        
         # Normalize the scores.
-        # Multiply the attention scores to the value and get back V'.
+        attention_probs = F.softmax(scores, dim=-1) 
+        attention_probs = self.dropout(attention_probs)
+        
+        # Multiply the attention scores to the value and get back V' with shape 
+        #[bs, num_attention_heads, seq_len, attention_head_size]    
+        attention_output = torch.matmul(attention_probs, value) 
+        
         # Next, we need to concat multi-heads and recover the original shape
         # [bs, seq_len, num_attention_heads * attention_head_size = hidden_size].
+        attention_output = attention_output.transpose(1, 2) 
+        attention_output = attention_output.contiguous().view(attention_output.size(0), attention_output.size(1), self.all_head_size) 
+
+        return attention_output
 
     def forward(self, hidden_states, attention_mask):
         """
