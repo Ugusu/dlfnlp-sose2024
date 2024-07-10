@@ -144,7 +144,7 @@ def test_model(model, test_data, test_ids, device):
     ### TODO
     model.eval()
     paraphrase_types = []
-
+    with torch.no_grad():
 
 
 def evaluate_model(model, test_data, device):
