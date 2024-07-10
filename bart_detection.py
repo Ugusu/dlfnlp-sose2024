@@ -8,9 +8,8 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
-
 from optimizer import AdamW
-
+import torch.nn.functional as F
 
 TQDM_DISABLE = False
 
@@ -37,7 +36,7 @@ class BartWithClassifier(nn.Module):
         return probabilities
 
 
-def transform_data(dataset, max_length=512):
+def transform_data(dataset, max_length=512, tokenizer_name='facebook/bart-large', labels=True, batch_size=16):
     """
     dataset: pd.DataFrame
 
@@ -55,10 +54,29 @@ def transform_data(dataset, max_length=512):
     Return a DataLoader with the TensorDataset. You can choose a batch size of your
     choice.
     """
-    raise NotImplementedError
+    # Use AutoTokenizer from_pretrained
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    if labels:
+        binary_labels = []
+        for row in dataset['paraphrase_types']:
+            labels = np.zeros(7, dtype=int)
+            for i in range(1, 8):
+                if str(i) in row:
+                    labels[i - 1] = 1
+            binary_labels.append(labels)
+        encodings = tokenizer((dataset['sentence1'].to_list()), (dataset['sentence2'].to_list()), truncation=True,
+                              padding=True, max_length=256, return_tensors='pt')
+        dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'], torch.tensor(np.array(binary_labels)))
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return data_loader
+    else:
+        encodings = tokenizer((dataset['sentence1'].to_list()), (dataset['sentence2'].to_list()), truncation=True,
+                              padding=True, max_length=256, return_tensors='pt')
+        dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return data_loader
 
-
-def train_model(model, train_data, dev_data, device):
+def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=3):
     """
     Train the model. You can use any training loop you want. We recommend starting with
     AdamW as your optimizer. You can take a look at the SST training loop for reference.
@@ -69,8 +87,50 @@ def train_model(model, train_data, dev_data, device):
 
     Return the trained model.
     """
-    ### TODO
-    raise NotImplementedError
+    # Loss Function and Optimizer
+    loss_fn = torch.nn.CrossEntropyLoss()
+    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    best_dev_acc = float("-inf")
+    for epoch in range(epochs):
+        print(f"Epoch {epoch + 1}/{epochs}")
+        train_loss = 0
+        num_batches = 0
+        model.train()
+        for batch in tqdm(train_data, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+            b_ids, b_mask, b_labels = (
+                batch[0],
+                batch[1],
+                batch[2],
+            )
+            b_ids = b_ids.to(device)
+            b_mask = b_mask.to(device)
+            b_labels = b_labels.to(device)
+
+            optimizer.zero_grad()
+            logits = model(input_ids=b_ids, attention_mask=b_mask)
+            loss = F.cross_entropy(logits, b_labels.view(-1))
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss.item()
+            num_batches += 1
+        train_loss = train_loss / num_batches
+        print(f"Train loss: {train_loss}")
+        val_loss = 0
+        model.eval()
+        with torch.no_grad():
+            for batch in tqdm(val_data, desc="Validation"):
+                input_ids, attention_mask, labels= batch
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
+
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                loss = loss_fn(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
+                val_loss += loss.item()
+
+        val_loss = val_loss / len(val_data)
+        print(f"Validation loss: {val_loss}")
+
 
 
 
@@ -82,8 +142,9 @@ def test_model(model, test_data, test_ids, device):
     Return this dataframe.
     """
     ### TODO
+    model.eval()
+    paraphrase_types = []
 
-    raise NotImplementedError
 
 
 def evaluate_model(model, test_data, device):
@@ -156,19 +217,20 @@ def finetune_paraphrase_detection(args):
 
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv", sep="\t")
-
-    # TODO You might do a split of the train data into train/validation set here
-    # (or in the csv files directly)
-    train_data = transform_data(train_dataset)
-    test_data = transform_data(test_dataset)
+    #split data
+    train = train_dataset.sample(frac=0.8)
+    val_dataset = train_dataset.drop(train.index)
+    val_data = transform_data(val_dataset)
+    train_data = transform_data(train)
+    test_data = transform_data(test_dataset, labels=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, dev_data, device)
+    model = train_model(model, train_data, val_data, device)
 
     print("Training finished.")
 
-    accuracy = evaluate_model(model, dev_data, device)
+    accuracy = evaluate_model(model, val_data, device)
     print(f"The accuracy of the model is: {accuracy:.3f}")
 
     test_ids = test_dataset["id"]
