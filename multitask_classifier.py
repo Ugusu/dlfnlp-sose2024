@@ -23,7 +23,7 @@ from datasets import (
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW
 
-TQDM_DISABLE = True
+TQDM_DISABLE = False
 
 
 # fix the random seed
@@ -78,7 +78,7 @@ class MultitaskBERT(nn.Module):
             out_features=1,
         )
 
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def forward(self,
                 input_ids: torch.Tensor,
