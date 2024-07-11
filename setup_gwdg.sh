@@ -1,8 +1,11 @@
 #!/bin/bash
+export PREFERRED_SOFTWARE_STACK=nhr-lmod
+source /sw/etc/profile/profile.sh
+
 set -e
 
 # Set up Conda, install Python
-module load anaconda3
+module load miniconda3
 conda create -n dnlp python=3.10
 source activate dnlp
 

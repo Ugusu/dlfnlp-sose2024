@@ -10,8 +10,6 @@ from sacrebleu.metrics import BLEU
 from torch.utils.data import DataLoader, TensorDataset, random_split
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
-from sklearn.model_selection import train_test_split
-
 
 from optimizer import AdamW
 
@@ -235,13 +233,14 @@ def finetune_paraphrase_generation(args):
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large")
 
     train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
+    dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
 
     # You might do a split of the train data into train/validation set here
-    train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.2, random_state=args.seed)
+    # we split the train and generated dev, then usd dev as the validation set
 
     train_data = transform_data(train_dataset)
-    val_data = transform_data(val_dataset)
+    val_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
@@ -262,5 +261,8 @@ def finetune_paraphrase_generation(args):
 
 if __name__ == "__main__":
     args = get_args()
+    if torch.cuda.is_available():
+        args.use_gpu = True
+        print("Using GPU")
     seed_everything(args.seed)
     finetune_paraphrase_generation(args)
