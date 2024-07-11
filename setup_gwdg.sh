@@ -3,7 +3,7 @@ set -e
 
 # Set up Conda, install Python
 module load anaconda3
-conda create -n dnlp python=3.10
+conda create -n dnlp python=3.10 -c defaults
 source activate dnlp
 
 # Install packages
