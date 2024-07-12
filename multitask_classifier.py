@@ -23,7 +23,7 @@ from datasets import (
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW
 
-TQDM_DISABLE = True
+TQDM_DISABLE = False
 
 
 # fix the random seed
@@ -64,40 +64,115 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
+
         ### TODO
-        raise NotImplementedError
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def forward(self, input_ids, attention_mask):
-        """Takes a batch of sentences and produces embeddings for them."""
+        self.sentiment_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,     # Mapping the 768-dimension output embedding to...
+            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
+        )
 
-        # The final BERT embedding is the hidden state of [CLS] token (the first token).
-        # See BertModel.forward() for more details.
-        # Here, you can start by just returning the embeddings straight from BERT.
+        self.paraphrase_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,
+            out_features=1,
+        )
+
+        # raise NotImplementedError
+
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                return_pooler_output: bool = True
+                ) -> torch.Tensor:
+        """
+        Processes input sentences and produces embeddings using the BERT model.
+
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs.
+            attention_mask (torch.Tensor): Tensor of attention masks.
+            return_pooler_output (bool, optional): If True (default), return the pooled output (CLS token's hidden
+                                                   state); otherwise, return the sequence of hidden states.
+
+        Returns:
+            torch.Tensor: Pooled output or sequence of hidden states.
+        """
+
         # When thinking of improvements, you can later try modifying this
         # (e.g., by adding other layers).
-        ### TODO
-        raise NotImplementedError
 
-    def predict_sentiment(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids, attention_mask=attention_mask)
+
+        if return_pooler_output:
+            return outputs["pooler_output"]  # CLS token output
+        else:
+            return outputs["last_hidden_state"]  # Sequence of hidden states
+
+    def predict_sentiment(self,
+                          input_ids: torch.Tensor,
+                          attention_mask: torch.Tensor
+                          ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
         There are 5 sentiment classes:
         (0 - negative, 1- somewhat negative, 2- neutral, 3- somewhat positive, 4- positive)
         Thus, your output should contain 5 logits for each sentence.
         Dataset: SST
-        """
-        ### TODO
-        raise NotImplementedError
 
-    def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+        Args:
+            input_ids (torch.Tensor): Tensor of input token IDs of shape (batch_size, seq_len).
+            attention_mask (torch.Tensor): Tensor of attention masks of shape (batch_size, seq_len).
+
+        Returns:
+            torch.Tensor: Logits for each sentiment class for each sentence of shape (batch_size, 5).
+        """
+        # Get the pooled output from the forward method (CLS token's hidden state by default)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        # Apply dropout
+        pooled_output = self.dropout(pooled_output)
+
+        # Compute logits for sentiment classification
+        logits: torch.Tensor = self.sentiment_classifier(input=pooled_output)
+
+        return logits
+
+    def predict_paraphrase(self, input_ids_1: torch.Tensor, attention_mask_1: torch.Tensor, input_ids_2: torch.Tensor, attention_mask_2: torch.Tensor) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit for predicting whether they are paraphrases.
         Note that your output should be unnormalized (a logit); it will be passed to the sigmoid function
         during evaluation, and handled as a logit by the appropriate loss function.
         Dataset: Quora
+
+        Args:
+            input_ids_1 (torch.Tensor): The tensor of input token IDs of the 1st sequences of shape (batch_size, seq_len).
+            attention_mask_1 (torch.Tensor): The tensor of attention masks of the 1st sequences of shape (batch_size, seq_len).
+            input_ids_2 (torch.Tensor):The tensor of input token IDs of the 2nd sequences of shape (batch_size, seq_len).
+            attention_mask_2 (torch.Tensor): The tensor of attention masks of the 2nd sequences of shape (batch_size, seq_len).
+
+        Returns:
+            torch.Tensor: The logit predictions if the sequence pairs are paraphrases of shape (batch_size, 1).
         """
-        ### TODO
-        raise NotImplementedError
+
+        # Context:
+        # {input_ids, attention_mask}_{1,2}[:, 0] are [CLS] tokens.
+        # {input_ids, attention_mask}_{1,2}[:, -1] are [SEP] tokens.
+        # Removing [CLS] token from the 2nd sequences. Concatenating sequences.
+        # Final shape (batch_size, seq_1_len+seq_2_len-1).
+        # [ [CLS] ...seq_1... [SEP] ...seq_2... [SEP] ].
+        all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
+        all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
+
+        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.dropout(embedding)
+
+        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
+
+        return is_paraphrase_logit
+
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -124,6 +199,9 @@ class MultitaskBERT(nn.Module):
 
 
 def save_model(model, optimizer, args, config, filepath):
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
     save_info = {
         "model": model.state_dict(),
         "optim": optimizer.state_dict(),
@@ -144,10 +222,10 @@ def train_multitask(args):
     # Load data
     # Create the data and its corresponding datasets and dataloader:
     sst_train_data, _, quora_train_data, sts_train_data, etpc_train_data = load_multitask_data(
-        args.sst_train, args.quora_train, args.sts_train, args.etpc_train, split="train"
+        args.sst_train, args.quora_train, args.sts_train, args.etpc_train, split="train", subset_size=args.subset_size
     )
     sst_dev_data, _, quora_dev_data, sts_dev_data, etpc_dev_data = load_multitask_data(
-        args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train"
+        args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train", subset_size=args.subset_size
     )
 
     sst_train_dataloader = None
@@ -378,6 +456,9 @@ def get_args():
     )
     parser.add_argument("--use_gpu", action="store_true")
 
+    # Add this line to include subset_size
+    parser.add_argument("--subset_size", type=int, default=None, help="Number of examples to load from each dataset for testing")
+
     args, _ = parser.parse_known_args()
 
     # Dataset paths
@@ -393,14 +474,9 @@ def get_args():
     parser.add_argument("--sts_dev", type=str, default="data/sts-similarity-dev.csv")
     parser.add_argument("--sts_test", type=str, default="data/sts-similarity-test-student.csv")
 
-    # TODO
-    # You should split the train data into a train and dev set first and change the
-    # default path of the --etpc_dev argument to your dev set.
     parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
     parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev.csv")
-    parser.add_argument(
-        "--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv"
-    )
+    parser.add_argument("--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv")
 
     # Output paths
     parser.add_argument(
