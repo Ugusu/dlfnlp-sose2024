@@ -1,6 +1,7 @@
 import math
 from typing import Callable, Iterable, Tuple
 
+import numpy
 import torch
 from torch import nn
 from torch.optim import Optimizer
@@ -11,7 +12,7 @@ class AdamW(Optimizer):
         self,
         params: Iterable[torch.nn.parameter.Parameter],
         lr: float = 1e-3,
-        betas: Tuple[float, float] = (0.1, 0.001),
+        betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8,
         weight_decay: float = 0.0,
         correct_bias: bool = True,
@@ -53,6 +54,10 @@ class AdamW(Optimizer):
 
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
+                beta1, beta2 = group["betas"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group.get("correct_bias", True)
 
                 # Complete the implementation of AdamW here, reading and saving
                 # your state in the `state` dictionary above.
@@ -71,84 +76,31 @@ class AdamW(Optimizer):
                 # State initialization
                 if len(state) == 0:
                     state['step'] = 0
+                    # Exponential moving average of gradient values
                     state['exp_avg'] = torch.zeros_like(p.data)
+                    # Exponential moving average of squared gradient values
                     state['exp_avg_sq'] = torch.zeros_like(p.data)
 
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
-                beta1, beta2 = group['betas']
-                lr = group['lr']
-                eps = group['eps']
-                weight_decay = group['weight_decay']
-                correct_bias = group['correct_bias']
 
                 state['step'] += 1
-                t = state['step']
 
-                # Update biased first moment estimate
+                # Decay the first and second moment running average coefficient
                 exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
-                # Update biased second raw moment estimate
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
 
-                # Compute bias-corrected first moment estimate
-                if correct_bias:
-                    bias_correction1 = 1 - beta1 ** t
-                    bias_correction2 = 1 - beta2 ** t
-                    step_size = lr * (bias_correction2 ** 0.5) / bias_correction1
-                else:
-                    step_size = lr
+                denom = exp_avg_sq.sqrt().add_(eps)
 
-                denom = (exp_avg_sq.sqrt() / bias_correction2 ** 0.5).add_(eps)
+                step_size = alpha
+                if correct_bias:  # bias correction
+                    bias_correction1 = 1 - beta1 ** state['step']
+                    bias_correction2 = 1 - beta2 ** state['step']
+                    step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-                # Update parameters
                 p.data.addcdiv_(exp_avg, denom, value=-step_size)
 
-                # Apply weight decay
-                if weight_decay != 0:
-                    p.data.add_(p.data, alpha=-lr * weight_decay)
+                # Add weight decay after the main gradient-based updates
+                if weight_decay > 0.0:
+                    p.data.add_(p.data, alpha=-alpha * weight_decay)
 
         return loss
-
-
-def test_adamw():
-    # Define a simple linear model
-    class SimpleModel(nn.Module):
-        def __init__(self):
-            super(SimpleModel, self).__init__()
-            self.linear = nn.Linear(10, 1)
-
-        def forward(self, x):
-            return self.linear(x)
-
-    # Instantiate the model and optimizer
-    model = SimpleModel()
-    optimizer = AdamW(model.parameters(), lr=0.001, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
-
-    # Create random data and target with random seed
-    torch.manual_seed(42)
-    input_data = torch.randn(10, 10)
-    target = torch.randn(10, 1)
-
-    # Define a loss function
-    criterion = nn.MSELoss()
-
-    # Perform optimization steps
-    for epoch in range(1, 11):
-        optimizer.zero_grad()  # Clear gradients
-        output = model(input_data)  # Forward pass
-        loss = criterion(output, target)  # Compute loss
-        loss.backward()  # Backward pass
-        optimizer.step()  # Update parameters
-
-        print(f'Epoch [{epoch}/10], Loss: {loss.item():.4f}')
-
-    # Print the parameters after optimization
-    for param in model.parameters():
-        print(param)
-
-
-def main():
-    test_adamw()
-
-
-if __name__ == "__main__":
-    main()
