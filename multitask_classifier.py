@@ -363,7 +363,8 @@ def train_multitask(args):
 
                 optimizer.zero_grad()
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
-                loss = F.cross_entropy(logits, b_labels.view(-1))
+                bce_with_logits_loss = nn.BCEWithLogitsLoss()
+                loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
                 loss.backward()
                 optimizer.step()
 
