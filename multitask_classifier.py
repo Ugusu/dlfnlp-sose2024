@@ -66,6 +66,7 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
 
         ### TODO
+        
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.sentiment_classifier = nn.Linear(
@@ -74,6 +75,11 @@ class MultitaskBERT(nn.Module):
         )
 
         self.paraphrase_classifier = nn.Linear(
+            in_features=BERT_HIDDEN_SIZE,
+            out_features=1,
+        )
+
+        self.similarity_prediction = nn.Linear(
             in_features=BERT_HIDDEN_SIZE,
             out_features=1,
         )
@@ -174,7 +180,7 @@ class MultitaskBERT(nn.Module):
         return is_paraphrase_logit
 
 
-    def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+    def predict_similarity(self, input_ids_1: torch.Tensor, attention_mask_1: torch.Tensor, input_ids_2: torch.Tensor, attention_mask_2: torch.Tensor) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
         Since the similarity label is a number in the interval [0,5], your output should be normalized to the interval [0,5];
@@ -182,7 +188,17 @@ class MultitaskBERT(nn.Module):
         Dataset: STS
         """
         ### TODO
-        raise NotImplementedError
+
+        all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
+        all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
+
+        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.dropout(embedding)
+
+        similarity_logit: torch.Tensor = self.similarity_prediction(embedding)
+
+        return similarity_logit
+        
 
     def predict_paraphrase_types(
         self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2
@@ -338,8 +354,37 @@ def train_multitask(args):
 
         if args.task == "sts" or args.task == "multitask":
             # Trains the model on the sts dataset
-            ### TODO
-            raise NotImplementedError
+
+            for batch in tqdm(
+                sts_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
+            ):
+                b_ids_1, b_ids_2, b_mask_1, b_mask_2, b_labels = (
+                    batch["token_ids_1"],
+                    batch["token_ids_2"],
+                    batch["attention_mask_1"],
+                    batch["attention_mask_2"],
+                    batch["labels"],
+                )
+
+                
+                b_ids_1 = b_ids_1.to(device)
+                b_ids_2 = b_ids_2.to(device)
+                b_mask_1 = b_mask_1.to(device)
+                b_mask_2 = b_mask_2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
+                normalized_logits = torch.sigmoid(logits) * 5
+                loss = F.mse_loss(normalized_logits, b_labels.view(-1,1))
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
+
+            
+            
 
         if args.task == "qqp" or args.task == "multitask":
             # Trains the model on the qqp dataset
