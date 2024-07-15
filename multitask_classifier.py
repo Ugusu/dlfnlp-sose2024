@@ -396,7 +396,7 @@ def train_multitask(args):
                 b_ids_2 = b_ids_2.to(device)
                 b_mask_1 = b_mask_1.to(device)
                 b_mask_2 = b_mask_2.to(device)
-                b_labels = b_labels.to(device)
+                b_labels = b_labels.to(device).float()  # Convert labels to Float
 
                 optimizer.zero_grad()
                 logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
