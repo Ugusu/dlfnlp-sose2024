@@ -45,7 +45,6 @@ class MultitaskBERT(nn.Module):
     - Sentiment classification (predict_sentiment)
     - Paraphrase detection (predict_paraphrase)
     - Semantic Textual Similarity (predict_similarity)
-    (- Paraphrase type detection (predict_paraphrase_types))
     """
 
     def __init__(self, config):
@@ -210,19 +209,6 @@ class MultitaskBERT(nn.Module):
 
         return similarity_logit
 
-    def predict_paraphrase_types(
-            self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2
-    ):
-        """
-        Given a batch of pairs of sentences, outputs logits for detecting the paraphrase types.
-        There are 7 different types of paraphrases.
-        Thus, your output should contain 7 unnormalized logits for each sentence. It will be passed to the sigmoid function
-        during evaluation, and handled as a logit by the appropriate loss function.
-        Dataset: ETPC
-        """
-        ### TODO
-        raise NotImplementedError
-
 
 def save_model(model, optimizer, args, config, filepath):
     # Ensure the directory exists
@@ -244,13 +230,14 @@ def save_model(model, optimizer, args, config, filepath):
 
 def train_multitask(args):
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
+
     # Load data
     # Create the data and its corresponding datasets and dataloader:
-    sst_train_data, _, quora_train_data, sts_train_data, etpc_train_data = load_multitask_data(
-        args.sst_train, args.quora_train, args.sts_train, args.etpc_train, split="train", subset_size=args.subset_size
+    sst_train_data, _, quora_train_data, sts_train_data = load_multitask_data(
+        args.sst_train, args.quora_train, args.sts_train, split="train", subset_size=args.subset_size
     )
-    sst_dev_data, _, quora_dev_data, sts_dev_data, etpc_dev_data = load_multitask_data(
-        args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train", subset_size=args.subset_size
+    sst_dev_data, _, quora_dev_data, sts_dev_data = load_multitask_data(
+        args.sst_dev, args.quora_dev, args.sts_dev, split="train", subset_size=args.subset_size
     )
 
     sst_train_dataloader = None
@@ -259,8 +246,6 @@ def train_multitask(args):
     quora_dev_dataloader = None
     sts_train_dataloader = None
     sts_dev_dataloader = None
-    etpc_train_dataloader = None
-    etpc_dev_dataloader = None
 
     # SST dataset
     if args.task == "sst" or args.task == "multitask":
@@ -438,31 +423,24 @@ def train_multitask(args):
                 train_loss += loss.item()
                 num_batches += 1
 
-        if args.task == "etpc" or args.task == "multitask":
-            # Trains the model on the etpc dataset
-            pass
-            # raise NotImplementedError
-
         train_loss = train_loss / num_batches
 
-        quora_train_acc, _, _, sst_train_acc, _, _, sts_train_corr, _, _, etpc_train_acc, _, _ = (
+        quora_train_acc, _, _, sst_train_acc, _, _, sts_train_corr, _, _ = (
             model_eval_multitask(
                 sst_train_dataloader,
                 quora_train_dataloader,
                 sts_train_dataloader,
-                etpc_train_dataloader,
                 model=model,
                 device=device,
                 task=args.task,
             )
         )
 
-        quora_dev_acc, _, _, sst_dev_acc, _, _, sts_dev_corr, _, _, etpc_dev_acc, _, _ = (
+        quora_dev_acc, _, _, sst_dev_acc, _, _, sts_dev_corr, _, _ = (
             model_eval_multitask(
                 sst_dev_dataloader,
                 quora_dev_dataloader,
                 sts_dev_dataloader,
-                etpc_dev_dataloader,
                 model=model,
                 device=device,
                 task=args.task,
@@ -473,8 +451,8 @@ def train_multitask(args):
             "sst": (sst_train_acc, sst_dev_acc),
             "sts": (sts_train_corr, sts_dev_corr),
             "qqp": (quora_train_acc, quora_dev_acc),
-            "etpc": (etpc_train_acc, etpc_dev_acc),
-            "multitask": (0, 0),  # TODO
+            "multitask": ((sst_train_acc + sts_train_corr + quora_train_acc) / 3,
+                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3),
         }[args.task]
 
         print(
@@ -507,8 +485,8 @@ def get_args():
     parser.add_argument(
         "--task",
         type=str,
-        help='choose between "sst","sts","qqp","etpc","multitask" to train for different tasks ',
-        choices=("sst", "sts", "qqp", "etpc", "multitask"),
+        help='choose between "sst","sts","qqp","multitask" to train for different tasks ',
+        choices=("sst", "sts", "qqp", "multitask"),
         default="sst",
     )
 
@@ -542,10 +520,6 @@ def get_args():
     parser.add_argument("--sts_train", type=str, default="data/sts-similarity-train.csv")
     parser.add_argument("--sts_dev", type=str, default="data/sts-similarity-dev.csv")
     parser.add_argument("--sts_test", type=str, default="data/sts-similarity-test-student.csv")
-
-    parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
-    parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev.csv")
-    parser.add_argument("--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv")
 
     # Output paths
     parser.add_argument(
@@ -602,25 +576,6 @@ def get_args():
             "predictions/bert/sts-similarity-test-output.csv"
             if not args.task == "multitask"
             else "predictions/bert/multitask/sts-similarity-test-output.csv"
-        ),
-    )
-
-    parser.add_argument(
-        "--etpc_dev_out",
-        type=str,
-        default=(
-            "predictions/bert/etpc-paraphrase-detection-dev-output.csv"
-            if not args.task == "multitask"
-            else "predictions/bert/multitask/etpc-paraphrase-detection-dev-output.csv"
-        ),
-    )
-    parser.add_argument(
-        "--etpc_test_out",
-        type=str,
-        default=(
-            "predictions/bert/etpc-paraphrase-detection-test-output.csv"
-            if not args.task == "multitask"
-            else "predictions/bert/multitask/etpc-paraphrase-detection-test-output.csv"
         ),
     )
 
