@@ -162,7 +162,7 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     return result_df
 
 
-def evaluate_model(model, test_loader, device, tokenizer):
+def evaluate_model(model, test_data, device, tokenizer):
     """
     You can use your train/validation set to evaluate models performance with the BLEU score.
     """
@@ -172,7 +172,7 @@ def evaluate_model(model, test_loader, device, tokenizer):
     references = []
 
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Evaluating"):
+        for batch in tqdm(test_data, desc="Evaluating"):
             input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
@@ -240,16 +240,16 @@ def finetune_paraphrase_generation(args):
     # we split the train and generated dev, then usd dev as the validation set
 
     train_data = transform_data(train_dataset)
-    val_data = transform_data(dev_dataset)
+    dev_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device, tokenizer)
+    model = train_model(model, train_data, dev_data, device, tokenizer)
 
     print("Training finished.")
 
-    bleu_score = evaluate_model(model, train_data, device, tokenizer)
+    bleu_score = evaluate_model(model, dev_data, device, tokenizer)
     print(f"The BLEU-score of the model is: {bleu_score:.3f}")
 
     test_ids = test_dataset["id"]
