@@ -97,12 +97,12 @@ Detail the experiments conducted, including tasks and models considered. Describ
 
 Summarize the results of your experiments in tables:
 
-| **Task** | **Metric 1** | **Metric n** |
-|----------|---------------|--------------|
-| Baseline | 45.23%        | ...          |
-| Improvement 1 | 58.56%   | ...          |
-| Improvement 2 | 52.11%   | ...          |
-| ...      | ...           | ...          |
+| **Task** | **Sentiment Classification (acc)** | **Paraphrase Tetection (acc)** | **Semantic Textual Similarity (cor)** | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (acc)** |
+|----------|---------------|--------------|--------------|--------------|--------------|
+| Baseline | ...        | ...          | ...          | ...          | ...          |
+| Improvement 1 | ...   | ...          | ...          | ...          | ...          |
+| Improvement 2 | ...  | ...          | ...          | ...          | ...          |
+| ...      | ...           | ...          | ...          | ...          | ...          |
 
 Discuss your results, observations, correlations, etc.
 
@@ -124,7 +124,7 @@ Explain the contribution of each group member:
 
 **Pablo Jahnen:** ...
 
-**Ughur Mammadzada:** ...
+**Ughur Mammadzada:** Implemented: BertLayer class, Predict Paraphrase functionality, and the training loop.
 
 **Enno Weber:** ...
 
