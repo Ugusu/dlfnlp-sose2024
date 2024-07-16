@@ -118,15 +118,15 @@ Add relevant graphs showing metrics like accuracy, validation loss, etc., during
 
 Explain the contribution of each group member:
 
-**Enno Weber:** _Implemented the training objective using X, Y, and Z. Supported member 2 in refactoring the code. Data cleaning, etc._
-
 **Daniel Ariza:** ...
 
 **Amirreza Aleyasin:** ...
 
+**Pablo Jahnen:** ...
+
 **Ughur Mammadzada:** ...
 
-**Pablo Jahnen:** ...
+**Enno Weber:** ...
 
 ## AI-Usage Card
 
@@ -140,6 +140,3 @@ List all references (repositories, papers, etc.) used for your project.
 
 The project description, partial implementation, and scripts were adapted from the final project for the Stanford [CS 224N class](https://web.stanford.edu/class/cs224n/). The BERT implementation was adapted from the "minbert" assignment at Carnegie Mellon University's [CS11-711 Advanced NLP](http://phontron.com/class/anlp2021/index.html). Parts of the code are from the [`transformers`](https://github.com/huggingface/transformers) library. Scripts and code were modified by [Jan Philip Wahle](https://jpwahle.com/) and [Terry Ruas](https://terryruas.com/).
 
----
-
-Feel free to adjust and add specific details as you progress with your project. This template should provide a solid foundation for a comprehensive README file.
