@@ -99,7 +99,7 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
             optimizer.zero_grad()
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
+            loss = outputs.loss
             loss.backward()
             optimizer.step()
 
@@ -116,8 +116,7 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
                 labels = labels.to(device)
 
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
-                val_loss += loss.item()
+                val_loss += outputs.loss.item()
 
         val_loss = val_loss / len(val_loader)
         print(f"Validation loss: {val_loss}")
