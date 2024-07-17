@@ -19,59 +19,62 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='facebook/bart-large'):
+def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='facebook/bart-large'):
     """
-    Turn the data to the format you want to use.
-    Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
-    Tokenize the sentence pair in the following format:
-    sentence_1 + SEP + sentence_1 segment location + SEP + paraphrase types.
-    Return Data Loader.
-    """
-    # Load the tokenizer
+        Turn the data to the format you want to use.
+        Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
+        Tokenize the sentence pair in the following format:
+        sentence_1 + SEP + sentence_1 segment location + SEP + paraphrase types.
+        Return Data Loader.
+        """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
-    # Prepare the sentences
-    sentences = []
-    for _, row in dataset.iterrows():
+    def prepare_features(examples):
+        # Tokenize the inputs
+        model_inputs = tokenizer(examples['formatted_input'], max_length=max_length, padding='max_length', truncation=True)
 
-        if 'sentence1' in row and 'sentence2' in row and 'paraphrase_types' in row and 'sentence1_segment_location' in row and 'sentence2_segment_location' in row:
-            test_data = False
-        elif 'sentence1' in row and 'paraphrase_types' in row and 'sentence1_segment_location' in row and 'id' in row:
-            test_data = True
-        else:
-            raise ValueError("Missing columns in the dataset.")
-        
-        if test_data:
-            sentence_1 = row['sentence1']
-            segment_location_1 = row['sentence1_segment_location']
-            paraphrase_types = row['paraphrase_types']
-            sentence_2 = ""
-            segment_location_2 = [0]
+        # If we have targets, tokenize them too
+        if 'formatted_target' in examples:
+            labels = tokenizer(examples['formatted_target'], max_length=max_length, padding='max_length', truncation=True)
+            model_inputs['labels'] = labels['input_ids']
 
-        else:
-            sentence_1 = row['sentence1']
-            sentence_2 = row['sentence2']
-            segment_location_1 = row['sentence1_segment_location']
-            segment_location_2 = row['sentence2_segment_location']
-            paraphrase_types = row['paraphrase_types']
+        return model_inputs
 
-        formatted_sentence_1 = f"{sentence_1} {tokenizer.sep_token} {segment_location_1} {tokenizer.sep_token} {paraphrase_types}"
-        sentences.append(formatted_sentence_1)
+    is_test_data = 'sentence2' not in dataset.columns
 
-        formatted_sentence_2 = f"{sentence_2} {tokenizer.sep_token} {segment_location_2} {tokenizer.sep_token} {paraphrase_types}"
-        sentences.append(formatted_sentence_2)
+    # Prepare the input sentences
+    dataset['formatted_input'] = dataset.apply(
+        lambda row: f"{row['sentence1']} {tokenizer.sep_token} {row['sentence1_segment_location']} {tokenizer.sep_token} {row['paraphrase_types']}",
+        axis=1
+    )
 
-    # Tokenize the sentences
-    encodings = tokenizer(sentences, truncation=True, padding=True, max_length=max_length, return_tensors='pt')
+    # Prepare the target sentences if it's not test data
+    if not is_test_data:
+        dataset['formatted_target'] = dataset.apply(
+            lambda row: f"{row['sentence2']} {tokenizer.sep_token} {row['sentence2_segment_location']} {tokenizer.sep_token} {row['paraphrase_types']}",
+            axis=1
+        )
 
-    # Create TensorDataset and DataLoader
-    dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    # Apply the tokenization
+    features = dataset.apply(prepare_features, axis=1)
+
+    # Convert to tensors
+    input_ids = torch.tensor([f['input_ids'] for f in features])
+    attention_mask = torch.tensor([f['attention_mask'] for f in features])
+
+    if is_test_data:
+        tensor_dataset = TensorDataset(input_ids, attention_mask)
+    else:
+        labels = torch.tensor([f['labels'] for f in features])
+        tensor_dataset = TensorDataset(input_ids, attention_mask, labels)
+
+    # Create DataLoader
+    data_loader = DataLoader(tensor_dataset, batch_size=batch_size, shuffle=not is_test_data)
 
     return data_loader
 
 
-def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=1e-5, output_dir="output"):
+def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=1e-5, output_dir="bart_finetuned_model"):
     """
     Train the model. Return and save the model.
     """
@@ -88,13 +91,14 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, le
 
         # Train the model
         for batch in tqdm(train_loader, desc="Training"):
-            input_ids, attention_mask = batch
+            input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
 
             optimizer.zero_grad()
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
             loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
             loss.backward()
             optimizer.step()
@@ -106,11 +110,12 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, le
         model.eval()
         with torch.no_grad():
             for batch in tqdm(val_loader, desc="Validation"):
-                input_ids, attention_mask = batch
+                input_ids, attention_mask, labels = batch
                 input_ids = input_ids.to(device)
                 attention_mask = attention_mask.to(device)
+                labels = labels.to(device)
 
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 loss = criterion(outputs.logits.view(-1, outputs.logits.shape[-1]), input_ids.view(-1))
                 val_loss += loss.item()
 
@@ -162,7 +167,7 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     return result_df
 
 
-def evaluate_model(model, test_loader, device, tokenizer):
+def evaluate_model(model, test_data, device, tokenizer):
     """
     You can use your train/validation set to evaluate models performance with the BLEU score.
     """
@@ -172,7 +177,7 @@ def evaluate_model(model, test_loader, device, tokenizer):
     references = []
 
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Evaluating"):
+        for batch in tqdm(test_data, desc="Evaluating"):
             input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
@@ -240,16 +245,16 @@ def finetune_paraphrase_generation(args):
     # we split the train and generated dev, then usd dev as the validation set
 
     train_data = transform_data(train_dataset)
-    val_data = transform_data(dev_dataset)
+    dev_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device, tokenizer)
+    model = train_model(model, train_data, dev_data, device, tokenizer)
 
     print("Training finished.")
 
-    bleu_score = evaluate_model(model, train_data, device, tokenizer)
+    bleu_score = evaluate_model(model, dev_data, device, tokenizer)
     print(f"The BLEU-score of the model is: {bleu_score:.3f}")
 
     test_ids = test_dataset["id"]
