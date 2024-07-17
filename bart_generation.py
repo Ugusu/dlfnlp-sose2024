@@ -74,7 +74,7 @@ def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='faceb
     return data_loader
 
 
-def train_model(model, train_loader, val_loader, device, tokenizer, epochs=3, learning_rate=1e-5, output_dir="bart_finetuned_model"):
+def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, learning_rate=1e-5, output_dir="models/bart_finetuned_model"):
     """
     Train the model. Return and save the model.
     """
