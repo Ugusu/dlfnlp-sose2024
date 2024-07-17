@@ -239,14 +239,12 @@ def finetune_paraphrase_detection(args):
     model = BartWithClassifier()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model.to(device)
-
+    dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv", sep="\t")
-    # split data
-    train = train_dataset.sample(frac=0.8)
-    val_dataset = train_dataset.drop(train.index)
-    val_data = transform_data(val_dataset)
-    train_data = transform_data(train)
+
+    train_data = transform_data(train_dataset)
+    val_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset, labels=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
