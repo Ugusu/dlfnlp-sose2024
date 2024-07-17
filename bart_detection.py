@@ -15,11 +15,11 @@ TQDM_DISABLE = False
 
 
 class BartWithClassifier(nn.Module):
-    def __init__(self, config):
+    def __init__(self, num_labels=7):
         super(BartWithClassifier, self).__init__()
 
-        self.bart = BartModel.from_pretrained("facebook/bart-large", local_files_only=config.local_files_only)
-        self.classifier = nn.Linear(self.bart.config.hidden_size, config.num_labels)
+        self.bart = BartModel.from_pretrained("facebook/bart-large")
+        self.classifier = nn.Linear(self.bart.config.hidden_size, num_labels)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_ids, attention_mask=None):
@@ -36,8 +36,7 @@ class BartWithClassifier(nn.Module):
         return probabilities
 
 
-def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large', labels=True, batch_size=16,
-                   local_files_only=False):
+def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large', labels=True, batch_size=16):
     """
     Binarizes labels ( Currently, the labels are in the form of [2, 5, 6, 0, 0, 0, 0]. This means that
     the sentence pair is of type 2, 5, and 6. Turn this into a binary form, where the
@@ -48,14 +47,13 @@ def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large'
         tokenizer_name (str): tokenizer to use
         labels (bool): If using the test dataset, set to false, as there are no labels to binarize
         batch_size (int): batch size
-        local_files_only (bool): set to true to only use local files
 
     Returns:
         data_loader (torch.utils.data.DataLoader): transformed DataLoader
     Turn the data to the format you want to use.
     """
     # Use AutoTokenizer from_pretrained
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, local_files_only=local_files_only)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     # Binarize labels if there are labels
     if labels:
@@ -287,29 +285,27 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
-    parser.add_argument("--local_files_only", action="store_true")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--num_labels", type=int, default=7)
     args = parser.parse_args()
     return args
 
 
 def finetune_paraphrase_detection(args):
-    model = BartWithClassifier(config=args)
+    model = BartWithClassifier()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model.to(device)
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv", sep="\t")
 
-    train_data = transform_data(train_dataset, local_files_only=args.local_files_only, max_length=args.max_length,
+    train_data = transform_data(train_dataset, max_length=args.max_length,
                                 batch_size=args.batch_size)
-    val_data = transform_data(dev_dataset, local_files_only=args.local_files_only, max_length=args.max_length,
+    val_data = transform_data(dev_dataset, max_length=args.max_length,
                               batch_size=args.batch_size)
-    test_data = transform_data(test_dataset, labels=False, local_files_only=args.local_files_only,
+    test_data = transform_data(test_dataset, labels=False,
                                max_length=args.max_length, batch_size=args.batch_size)
 
     print(f"Loaded {len(train_dataset)} training samples.")
