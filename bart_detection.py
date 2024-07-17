@@ -86,7 +86,7 @@ def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large'
         return data_loader
 
 
-def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=3, output_dir="output"):
+def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=3, output_dir="output.pt"):
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
     training accuracy, training loss and validation loss for each epoch and returns the model
@@ -142,8 +142,8 @@ def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=
         train_loss = train_loss / num_batches
 
         # Calculate training accuracy
-        accuracy = evaluate_model(model=model, test=train_data, device=device)
-        print(f"Train Accuracy: {accuracy}")
+        train_accuracy = evaluate_model(model=model, test_data=train_data, device=device)
+        print(f"Train Accuracy: {train_accuracy}")
         print(f"Train loss: {train_loss}")
 
         val_loss = 0
@@ -161,20 +161,22 @@ def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=
                 b_mask = b_mask.to(device)
                 b_labels = b_labels.to(device)
 
-            outputs = model(input_ids=b_ids, attention_mask=b_mask)
-            loss = loss_fn(outputs, b_labels)
-            val_loss += loss.item()
+                outputs = model(input_ids=b_ids, attention_mask=b_mask)
+                loss = loss_fn(outputs, b_labels)
+                val_loss += loss.item()
 
-        # Calculate Validation loss
+        # Calculate Validation loss and accuracy
+        val_accuracy = evaluate_model(model=model, test_data=val_data, device=device)
         val_loss = val_loss / len(val_data)
         print(f"Validation loss: {val_loss}")
+        print(f"Validation accuracy: {val_accuracy}")
 
         # Update for best Validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
 
             # Save the model
-            model.save_pretrained(output_dir)
+            torch.save(model, output_dir)
 
     return model
 
@@ -291,6 +293,7 @@ def get_args():
 def finetune_paraphrase_detection(args):
     model = BartWithClassifier()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
+    print(device)
     model.to(device)
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
