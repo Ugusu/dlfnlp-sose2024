@@ -217,7 +217,6 @@ def test_model(model, test_data, test_ids, device):
             predicted_labels = (outputs > 0.5).int()
 
             predicted_labels = predicted_labels.tolist()
-            print(predicted_labels)
             paraphrase_types += predicted_labels
 
             # Create dataframe for ouput
