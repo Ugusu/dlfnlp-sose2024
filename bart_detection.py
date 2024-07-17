@@ -178,6 +178,7 @@ def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=
 
     return model
 
+
 def test_model(model, test_data, test_ids, device):
     """
      Test the model. Predict the paraphrase types for the given sentences and return the results in form of
@@ -211,15 +212,19 @@ def test_model(model, test_data, test_ids, device):
             # Set labels
             predicted_labels = (outputs > 0.5).int()
 
-            paraphrase_types.append(np.array(predicted_labels))
+            predicted_labels = predicted_labels.tolist()
+            print(predicted_labels)
+            paraphrase_types += predicted_labels
 
             # Create dataframe for ouput
         df = pd.DataFrame({
-            'id' : test_ids,
-            'Predicted_Paraphrase_Types' : paraphrase_types
+            'id': test_ids,
+            'Predicted_Paraphrase_Types': paraphrase_types
         })
 
     return df
+
+
 def evaluate_model(model, test_data, device):
     """
     This function measures the accuracy of our model's prediction on a given train/validation set
