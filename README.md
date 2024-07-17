@@ -43,7 +43,7 @@ The initial part focused on establishing a working baseline for each task, while
 To set up the environment and install dependencies for local development and testing, use the provided bash script `setup.sh`. This script creates a new conda environment called `dnlp` and installs all required packages. It will also check for CUDA and install the appropriate PyTorch version accordingly.
 
 ```sh
-setup.sh
+bash setup.sh
 ```
 
 Activate the environment with:
@@ -55,12 +55,13 @@ conda activate dnlp
 For setting up the repository on the remote GWDG cluster for training models with GPUs via SSH connection, use the `setup_gwdg.sh` script. This script is specifically designed to configure the environment for GPU-accelerated training on the GWDG cluster.
 
 ```sh
-setup_gwdg.sh
+bash setup_gwdg.sh
 ```
 
 ---
 
 ## Training
+### local: 
 
 To train the model, activate the environment and run:
 
@@ -73,6 +74,13 @@ Important parameters and their descriptions can be seen by running:
 ```sh
 python multitask_classifier.py --help
 ```
+### HPC:
+to submit the job to a node in the GWDG HPC cluster, run:
+settings can be configured according to the requirements in the `run_train.sh` file.
+```sh
+sbatch run_train.sh
+```
+
 
 ## Evaluation
 
@@ -80,7 +88,13 @@ The model is evaluated after each epoch on the validation set. Results are print
 
 ## Methodology
 
-In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
+#TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
+
+We implemented the base Bert and Bart for the first phase of the project.
+Bert: BERT PEOPLE FILL THIS PART
+BART: BART have 2 tasks:
+-  BART_generation: for this task we used the BART model to generate paraphrases of a given sentence. We used the `BartForConditionalGeneration` model from the `transformers` library. The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs. The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16. The model was evaluated on the `etpc-paraphrase-generation-test-student` test set.
+- BART_detection: To be filled
 
 ## Experiments
 
@@ -98,11 +112,11 @@ Detail the experiments conducted, including tasks and models considered. Describ
 Summarize the results of your experiments in tables:
 
 | **Task** | **Sentiment Classification (acc)** | **Paraphrase Tetection (acc)** | **Semantic Textual Similarity (cor)** | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (acc)** |
-|----------|---------------|--------------|--------------|--------------|--------------|
-| Baseline | ...        | ...          | ...          | ...          | ...          |
-| Improvement 1 | ...   | ...          | ...          | ...          | ...          |
-| Improvement 2 | ...  | ...          | ...          | ...          | ...          |
-| ...      | ...           | ...          | ...          | ...          | ...          |
+|----------|---------------|--------------|--------------|--------------|-------------------------------------|
+| Baseline | ...        | ...          | ...          | ...          | BLEU score 38.483                   |
+| Improvement 1 | ...   | ...          | ...          | ...          | ...                                 |
+| Improvement 2 | ...  | ...          | ...          | ...          | ...                                 |
+| ...      | ...           | ...          | ...          | ...          | ...                                 |
 
 Discuss your results, observations, correlations, etc.
 
@@ -120,7 +134,8 @@ Explain the contribution of each group member:
 
 **Daniel Ariza:** ...
 
-**Amirreza Aleyasin:** ...
+**Amirreza Aleyasin:** Phase 1: Implemented the BART model for paraphrase generation and detection. and AdamW optimizer.
+Phase 2: ...
 
 **Pablo Jahnen:** ...
 
