@@ -266,8 +266,5 @@ def finetune_paraphrase_generation(args):
 
 if __name__ == "__main__":
     args = get_args()
-    if torch.cuda.is_available():
-        args.use_gpu = True
-        print("Using GPU")
     seed_everything(args.seed)
     finetune_paraphrase_generation(args)
