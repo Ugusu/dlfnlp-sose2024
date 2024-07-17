@@ -25,7 +25,7 @@ Sure, here's the revised introduction with the BART information included and the
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Status](https://img.shields.io/badge/Status-In%20Progress-yellow.svg)](https://img.shields.io/badge/Status-In%20Progress-yellow.svg)
 [![Code Style](https://img.shields.io/badge/Code%20Style-PEP8-green.svg)](https://www.python.org/dev/peps/pep-0008/)
-[![AI-Usage Card](https://img.shields.io/badge/AI_Usage_Card-pdf-blue.svg)](./AI-Usage-Card.pdf/)
+[![AI-Usage Card](https://img.shields.io/badge/AI_Usage_Card-pdf-blue.svg)](./ai-usage-card-neural-wordsmiths.pdf/)
 
 This repository contains the official implementation of our final project for the Deep Learning for Natural Language Processing course at the University of Göttingen. The project involved implementing components of the BERT model and applying it to tasks like sentiment classification, paraphrase detection, and semantic similarity. Additionally, we implemented a BART model for paraphrase type generation and detection.
 
@@ -130,7 +130,7 @@ Explain the contribution of each group member:
 
 ## AI-Usage Card
 
-Artificial Intelligence (AI) aided the development of this project. For transparency, we provide our [AI-Usage Card](./AI-Usage-Card.pdf/) at the top.
+Artificial Intelligence (AI) aided the development of this project. For transparency, we provide our [AI-Usage Card](./ai-usage-card-neural-wordsmiths.pdf/) at the top.
 
 ## References
 
