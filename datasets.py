@@ -241,7 +241,7 @@ class SentencePairTestDataset(Dataset):
         return batched_data
 
 
-def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filename, split="train", subset_size=None):
+def load_multitask_data(sst_filename, quora_filename, sts_filename, split="train", subset_size=None):
     def load_subset(data, subset_size):
         if subset_size:
             return data[:subset_size]
@@ -328,36 +328,4 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
     sts_data = load_subset(sts_data, subset_size)
     print(f"Loaded {len(sts_data)} {split} examples from {sts_filename}")
 
-    etpc_data = []
-    if split == "test":
-        with open(etpc_filename, "r", encoding="utf-8") as fp:
-            for record in csv.DictReader(fp, delimiter="\t"):
-                sent_id = record["id"].lower().strip()
-                etpc_data.append(
-                    (
-                        preprocess_string(record["sentence1"]),
-                        preprocess_string(record["sentence2"]),
-                        sent_id,
-                    )
-                )
-
-    else:
-        with open(etpc_filename, "r", encoding="utf-8") as fp:
-            for record in csv.DictReader(fp, delimiter="\t"):
-                try:
-                    sent_id = record["id"].lower().strip()
-                    etpc_data.append(
-                        (
-                            preprocess_string(record["sentence1"]),
-                            preprocess_string(record["sentence2"]),
-                            list(map(int, record["paraphrase_types"].strip("][").split(", "))),
-                            sent_id,
-                        )
-                    )
-                except:
-                    pass
-
-    etpc_data = load_subset(etpc_data, subset_size)
-    print(f"Loaded {len(etpc_data)} {split} examples from {etpc_filename}")
-
-    return sst_data, num_labels, quora_data, sts_data, etpc_data
+    return sst_data, num_labels, quora_data, sts_data
