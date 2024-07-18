@@ -244,11 +244,6 @@ def finetune_paraphrase_generation(args):
     # You might do a split of the train data into train/validation set here
     # we split the train and generated dev, then usd dev as the validation set
 
-    # subset
-    train_dataset = train_dataset.sample(frac=0.005)
-    dev_dataset = dev_dataset.sample(frac=0.005)
-    test_dataset= test_dataset.sample(frac=0.005)
-
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset)
     test_data = transform_data(test_dataset)
