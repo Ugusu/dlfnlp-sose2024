@@ -192,7 +192,8 @@ Explain the contribution of each group member:
 - Phase 1:
   - Implemented the `embed` function in the `BertModel` class.
   - Implemented missing functionality for the sentiment analysis task.
-  - Assisted in adding docstrings and type hints to all relevant functions.
+  - Assisted in adding docstrings and type hints to functions in `bert.py` and `multitask_classifier.py`.
+  - Filled and generated AI-usage card with input from all team members.
 - Phase 2: ...
 
 **Amirreza Aleyasin:**
@@ -213,7 +214,8 @@ Explain the contribution of each group member:
 - Phase 2: ...
 
 **Enno Weber:**
-- Phase 1: Implemented: Bart paraphrase detection transformer, training loop and test function
+- Phase 1: 
+  - Implemented BART paraphrase detection transformer, training loop and test function.
 - Phase 2: ...
 
 
