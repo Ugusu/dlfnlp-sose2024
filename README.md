@@ -121,7 +121,7 @@ BART has 2 tasks:
   - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16.
   - The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 
-- BART_detection: To be filled.
+- BART_detection: We used BART-large model to detect 7 differenct paraphrase types given a sentence. Tokenization was done using AutoTokenizer from the transformers library and using a pretrained BartModel from the same library, the model was fine-tuned on the etpc-paraphrase-train.csv using AdamW optimzer and CrossEntropyLoss loss function and validated on the etpc-paraphrase-dev.csv dataset for 5 epochs, learning rate 1e-5 and batch size 16. It is saved for best validation loss performance and was then tested on the etpc-paraphrase-generation-test-student dataset.
 
 BART version: BART Large.
 
@@ -213,7 +213,7 @@ Explain the contribution of each group member:
 - Phase 2: ...
 
 **Enno Weber:**
-- Phase 1: ...
+- Phase 1: Implemented: Bart paraphrase detection transformer, training loop and test function
 - Phase 2: ...
 
 
