@@ -19,7 +19,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='facebook/bart-large'):
+def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='facebook/bart-large'):
     """
         Turn the data to the format you want to use.
         Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
@@ -29,47 +29,39 @@ def transform_data(dataset, max_length=256, batch_size=32, tokenizer_name='faceb
         """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
-    def prepare_features(examples):
-        # Tokenize the inputs
-        model_inputs = tokenizer(examples['formatted_input'], max_length=max_length, padding='max_length', truncation=True)
+    is_test = False
+    if 'sentence2' not in dataset:
+        is_test = True
 
-        # If we have targets, tokenize them too
-        if 'formatted_target' in examples:
-            labels = tokenizer(examples['formatted_target'], max_length=max_length, padding='max_length', truncation=True)
-            model_inputs['labels'] = labels['input_ids']
+    sentences = []
+    target_sentences = []
+    for row in dataset:
+        sentence1 = dataset['sentence1']
+        sentence1_segment = dataset['sentence1_segment_location']
+        paraphrase_types = dataset['paraphrase_types']
+        formatted_sentence = sentence1 + tokenizer.sep_token + sentence1_segment + tokenizer.sep_token + paraphrase_types
+        sentences.extend(formatted_sentence)
 
-        return model_inputs
+    if not is_test:
+        for row in dataset:
+            sentence1 = dataset['sentence2']
+            sentence1_segment = dataset['sentence2_segment_location']
+            paraphrase_types = dataset['paraphrase_types']
+            formatted_sentence = sentence1 + tokenizer.sep_token + sentence1_segment + tokenizer.sep_token + paraphrase_types
+            target_sentences.extend(formatted_sentence)
 
-    is_test_data = 'sentence2' not in dataset.columns
+    encodings = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors='pt')
+    if is_test:
+        dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        return dataloader
 
-    # Prepare the input sentences
-    dataset['formatted_input'] = dataset.apply(
-        lambda row: f"{row['sentence1']} {tokenizer.sep_token} {row['sentence1_segment_location']} {tokenizer.sep_token} {row['paraphrase_types']}",
-        axis=1
-    )
+    target_encodings = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors='pt')
+    labels = target_encodings['input_ids']
 
-    # Prepare the target sentences if it's not test data
-    if not is_test_data:
-        dataset['formatted_target'] = dataset.apply(
-            lambda row: f"{row['sentence2']} {tokenizer.sep_token} {row['sentence2_segment_location']} {tokenizer.sep_token} {row['paraphrase_types']}",
-            axis=1
-        )
+    dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'], labels)
 
-    # Apply the tokenization
-    features = dataset.apply(prepare_features, axis=1)
-
-    # Convert to tensors
-    input_ids = torch.tensor([f['input_ids'] for f in features])
-    attention_mask = torch.tensor([f['attention_mask'] for f in features])
-
-    if is_test_data:
-        tensor_dataset = TensorDataset(input_ids, attention_mask)
-    else:
-        labels = torch.tensor([f['labels'] for f in features])
-        tensor_dataset = TensorDataset(input_ids, attention_mask, labels)
-
-    # Create DataLoader
-    data_loader = DataLoader(tensor_dataset, batch_size=batch_size, shuffle=not is_test_data)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     return data_loader
 
@@ -99,6 +91,9 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
             optimizer.zero_grad()
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            logits = outputs.logits
+            probs = torch.nn.functional.gelu(logits)
+            loss1 = criterion(probs.view(-1, probs.size(-1)), labels.view(-1))
             loss = outputs.loss
             loss.backward()
             optimizer.step()
@@ -114,9 +109,12 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
                 input_ids = input_ids.to(device)
                 attention_mask = attention_mask.to(device)
                 labels = labels.to(device)
-
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                val_loss += outputs.loss.item()
+                logits = outputs.logits
+                probs = torch.nn.functional.gelu(logits)
+                loss1 = criterion(probs.view(-1, probs.size(-1)), labels.view(-1))
+                loss = outputs.loss
+                val_loss += loss.item()
 
         val_loss = val_loss / len(val_loader)
         print(f"Validation loss: {val_loss}")
@@ -140,13 +138,15 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     model.eval()
 
     generated_sentences = []
+    processed_ids = []
 
     with torch.no_grad():
         try:
             # Iterate over test data batches
-            for batch in tqdm(test_data, desc="Testing"):
-                input_ids = batch[0].to(device)
-                attention_mask = batch[1].to(device)
+            for i, batch in enumerate(tqdm(test_data, desc="Testing")):
+                input_ids, attention_mask = batch
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
 
                 # Generate paraphrases
                 outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=256, num_beams=5, early_stopping=True)
@@ -154,12 +154,25 @@ def test_model(test_data, test_ids, device, model, tokenizer):
                 # Decode generated sentences
                 decoded_sentences = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
                 generated_sentences.extend(decoded_sentences)
+
+                # Add corresponding ids
+                batch_size = len(decoded_sentences)
+                if isinstance(test_ids, list) and i*batch_size < len(test_ids):
+                    processed_ids.extend(test_ids[i*batch_size : (i+1)*batch_size])
+                else:
+                    processed_ids.extend(range(i*batch_size, (i+1)*batch_size))
+
         except Exception as e:
             print(f"An error occurred during model inference: {e}")
 
+    # Ensure processed_ids and generated_sentences have the same length
+    min_length = min(len(processed_ids), len(generated_sentences))
+    processed_ids = processed_ids[:min_length]
+    generated_sentences = generated_sentences[:min_length]
+
     # Create a DataFrame with 'id' and 'Generated_sentence2'
     result_df = pd.DataFrame({
-        'id': test_ids,
+        'id': processed_ids,
         'Generated_sentence2': generated_sentences
     })
 
@@ -237,11 +250,17 @@ def finetune_paraphrase_generation(args):
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large")
 
     train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
-    dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
+    dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
     test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
 
     # You might do a split of the train data into train/validation set here
     # we split the train and generated dev, then usd dev as the validation set
+
+    # subsetting the train data
+    train_dataset = train_dataset.sample(frac=0.005, random_state=42)
+    dev_dataset = dev_dataset.sample(frac=0.005, random_state=42)
+    test_dataset =test_dataset.sample(frac=0.005, random_state=42)
+
 
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset)
