@@ -13,4 +13,4 @@ pip install explainaboard-client==0.1.4 sacrebleu==2.4.0
 
 # Download model on login-node
 python -c "from tokenizer import BertTokenizer; from bert import BertModel; BertTokenizer.from_pretrained('bert-base-uncased'); BertModel.from_pretrained('bert-base-uncased')"
-python -c "from transformers import AutoTokenizer, AutoModel; AutoTokenizer.from_pretrained('facebook/bart-base'); from transformers import BartModel; BartModel.from_pretrained('facebook/bart-base')"
+python -c "from transformers import AutoTokenizer, AutoModel; AutoTokenizer.from_pretrained('facebook/bart-large'); from transformers import BartModel; BartModel.from_pretrained('facebook/bart-large')"
