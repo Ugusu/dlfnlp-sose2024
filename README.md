@@ -174,9 +174,13 @@ Discuss your results, observations, correlations, etc.
 
 ## Hyperparameter Optimization
 
+#TODO 
+
 Briefly describe how you optimized your hyperparameters. If you focused strongly on hyperparameter optimization, include it in the Experiment section.
 
 ## Visualizations
+
+#TODO
 
 Add relevant graphs showing metrics like accuracy, validation loss, etc., during training. Compare different training processes of your improvements in these graphs.
 
@@ -184,16 +188,34 @@ Add relevant graphs showing metrics like accuracy, validation loss, etc., during
 
 Explain the contribution of each group member:
 
-**Daniel Ariza:** ...
+**Daniel Ariza:**
+- Phase 1:
+  - Implemented the `embed` function in the `BertModel` class.
+  - Implemented missing functionality for the sentiment analysis task.
+  - Assisted in adding docstrings and type hints to all relevant functions.
+- Phase 2: ...
 
-**Amirreza Aleyasin:** Phase 1: Implemented the BART model for paraphrase generation and detection. and AdamW optimizer.
-Phase 2: ...
+**Amirreza Aleyasin:**
+- Phase 1:
+  - Implemented the BART model for paraphrase generation and detection.
+  - Implemented the AdamW optimizer.
+- Phase 2: ...
 
-**Pablo Jahnen:** ...
+**Pablo Jahnen:**
+- Phase 1: ...
+- Phase 2: ...
 
-**Ughur Mammadzada:** Implemented: BertLayer class, Predict Paraphrase functionality, and the training loop.
+**Ughur Mammadzada:**
+- Phase 1:
+  - Implemented the `BertLayer` class.
+  - Developed functionality for paraphrase prediction task.
+  - Developed the training loop for paraphrase prediction task.
+- Phase 2: ...
 
-**Enno Weber:** ...
+**Enno Weber:**
+- Phase 1: ...
+- Phase 2: ...
+
 
 ## AI-Usage Card
 
