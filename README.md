@@ -77,11 +77,13 @@ settings can be configured according to the requirements in the `run_train.sh` f
 ```sh
 sbatch run_train.sh
 ```
-
+---
 
 ## Evaluation
 
 The model is evaluated after each epoch on the validation set. Results are printed to the console and saved in the `logdir` directory. The best model is saved in the `models` directory.
+
+---
 
 ## Methodology
 
@@ -125,6 +127,8 @@ BART has 2 tasks:
 
 BART version: BART Large.
 
+---
+
 ## Experiments
 
 ### Learning all tasks vs. Learning one task:
@@ -133,6 +137,8 @@ BART version: BART Large.
 - The results for Sentiment Classification and Semantic Textual Similarity degrade, while for Paraphrase Detection increase.
 - Most probable explanation: Dataset sizes are not equal. Later or bigger trainings degrade previous or smaller trainings.
 - Possible solution: Trainings on bigger datasets first. Number of epochs relative to dataset size.
+
+---
 
 ## Results
 
@@ -170,7 +176,9 @@ Here Paraphrase Detection was trained for 1 epoch:
 | ... | ... | ... | ... |
 
 
-Discuss your results, observations, correlations, etc.
+#TODO: Discuss your results, observations, correlations, etc.
+
+---
 
 ## Hyperparameter Optimization
 
@@ -183,6 +191,8 @@ Briefly describe how you optimized your hyperparameters. If you focused strongly
 #TODO
 
 Add relevant graphs showing metrics like accuracy, validation loss, etc., during training. Compare different training processes of your improvements in these graphs.
+
+---
 
 ## Members Contribution
 
@@ -218,6 +228,7 @@ Explain the contribution of each group member:
   - Implemented BART paraphrase detection transformer, training loop and test function.
 - Phase 2: ...
 
+---
 
 ## AI-Usage Card
 
