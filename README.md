@@ -118,9 +118,9 @@ BERT version: BERT Base Uncased.
 BART has 2 tasks:
 
 - BART_generation: for this task, we used the BART model to generate paraphrases of a given sentence.
-  - We used the `BartForConditionalGeneration` model from the `transformers` library.
-  - The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs.
-  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16.
+  - We used the `BartForConditionalGeneration` model from the `transformers` library the pretrained `bart-large` has been used.
+  - The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs.
+  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 5 epochs with a batch size of 16.
   - The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 
 - BART_detection: We used BART-large model to detect 7 differenct paraphrase types given a sentence. Tokenization was done using AutoTokenizer from the transformers library and using a pretrained BartModel from the same library, the model was fine-tuned on the etpc-paraphrase-train.csv using AdamW optimzer and CrossEntropyLoss loss function and validated on the etpc-paraphrase-dev.csv dataset for 5 epochs, learning rate 1e-5 and batch size 16. It is saved for best validation loss performance and was then tested on the etpc-paraphrase-generation-test-student dataset.
@@ -144,11 +144,11 @@ BART version: BART Large.
 
 ### BART
 
-The results for the dev dataset.
+The results for evaluation on the dev dataset. training was done for 5 epochs.
 
 | | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
 |----------|---------------|--------------|
-| Baseline | 0.833 | 38.483 |
+| Baseline | 0.833 | 64.185 |
 | Improvement 1 | ... | ... |
 | Improvement 2 | ... | ... |
 
@@ -208,8 +208,8 @@ Explain the contribution of each group member:
 
 **Amirreza Aleyasin:**
 - Phase 1:
-  - Implemented the BART model for paraphrase generation and detection.
-  - Implemented the AdamW optimizer.
+  - Implemented the BART model for `paraphrase generation` and detection.
+  - Implemented the `AdamW optimizer`.
 - Phase 2: ...
 
 **Pablo Jahnen:**
