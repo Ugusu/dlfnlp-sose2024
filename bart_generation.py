@@ -19,14 +19,18 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='facebook/bart-large'):
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
+                   tokenizer_name: str = 'facebook/bart-large') -> DataLoader:
     """
-        Turn the data to the format you want to use.
-        Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
-        Tokenize the sentence pair in the following format:
-        sentence_1 + SEP + sentence_1 segment location + SEP + paraphrase types.
-        Return Data Loader.
-        """
+     Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
+     Args:
+     dataset (pd.DataFrame): The dataset to transform.
+     max_length (int): Maximum token length. Defaults to 256.
+     batch_size (int): Size of data batches. Defaults to 16.
+     tokenizer_name (str): Name of the tokenizer to use. Defaults to 'facebook/bart-large'.
+     Returns:
+     DataLoader: DataLoader containing the tokenized data.
+     """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     is_test = False
@@ -61,9 +65,28 @@ def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='faceb
     return data_loader
 
 
-def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, learning_rate=1e-5, output_dir="models/bart_finetuned_model"):
+def train_model(model: BartForConditionalGeneration,
+                train_loader: DataLoader,
+                val_loader: DataLoader,
+                device: torch.device,
+                tokenizer: AutoTokenizer,
+                epochs: int = 3,
+                learning_rate: float = 1e-5,
+                output_dir: str = "bart_finetuned_model"
+                ) -> BartForConditionalGeneration:
     """
-    Train the model. Return and save the model.
+    Train the BART model. Save and return the best model based on validation loss.
+    Args:
+    model (BartForConditionalGeneration): The model to train.
+    train_loader (DataLoader): DataLoader for training data.
+    val_loader (DataLoader): DataLoader for validation data.
+    device (torch.device): Device to train the model on.
+    tokenizer (AutoTokenizer): Tokenizer for the model.
+    epochs (int): Number of training epochs. Defaults to 3.
+    learning_rate (float): Learning rate for the optimizer. Defaults to 1e-5.
+    output_dir (str): Directory to save the trained model. Defaults to "bart_finetuned_model".
+    Returns:
+    BartForConditionalGeneration: The trained model.
     """
     # Set model to training mode
     model.train()
@@ -115,12 +138,22 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
     return model
 
 
-def test_model(test_data, test_ids, device, model, tokenizer):
+def test_model(test_data: DataLoader,
+               test_ids: pd.Series,
+               device: torch.device,
+               model: BartForConditionalGeneration,
+               tokenizer: AutoTokenizer
+               ) -> pd.DataFrame:
     """
-    Test the model. Generate paraphrases for the given sentences (sentence1) and return the results
-    in form of a Pandas dataframe with the columns 'id' and 'Generated_sentence2'.
-    The data format in the columns should be the same as in the train dataset.
-    Return this dataframe.
+    Test the model by generating paraphrases for the given sentences and return the results in a DataFrame.
+    Args:
+    test_data (DataLoader): DataLoader for test data.
+    test_ids (pd.Series): Series of test data IDs.
+    device (torch.device): Device to run the model on.
+    model (BartForConditionalGeneration): The model to test.
+    tokenizer (AutoTokenizer): Tokenizer for the model.
+    Returns:
+    pd.DataFrame: DataFrame containing the test IDs and generated paraphrases.
     """
     # Set model to evaluation mode
     model.eval()
@@ -137,7 +170,8 @@ def test_model(test_data, test_ids, device, model, tokenizer):
                 attention_mask = attention_mask.to(device)
 
                 # Generate paraphrases
-                outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=256, num_beams=5, early_stopping=True)
+                outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=256,
+                                         num_beams=5, early_stopping=True)
 
                 # Decode generated sentences
                 decoded_sentences = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
@@ -167,9 +201,20 @@ def test_model(test_data, test_ids, device, model, tokenizer):
     return result_df
 
 
-def evaluate_model(model, test_data, device, tokenizer):
+def evaluate_model(model: BartForConditionalGeneration,
+                   test_data: DataLoader,
+                   device: torch.device,
+                   tokenizer: AutoTokenizer
+                   ) -> float:
     """
-    You can use your train/validation set to evaluate models performance with the BLEU score.
+    Evaluate the model using the BLEU score.
+    Args:
+    model (BartForConditionalGeneration): The model to evaluate.
+    test_data (DataLoader): DataLoader for test data.
+    device (torch.device): Device to run the model on.
+    tokenizer (AutoTokenizer): Tokenizer for the model.
+    Returns:
+    float: BLEU score of the model's performance.
     """
     model.eval()
     bleu = BLEU()
@@ -211,7 +256,12 @@ def evaluate_model(model, test_data, device, tokenizer):
     return bleu_score.score
 
 
-def seed_everything(seed=11711):
+def seed_everything(seed: int = 11711) -> None:
+    """
+    Set random seed for reproducibility.
+    Args:
+    seed (int): Seed value. Defaults to 11711.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -221,7 +271,12 @@ def seed_everything(seed=11711):
     torch.backends.cudnn.deterministic = True
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
+    """
+    Parse command line arguments.
+    Returns:
+    argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
@@ -229,7 +284,12 @@ def get_args():
     return args
 
 
-def finetune_paraphrase_generation(args):
+def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
+    """
+    Fine-tune the BART model for paraphrase generation.
+    Args:
+    args (argparse.Namespace): Command line arguments.
+    """
     # clear cache
     torch.cuda.empty_cache()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
