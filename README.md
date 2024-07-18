@@ -115,7 +115,7 @@ BERT version: BERT Base Uncased.
 ### BART
 
 BART has 2 tasks:
--  BART_generation: for this task we used the BART model to generate paraphrases of a given sentence. We used the `BartForConditionalGeneration` model from the `transformers` library. The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs. The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16. The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` test sets.
+-  BART_generation: for this task we used the BART model to generate paraphrases of a given sentence. We used the `BartForConditionalGeneration` model from the `transformers` library. The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs. The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16. The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 - BART_detection: To be filled
 
 BART version: BART Large.
