@@ -96,7 +96,7 @@ We implemented the base Bert and Bart for the first phase of the project.
 
 For the BERT model we implemented 3 tasks:
 - Sentiment Classification: The model got an additional classification layer, which takes as input the embedings from the BERT model. The used dataset is Stanford Sentiment Treebank. Loss function - Cross Entropy.
-- Semantic Textual Similarity: Similar to the previous task, a clssifier layer was added to the model. It takes as input the model's embedings, and predicts single logit, which defines the similarity score between senteces, which then is normilized to the range 0-5, 5 being most similar and 0 being related. Loss fucntion - Mean Squared Error Loss.
+- Semantic Textual Similarity: Similar to the previous task, a classifier layer was added to the model. It takes as input the model's embedings, and predicts single logit, which defines the similarity score between senteces, which then is normilized to the range 0-5, 5 being most similar and 0 being related. Loss fucntion - Mean Squared Error Loss.
 - Paraphrase Detection: The classifier layer at the end is similar to the previous task, with inputs being the embeddings of the model, and output a logit. The logit is normilized to the range 0-1, 1 being "is a paraphrase" and 0 being "not a paraphrase". Loss function - Binary Cross Entropy with Logits.
 
 All embedings go through a dropout layer, before being passed to the classifier layers.
@@ -110,6 +110,8 @@ For multitask training all tasks were run for 10 epochs with AdamW optimizer and
 
 For separete fine-tuning per tasks the hyperparameters were the same, except for Paraphrase Detection task, as 1 epoch is enough.
 
+The model was trained on fine-tuning mode, so all parameters were updated.
+
 BERT version: BERT Base Uncased.
 
 ### BART
@@ -122,14 +124,12 @@ BART version: BART Large.
 
 ## Experiments
 
-Detail the experiments conducted, including tasks and models considered. Describe each experiment with the following points:
+### Learning all tasks vs Learning one task:
 
-- What experiments are being executed?
-- What were your expectations?
-- What changes were made compared to the base model?
-- What were the results?
-- Add relevant metrics and plots.
-- Discuss the results.
+- A BERT model was trained to be able to solve all 3 tasks, and was compared to a BERT model trained on the tasks independetly.
+- The results for Sentiment Classification and Semantic Textual Similarity degrade, while for Paraphrase Detection increase.
+- Most probable explanation: Dataset sizes are not equal. Later or bigger trainings degrade previous or smaller trainings.
+- Possible solution: Trainings on bigger datasets first. Number of epochs relative to dataset size.
 
 ## Results
 
@@ -144,6 +144,8 @@ The results for the dev dataset.
 | Improvement 2 | ... | ... |
 
 ### BERT
+
+For BERT model, fine-tuning was done 2 times. For Multitask the model learned all 3 tasks one after another. For Independet the model learned tasks separately.
 
 The results for the dev dataset.
 
