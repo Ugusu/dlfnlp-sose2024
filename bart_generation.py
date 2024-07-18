@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sacrebleu.metrics import BLEU
-from torch.utils.data import DataLoader, TensorDataset, random_split
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
@@ -35,33 +35,28 @@ def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='faceb
 
     sentences = []
     target_sentences = []
-    for row in dataset:
-        sentence1 = dataset['sentence1']
-        sentence1_segment = dataset['sentence1_segment_location']
-        paraphrase_types = dataset['paraphrase_types']
-        formatted_sentence = sentence1 + tokenizer.sep_token + sentence1_segment + tokenizer.sep_token + paraphrase_types
-        sentences.extend(formatted_sentence)
+    for _, row in dataset.iterrows():
+        sentence1 = row['sentence1']
+        sentence1_segment = row['sentence1_segment_location']
+        paraphrase_types = row['paraphrase_types']
+        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        sentences.append(formatted_sentence)
 
+        if not is_test:
+            sentence2 = row['sentence2']
+            sentence2_segment = row['sentence2_segment_location']
+            formatted_sentence2 = f"{sentence2} {tokenizer.sep_token} {sentence2_segment} {tokenizer.sep_token} {paraphrase_types}"
+            target_sentences.append(formatted_sentence2)
+
+    # Tokenize the sentences
+    inputs = tokenizer(sentences, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt")
     if not is_test:
-        for row in dataset:
-            sentence1 = dataset['sentence2']
-            sentence1_segment = dataset['sentence2_segment_location']
-            paraphrase_types = dataset['paraphrase_types']
-            formatted_sentence = sentence1 + tokenizer.sep_token + sentence1_segment + tokenizer.sep_token + paraphrase_types
-            target_sentences.extend(formatted_sentence)
+        labels = tokenizer(target_sentences, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt")
+        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
+    else:
+        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
 
-    encodings = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors='pt')
-    if is_test:
-        dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-        return dataloader
-
-    target_encodings = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors='pt')
-    labels = target_encodings['input_ids']
-
-    dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'], labels)
-
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     return data_loader
 
@@ -73,8 +68,7 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
     # Set model to training mode
     model.train()
 
-    # Prepare the optimizer and scheduler
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
+    # Prepare the optimizer
     optimizer = AdamW(model.parameters(), lr=learning_rate)
 
     best_val_loss = float("inf")
@@ -91,9 +85,6 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
             optimizer.zero_grad()
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            logits = outputs.logits
-            probs = torch.nn.functional.gelu(logits)
-            loss1 = criterion(probs.view(-1, probs.size(-1)), labels.view(-1))
             loss = outputs.loss
             loss.backward()
             optimizer.step()
@@ -110,9 +101,6 @@ def train_model(model, train_loader, val_loader, device, tokenizer, epochs=5, le
                 attention_mask = attention_mask.to(device)
                 labels = labels.to(device)
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                logits = outputs.logits
-                probs = torch.nn.functional.gelu(logits)
-                loss1 = criterion(probs.view(-1, probs.size(-1)), labels.view(-1))
                 loss = outputs.loss
                 val_loss += loss.item()
 
@@ -255,12 +243,6 @@ def finetune_paraphrase_generation(args):
 
     # You might do a split of the train data into train/validation set here
     # we split the train and generated dev, then usd dev as the validation set
-
-    # subsetting the train data
-    train_dataset = train_dataset.sample(frac=0.005, random_state=42)
-    dev_dataset = dev_dataset.sample(frac=0.005, random_state=42)
-    test_dataset =test_dataset.sample(frac=0.005, random_state=42)
-
 
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset)
