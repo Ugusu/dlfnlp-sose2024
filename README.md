@@ -213,8 +213,11 @@ Explain the contribution of each group member:
 - Phase 2: ...
 
 **Pablo Jahnen:**
-- Phase 1: ...
-- Phase 2: ...
+- Phase 1:
+- Implemented the attention function in the 'BertSelfAttention' class.
+- Developed functionality for similarity prediction task.
+- Developed the training loop for similarity prediction task.
+- Phase 2: 
 
 **Ughur Mammadzada:**
 - Phase 1:
