@@ -135,7 +135,7 @@ The results for the test dataset.
 
 | | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
 |----------|---------------|--------------|
-| Baseline | ... | 38.483 |
+| Baseline | 0.833 | 38.483 |
 | Improvement 1 | ... | ... |
 | Improvement 2 | ... | ... |
 
