@@ -13,9 +13,6 @@ Here's a structured README template for your group project:
 <b>Group Members:</b> Amirreza Aleyasin, Daniel Ariza, Pablo Jahnen, Enno Weber
 </div>
 
-
-Sure, here's the revised introduction with the BART information included and the second part of the project described in the future tense:
-
 ---
 
 ## Introduction
@@ -88,9 +85,9 @@ The model is evaluated after each epoch on the validation set. Results are print
 
 ## Methodology
 
-#TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
+We implemented the base BERT and BART for the first phase of the project.
 
-We implemented the base Bert and Bart for the first phase of the project.
+#TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
 
 ### BERT
 
@@ -99,7 +96,7 @@ For the BERT model we implemented 3 tasks:
 - Semantic Textual Similarity: Similar to the previous task, a classifier layer was added to the model. It takes as input the model's embedings, and predicts single logit, which defines the similarity score between senteces, which then is normilized to the range 0-5, 5 being most similar and 0 being related. Loss fucntion - Mean Squared Error Loss.
 - Paraphrase Detection: The classifier layer at the end is similar to the previous task, with inputs being the embeddings of the model, and output a logit. The logit is normilized to the range 0-1, 1 being "is a paraphrase" and 0 being "not a paraphrase". Loss function - Binary Cross Entropy with Logits.
 
-All embedings go through a dropout layer, before being passed to the classifier layers.
+All embeddings go through a dropout layer, before being passed to the classifier layers.
 
 For multitask training all tasks were run for 10 epochs with AdamW optimizer and hyperparameters:
 - Learning rate: 1e-5
@@ -108,7 +105,7 @@ For multitask training all tasks were run for 10 epochs with AdamW optimizer and
 - Epsilon: 1e-8
 - Betas: (0.9, 0.999)
 
-For separete fine-tuning per tasks the hyperparameters were the same, except for Paraphrase Detection task, as 1 epoch is enough.
+For separate fine-tuning per tasks the hyperparameters were the same, except for Paraphrase Detection task, as 1 epoch is enough.
 
 The model was trained on fine-tuning mode, so all parameters were updated.
 
@@ -117,14 +114,20 @@ BERT version: BERT Base Uncased.
 ### BART
 
 BART has 2 tasks:
--  BART_generation: for this task we used the BART model to generate paraphrases of a given sentence. We used the `BartForConditionalGeneration` model from the `transformers` library. The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs. The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16. The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
-- BART_detection: To be filled
+
+- BART_generation: for this task, we used the BART model to generate paraphrases of a given sentence.
+  - We used the `BartForConditionalGeneration` model from the `transformers` library.
+  - The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs.
+  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16.
+  - The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
+
+- BART_detection: To be filled.
 
 BART version: BART Large.
 
 ## Experiments
 
-### Learning all tasks vs Learning one task:
+### Learning all tasks vs. Learning one task:
 
 - A BERT model was trained to be able to solve all 3 tasks, and was compared to a BERT model trained on the tasks independetly.
 - The results for Sentiment Classification and Semantic Textual Similarity degrade, while for Paraphrase Detection increase.
