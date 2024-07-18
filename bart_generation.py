@@ -45,7 +45,7 @@ def transform_data(dataset, max_length=256, batch_size=16, tokenizer_name='faceb
         if not is_test:
             sentence2 = row['sentence2']
             sentence2_segment = row['sentence2_segment_location']
-            formatted_sentence2 = f"{sentence2} {tokenizer.sep_token} {sentence2_segment} {tokenizer.sep_token} {paraphrase_types}"
+            formatted_sentence2 = f"{sentence2} {tokenizer.sep_token} {sentence2_segment}"
             target_sentences.append(formatted_sentence2)
 
     # Tokenize the sentences
