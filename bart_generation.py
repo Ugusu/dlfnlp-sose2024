@@ -19,7 +19,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 16,
                    tokenizer_name: str = 'facebook/bart-large') -> DataLoader:
     """
      Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
