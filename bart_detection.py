@@ -215,7 +215,6 @@ def test_model(model, test_data, test_ids, device):
             predicted_labels = (outputs > 0.5).int()
 
             predicted_labels = predicted_labels.tolist()
-            print(predicted_labels)
             paraphrase_types += predicted_labels
 
             # Create dataframe for ouput
@@ -286,6 +285,10 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--max_length", type=int, default=256)
+    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--epochs", type=int, default=3)
     args = parser.parse_args()
     return args
 
@@ -293,19 +296,21 @@ def get_args():
 def finetune_paraphrase_detection(args):
     model = BartWithClassifier()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
-    print(device)
     model.to(device)
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv", sep="\t")
 
-    train_data = transform_data(train_dataset)
-    val_data = transform_data(dev_dataset)
-    test_data = transform_data(test_dataset, labels=False)
+    train_data = transform_data(train_dataset, max_length=args.max_length,
+                                batch_size=args.batch_size)
+    val_data = transform_data(dev_dataset, max_length=args.max_length,
+                              batch_size=args.batch_size)
+    test_data = transform_data(test_dataset, labels=False,
+                               max_length=args.max_length, batch_size=args.batch_size)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device)
+    model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs)
 
     print("Training finished.")
 
