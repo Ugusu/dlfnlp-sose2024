@@ -9,48 +9,60 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
 from optimizer import AdamW
-import torch.nn.functional as F
 
 TQDM_DISABLE = False
 
 
 class BartWithClassifier(nn.Module):
-    def __init__(self, num_labels=7):
+    def __init__(self, num_labels: int = 7):
         super(BartWithClassifier, self).__init__()
 
         self.bart = BartModel.from_pretrained("facebook/bart-large")
         self.classifier = nn.Linear(self.bart.config.hidden_size, num_labels)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, input_ids, attention_mask=None):
-        # Use the BartModel to obtain the last hidden state
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor = None
+                ) -> torch.Tensor:
+        """
+        Forward pass through the model.
+
+        Args:
+            input_ids (torch.Tensor): Input IDs for the BART model.
+            attention_mask (torch.Tensor, optional): Attention mask for the BART model.
+
+        Returns:
+            torch.Tensor: Sigmoid probabilities of the classifier output.
+        """
         outputs = self.bart(input_ids=input_ids, attention_mask=attention_mask)
         last_hidden_state = outputs.last_hidden_state
         cls_output = last_hidden_state[:, 0, :]
 
-        # Add an additional fully connected layer to obtain the logits
         logits = self.classifier(cls_output)
-
-        # Return the probabilities
         probabilities = self.sigmoid(logits)
         return probabilities
 
 
-def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large', labels=True, batch_size=16):
+def transform_data(dataset: pd.DataFrame,
+                   max_length: int = 256,
+                   tokenizer_name: str = 'facebook/bart-large',
+                   labels: bool = True,
+                   batch_size: int = 16
+                   ) -> DataLoader:
     """
     Binarizes labels ( Currently, the labels are in the form of [2, 5, 6, 0, 0, 0, 0]. This means that
     the sentence pair is of type 2, 5, and 6. Turn this into a binary form, where the
     label becomes [0, 1, 0, 0, 1, 1, 0]), tokenizes text input and transforms Dataset into torch.utils.data.DataLoader
-    Args
-        dataset (pd.DataFrame): input dataset
-        max_length (int): maximum length for tokenizer
-        tokenizer_name (str): tokenizer to use
-        labels (bool): If using the test dataset, set to false, as there are no labels to binarize
-        batch_size (int): batch size
+    Args:
+        dataset (pd.DataFrame): Input dataset.
+        max_length (int): Maximum length for tokenizer.
+        tokenizer_name (str): Tokenizer to use.
+        labels (bool): If using the test dataset, set to False as there are no labels to binarize.
+        batch_size (int): Batch size.
 
     Returns:
-        data_loader (torch.utils.data.DataLoader): transformed DataLoader
-    Turn the data to the format you want to use.
+        DataLoader: Transformed DataLoader.
     """
     # Use AutoTokenizer from_pretrained
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -86,21 +98,28 @@ def transform_data(dataset, max_length=256, tokenizer_name='facebook/bart-large'
         return data_loader
 
 
-def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=3, output_dir="output.pt"):
+def train_model(model: nn.Module,
+                train_data: DataLoader,
+                val_data: DataLoader,
+                device: torch.device,
+                learning_rate: float = 1e-5,
+                epochs: int = 3,
+                output_dir: str = "output.pt"
+                ) -> nn.Module:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
     training accuracy, training loss and validation loss for each epoch and returns the model
     Args:
-        model: model to be trained
-        train_data (torch.utils.data.DataLoader): training data transformed using transform_data function
-        val_data (torch.utils.data.DataLoader): validation data transformed using transform_data function
-        device (torch.device): device to be used
-        learning_rate (float): learning rate to be used
-        epochs (int): number of epochs
-        output_dir (str): directory where model is saved
+        model (nn.Module): Model to be trained.
+        train_data (DataLoader): Training data.
+        val_data (DataLoader): Validation data.
+        device (torch.device): Device to be used.
+        learning_rate (float): Learning rate.
+        epochs (int): Number of epochs.
+        output_dir (str): Directory where the model is saved.
 
     Returns:
-        model: trained model
+        nn.Module: Trained model.
     """
     # Loss Function and Optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -181,18 +200,22 @@ def train_model(model, train_data, val_data, device, learning_rate=1e-5, epochs=
     return model
 
 
-def test_model(model, test_data, test_ids, device):
+def test_model(model: nn.Module,
+               test_data: DataLoader,
+               test_ids: pd.Series,
+               device: torch.device
+               ) -> pd.DataFrame:
     """
-     Test the model. Predict the paraphrase types for the given sentences and return the results in form of
+    Test the model. Predict the paraphrase types for the given sentences and return the results in form of
     a Pandas dataframe with the columns 'id' and 'Predicted_Paraphrase_Types'.
     Args:
-        model: trained model
-        test_data (torch.utils.data.DataLoader): test data transformed using transform_data function
-        test_ids (pd.Series): test ids of the test dataset
-        device (torch.device): device to be used
+        model (nn.Module): Trained model.
+        test_data (DataLoader): Test data.
+        test_ids (pd.Series): Test IDs.
+        device (torch.device): Device to be used.
 
     Returns:
-        df (pd.DataFrame):  a Pandas dataframe with the columns 'id' and 'Predicted_Paraphrase_Types'.
+        pd.DataFrame: DataFrame with predictions.
     """
     # Set model to evaluation mode
     model.eval()
@@ -217,7 +240,7 @@ def test_model(model, test_data, test_ids, device):
             predicted_labels = predicted_labels.tolist()
             paraphrase_types += predicted_labels
 
-            # Create dataframe for ouput
+            # Create dataframe for output
         df = pd.DataFrame({
             'id': test_ids,
             'Predicted_Paraphrase_Types': paraphrase_types
@@ -226,12 +249,23 @@ def test_model(model, test_data, test_ids, device):
     return df
 
 
-def evaluate_model(model, test_data, device):
+def evaluate_model(model: nn.Module,
+                   test_data: DataLoader,
+                   device: torch.device
+                   ) -> float:
     """
     This function measures the accuracy of our model's prediction on a given train/validation set
     We measure how many of the seven paraphrase types the model has predicted correctly for each data point.
     So, if the models prediction is [1,1,0,0,1,1,0] and the true label is [0,0,0,0,1,1,0], this predicition
     has an accuracy of 5/7, i.e. 71.4% .
+
+    Args:
+        model (nn.Module): Model to be evaluated.
+        test_data (DataLoader): Test data.
+        device (torch.device): Device to be used.
+
+    Returns:
+        float: Accuracy of the model.
     """
     all_pred = []
     all_labels = []
@@ -271,7 +305,13 @@ def evaluate_model(model, test_data, device):
     return accuracy
 
 
-def seed_everything(seed=11711):
+def seed_everything(seed: int = 11711) -> None:
+    """
+    Sets seed for reproducibility.
+
+    Args:
+        seed (int): Seed value.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -281,7 +321,13 @@ def seed_everything(seed=11711):
     torch.backends.cudnn.deterministic = True
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
+    """
+    Parses command line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
@@ -293,7 +339,13 @@ def get_args():
     return args
 
 
-def finetune_paraphrase_detection(args):
+def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
+    """
+    Finetunes the model for paraphrase detection.
+
+    Args:
+        args (argparse.Namespace): Command line arguments.
+    """
     model = BartWithClassifier()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model.to(device)
