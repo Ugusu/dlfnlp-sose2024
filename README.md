@@ -91,8 +91,28 @@ The model is evaluated after each epoch on the validation set. Results are print
 #TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
 
 We implemented the base Bert and Bart for the first phase of the project.
-Bert: BERT PEOPLE FILL THIS PART
-BART: BART have 2 tasks:
+
+### BERT
+
+For the BERT model we implemented 3 tasks:
+- Sentiment Classification: The model got an additional classification layer, which takes as input the embedings from the BERT model. The used dataset is Stanford Sentiment Treebank. Loss function - Cross Entropy.
+- Semantic Textual Similarity: Similar to the previous task, a clssifier layer was added to the model. It takes as input the model's embedings, and predicts single logit, which defines the similarity score between senteces, which then is normilized to the range 0-5, 5 being most similar and 0 being related. Loss fucntion - Mean Squared Error Loss.
+- Paraphrase Detection: The classifier layer at the end is similar to the previous task, with inputs being the embeddings of the model, and output a logit. The logit is normilized to the range 0-1, 1 being "is a paraphrase" and 0 being "not a paraphrase". Loss function - Binary Cross Entropy with Logits.
+
+All embedings go through a dropout layer, before being passed to the classifier layers.
+
+For multitask training all tasks were run for 10 epochs with AdamW optimizer and hyperparameters:
+- Learning rate: 1e-5
+- Dropout probability: 0.2
+- Batch size: 64
+- Epsilon: 1e-8
+- Betas: (0.9, 0.999)
+
+For separete fine-tuning per tasks the hyperparameters were the same, except for Paraphrase Detection task, as 1 epoch is enough.
+
+### BART
+
+BART has 2 tasks:
 -  BART_generation: for this task we used the BART model to generate paraphrases of a given sentence. We used the `BartForConditionalGeneration` model from the `transformers` library. The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2020 paraphrase pairs. The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 3 epochs with a batch size of 16. The model was evaluated on the `etpc-paraphrase-generation-test-student` test set.
 - BART_detection: To be filled
 
@@ -109,14 +129,37 @@ Detail the experiments conducted, including tasks and models considered. Describ
 
 ## Results
 
-Summarize the results of your experiments in tables:
+### BART
 
-| **Task** | **Sentiment Classification (acc)** | **Paraphrase Tetection (acc)** | **Semantic Textual Similarity (cor)** | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (acc)** |
-|----------|---------------|--------------|--------------|--------------|-------------------------------------|
-| Baseline | ...        | ...          | ...          | ...          | BLEU score 38.483                   |
-| Improvement 1 | ...   | ...          | ...          | ...          | ...                                 |
-| Improvement 2 | ...  | ...          | ...          | ...          | ...                                 |
-| ...      | ...           | ...          | ...          | ...          | ...                                 |
+The results for the test dataset.
+
+| | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
+|----------|---------------|--------------|
+| Baseline | ... | 38.483 |
+| Improvement 1 | ... | ... |
+| Improvement 2 | ... | ... |
+
+### BERT
+
+The results for the dev dataset.
+
+| **Multitask** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
+|----------|---------------|--------------|--------------|
+| Baseline | 0.515 | 0.877 | 0.849 |
+| Improvement 1 | ... | ... | ... |
+| Improvement 2 | ... | ... | ... |
+| ... | ... | ... | ... |
+
+
+Here Paraphrase Detection was trained for 1 epoch:
+
+| **Independent** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
+|----------|---------------|--------------|--------------|
+| Baseline | 0.534 | 0.860 | 0.863 |
+| Improvement 1 | ... | ... | ... |
+| Improvement 2 | ... | ... | ... |
+| ... | ... | ... | ... |
+
 
 Discuss your results, observations, correlations, etc.
 
