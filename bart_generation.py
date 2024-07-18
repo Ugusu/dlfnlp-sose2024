@@ -1,4 +1,3 @@
-from torch.optim.lr_scheduler import StepLR
 import argparse
 import os
 import random
