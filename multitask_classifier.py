@@ -452,7 +452,7 @@ def train_multitask(args):
             "sts": (sts_train_corr, sts_dev_corr),
             "qqp": (quora_train_acc, quora_dev_acc),
             "multitask": ((sst_train_acc + sts_train_corr + quora_train_acc) / 3,
-                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3),
+                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3) if args.task == "multitask" else (None, None),
         }[args.task]
 
         print(
