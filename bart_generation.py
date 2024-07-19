@@ -9,6 +9,7 @@ from sacrebleu.metrics import BLEU
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
+from torch.optim.lr_scheduler import StepLR
 
 from optimizer import AdamW
 
@@ -18,7 +19,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 16,
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 32,
                    tokenizer_name: str = 'facebook/bart-large') -> DataLoader:
     """
      Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
@@ -40,26 +41,27 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     target_sentences = []
     for _, row in dataset.iterrows():
         sentence1 = row['sentence1']
-        sentence1_segment = row['sentence1_segment_location']
-        paraphrase_types = row['paraphrase_types']
+        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
+        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
         formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
         sentences.append(formatted_sentence)
 
         if not is_test:
             sentence2 = row['sentence2']
-            sentence2_segment = row['sentence2_segment_location']
-            formatted_sentence2 = f"{sentence2} {tokenizer.sep_token} {sentence2_segment}"
+            formatted_sentence2 = f"{sentence2}"
             target_sentences.append(formatted_sentence2)
 
     # Tokenize the sentences
-    inputs = tokenizer(sentences, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt")
+    inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+    shuffle_state = False
     if not is_test:
-        labels = tokenizer(target_sentences, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt")
+        labels = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
+        shuffle_state = True
     else:
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
 
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle_state)
 
     return data_loader
 
@@ -69,9 +71,9 @@ def train_model(model: BartForConditionalGeneration,
                 val_loader: DataLoader,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
-                epochs: int = 3,
+                epochs: int = 5,
                 learning_rate: float = 1e-5,
-                output_dir: str = "bart_finetuned_model"
+                output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
     """
     Train the BART model. Save and return the best model based on validation loss.
@@ -91,7 +93,15 @@ def train_model(model: BartForConditionalGeneration,
     model.train()
 
     # Prepare the optimizer
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    #optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    #scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+
+    # configured loss function
+    loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
+    def loss_value(outputs, labels):
+        vocab_size = tokenizer.vocab_size
+        return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
 
     best_val_loss = float("inf")
     for epoch in range(epochs):
@@ -107,6 +117,7 @@ def train_model(model: BartForConditionalGeneration,
             optimizer.zero_grad()
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            #loss = loss_value(outputs, labels)
             loss = outputs.loss
             loss.backward()
             optimizer.step()
@@ -123,9 +134,11 @@ def train_model(model: BartForConditionalGeneration,
                 attention_mask = attention_mask.to(device)
                 labels = labels.to(device)
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                #loss = loss_value(outputs, labels)
                 loss = outputs.loss
                 val_loss += loss.item()
 
+        #scheduler.step()
         val_loss = val_loss / len(val_loader)
         print(f"Validation loss: {val_loss}")
 
@@ -156,64 +169,36 @@ def test_model(test_data: DataLoader,
     """
     # Set model to evaluation mode
     model.eval()
-
-    generated_sentences = []
-    processed_ids = []
+    generated_paraphrases = []
 
     with torch.no_grad():
-        try:
-            # Iterate over test data batches
-            for i, batch in enumerate(tqdm(test_data, desc="Testing")):
-                input_ids, attention_mask = batch
-                input_ids = input_ids.to(device)
-                attention_mask = attention_mask.to(device)
+        for batch in tqdm(test_data, desc="Testing"):
+            input_ids, attention_mask = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
 
-                # Generate paraphrases
-                outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=256,
-                                         num_beams=5, early_stopping=True)
+            # Generate paraphrases
+            outputs = model.generate(
+                input_ids,
+                attention_mask=attention_mask,
+                max_length=50,
+                num_beams=5,
+                early_stopping=True,
+            )
 
-                # Decode generated sentences
-                decoded_sentences = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-                generated_sentences.extend(decoded_sentences)
+            paraphrases = [
+                tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+                for g in outputs
+            ]
+            generated_paraphrases.extend(paraphrases)
 
-                # Add corresponding ids
-                batch_size = len(decoded_sentences)
-                if isinstance(test_ids, list) and i*batch_size < len(test_ids):
-                    processed_ids.extend(test_ids[i*batch_size : (i+1)*batch_size])
-                else:
-                    processed_ids.extend(range(i*batch_size, (i+1)*batch_size))
-
-        except Exception as e:
-            print(f"An error occurred during model inference: {e}")
-
-    # Ensure processed_ids and generated_sentences have the same length
-    min_length = min(len(processed_ids), len(generated_sentences))
-    processed_ids = processed_ids[:min_length]
-    generated_sentences = generated_sentences[:min_length]
-
-    # Create a DataFrame with 'id' and 'Generated_sentence2'
-    result_df = pd.DataFrame({
-        'id': processed_ids,
-        'Generated_sentence2': generated_sentences
-    })
-
-    return result_df
+    results_df = pd.DataFrame({"id": test_ids, "paraphrase": generated_paraphrases})
+    return results_df
 
 
-def evaluate_model(model: BartForConditionalGeneration,
-                   test_data: DataLoader,
-                   device: torch.device,
-                   tokenizer: AutoTokenizer
-                   ) -> float:
+def evaluate_model(model, test_data, device, tokenizer):
     """
-    Evaluate the model using the BLEU score.
-    Args:
-    model (BartForConditionalGeneration): The model to evaluate.
-    test_data (DataLoader): DataLoader for test data.
-    device (torch.device): Device to run the model on.
-    tokenizer (AutoTokenizer): Tokenizer for the model.
-    Returns:
-    float: BLEU score of the model's performance.
+    You can use your train/validation set to evaluate models performance with the BLEU score.
     """
     model.eval()
     bleu = BLEU()
@@ -221,7 +206,7 @@ def evaluate_model(model: BartForConditionalGeneration,
     references = []
 
     with torch.no_grad():
-        for batch in tqdm(test_data, desc="Evaluating"):
+        for batch in test_data:
             input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
@@ -246,12 +231,12 @@ def evaluate_model(model: BartForConditionalGeneration,
             ]
 
             predictions.extend(pred_text)
-            references.extend([[r] for r in ref_text])
+            references.extend(ref_text)
 
     model.train()
 
     # Calculate BLEU score
-    bleu_score = bleu.corpus_score(predictions, references)
+    bleu_score = bleu.corpus_score(predictions, [references])
     return bleu_score.score
 
 
@@ -302,6 +287,11 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
 
     # You might do a split of the train data into train/validation set here
     # we split the train and generated dev, then usd dev as the validation set
+
+    #subset the train data
+    train_dataset = train_dataset.sample(frac=0.01, random_state=args.seed)
+    dev_dataset = dev_dataset.sample(frac=0.01, random_state=args.seed)
+    test_dataset = test_dataset.sample(frac=0.02, random_state=args.seed)
 
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset)
