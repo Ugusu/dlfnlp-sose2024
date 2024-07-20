@@ -94,7 +94,7 @@ def train_model(model: BartForConditionalGeneration,
 
     # Prepare the optimizer
     #optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    optimizer = AdamW(model.parameters(), lr=learning_rate)
     #scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
     # configured loss function
@@ -304,7 +304,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     test_ids = test_dataset["id"]
     test_results = test_model(test_data, test_ids, device, model, tokenizer)
     test_results.to_csv(
-        "predictions/bart/etpc-paraphrase-generation-test-output.csv", index=False, sep="\t"
+        "predictions/bart/etpc-paraphrase-generation-test-output-min1.csv", index=False, sep="\t"
     )
 
 
