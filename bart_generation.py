@@ -48,8 +48,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
         if not is_test:
             sentence2 = row['sentence2']
-            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
-            formatted_sentence2 = f"{sentence2} {tokenizer.sep_token} {sentence2_segment}"
+            formatted_sentence2 = f"{sentence2}"
             target_sentences.append(formatted_sentence2)
 
     # Tokenize the sentences
@@ -193,7 +192,7 @@ def test_model(test_data: DataLoader,
             ]
             generated_paraphrases.extend(paraphrases)
 
-    results_df = pd.DataFrame({"id": test_ids, "paraphrase": generated_paraphrases})
+    results_df = pd.DataFrame({"id": test_ids, "Generated_sentence2": generated_paraphrases})
     return results_df
 
 
