@@ -48,6 +48,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
         if not is_test:
             sentence2 = row['sentence2']
+            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
             formatted_sentence2 = f"{sentence2}"
             target_sentences.append(formatted_sentence2)
 
@@ -93,8 +94,8 @@ def train_model(model: BartForConditionalGeneration,
     model.train()
 
     # Prepare the optimizer
-    #optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
+    #optimizer = AdamW(model.parameters(), lr=learning_rate)
     #scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
     # configured loss function
