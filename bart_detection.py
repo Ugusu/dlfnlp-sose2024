@@ -149,7 +149,7 @@ def train_model(model: nn.Module,
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(input_ids=b_ids, attention_mask=b_mask)
+            outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
             loss = loss_fn(outputs, b_labels)
             loss.backward()
             optimizer.step()
