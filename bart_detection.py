@@ -93,7 +93,7 @@ def transform_data(dataset: pd.DataFrame,
                               padding=True, max_length=max_length, return_tensors='pt')
         # Create dataset
         dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
-        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
         return data_loader
 
