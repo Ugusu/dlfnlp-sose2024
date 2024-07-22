@@ -93,7 +93,7 @@ def transform_data(dataset: pd.DataFrame,
                               padding=True, max_length=max_length, return_tensors='pt')
         # Create dataset
         dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
-        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
         return data_loader
 
@@ -284,7 +284,6 @@ def evaluate_model(model: nn.Module,
             all_labels.append(labels)
 
     all_predictions = torch.cat(all_pred, dim=0)
-    print(all_predictions)
     all_true_labels = torch.cat(all_labels, dim=0)
 
     true_labels_np = all_true_labels.cpu().numpy()
