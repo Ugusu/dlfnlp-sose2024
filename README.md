@@ -148,7 +148,7 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 
 | | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
 |----------|---------------|--------------|
-| Baseline | 0.833 | 64.185 |
+| Baseline | 0.833 | 44.053 |
 | Improvement 1 | ... | ... |
 | Improvement 2 | ... | ... |
 
