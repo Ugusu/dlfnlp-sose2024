@@ -93,7 +93,7 @@ def transform_data(dataset: pd.DataFrame,
                               padding=True, max_length=max_length, return_tensors='pt')
         # Create dataset
         dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'])
-        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
         return data_loader
 
@@ -149,7 +149,7 @@ def train_model(model: nn.Module,
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(input_ids=b_ids, attention_mask=b_mask)
+            outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
             loss = loss_fn(outputs, b_labels)
             loss.backward()
             optimizer.step()
