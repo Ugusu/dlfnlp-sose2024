@@ -81,6 +81,7 @@ class MultitaskBERT(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
+                context_embeddings: torch.Tensor = None,
                 return_pooler_output: bool = True
                 ) -> torch.Tensor:
         """
@@ -99,7 +100,7 @@ class MultitaskBERT(nn.Module):
         # When thinking of improvements, you can later try modifying this
         # (e.g., by adding other layers).
 
-        outputs = self.bert(input_ids, attention_mask=attention_mask)
+        outputs = self.bert(input_ids, attention_mask=attention_mask, context_embeddings=context_embeddings)
 
         if return_pooler_output:
             return outputs["pooler_output"]  # CLS token output
@@ -108,7 +109,8 @@ class MultitaskBERT(nn.Module):
 
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
-                          attention_mask: torch.Tensor
+                          attention_mask: torch.Tensor,
+                          context_embeddings: torch.Tensor = None
                           ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
@@ -127,7 +129,8 @@ class MultitaskBERT(nn.Module):
         # Get the pooled output from the forward method (CLS token's hidden state by default)
         pooled_output: torch.Tensor = self.forward(
             input_ids=input_ids,
-            attention_mask=attention_mask
+            attention_mask=attention_mask,
+            context_embeddings=context_embeddings
         )
 
         # Apply dropout
