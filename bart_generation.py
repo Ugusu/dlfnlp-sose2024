@@ -43,7 +43,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
         sentence1 = row['sentence1']
         sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
         paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        formatted_sentence = f"{sentence1}"
         sentences.append(formatted_sentence)
 
         if not is_test:
@@ -287,6 +287,12 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
 
     # You might do a split of the train data into train/validation set here
     # we split the train and generated dev, then usd dev as the validation set
+
+    # subset for development
+    train_dataset = train_dataset.sample(frac=0.001, random_state=42)
+    dev_dataset = dev_dataset.sample(frac=0.001, random_state=42)
+    test_dataset = test_dataset.sample(frac=0.001, random_state=42)
+    ###########################################################################
 
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset)
