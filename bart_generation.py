@@ -110,6 +110,82 @@ def modified_BART_model():
     return model
 
 
+class PrefixModel(nn.Module):
+    def __init__(self, base_model, prefix_length, prefix_method='direct'):
+        super().__init__()
+        self.base_model = base_model
+        self.prefix_length = prefix_length
+        self.prefix_method = prefix_method
+
+        # Initialize the prefix
+        self.prefix = nn.Parameter(torch.randn(1, prefix_length, base_model.config.d_model))
+
+        if prefix_method == 'indirect':
+            # For indirect method, we'll use an MLP to generate the prefix
+            self.prefix_mlp = nn.Sequential(
+                nn.Linear(base_model.config.d_model, base_model.config.d_model),
+                nn.ReLU(),
+                nn.Linear(base_model.config.d_model, base_model.config.d_model)
+            )
+
+    def get_prefix(self, batch_size):
+        if self.prefix_method == 'direct':
+            return self.prefix.expand(batch_size, -1, -1)
+        elif self.prefix_method == 'indirect':
+            # Generate prefix through MLP
+            prefix = self.prefix.expand(batch_size, -1, -1)
+            return self.prefix_mlp(prefix)
+
+    def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, labels=None):
+        batch_size = input_ids.shape[0]
+
+        # Get the prefix
+        prefix = self.get_prefix(batch_size)
+
+        # Get the embeddings from the base model
+        inputs_embeds = self.base_model.model.encoder.embed_tokens(input_ids)
+
+        # Concatenate the prefix with the input embeddings
+        inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
+
+        # Adjust the attention mask to account for the prefix
+        if attention_mask is not None:
+            prefix_attention_mask = torch.ones(batch_size, self.prefix_length, device=attention_mask.device)
+            attention_mask = torch.cat([prefix_attention_mask, attention_mask], dim=1)
+
+        # Forward pass through the base model
+        outputs = self.base_model(inputs_embeds=inputs_embeds,
+                                  attention_mask=attention_mask,
+                                  decoder_input_ids=decoder_input_ids,
+                                  labels=labels)
+
+        return outputs
+
+    def save_pretrained(self, output_dir):
+        self.base_model.save_pretrained(output_dir)
+
+    def generate(self, input_ids, attention_mask=None, max_length=None, num_beams=None, early_stopping=None):
+        batch_size = input_ids.shape[0]
+
+        # Get the prefix
+        prefix = self.get_prefix(batch_size)
+
+        # Get the embeddings from the base model
+        inputs_embeds = self.base_model.model.encoder.embed_tokens(input_ids)
+
+        # Concatenate the prefix with the input embeddings
+        inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
+
+        # Forward pass through the base model
+        outputs = self.base_model.generate(inputs_embeds=inputs_embeds,
+                                           attention_mask=attention_mask,
+                                           max_length=max_length,
+                                           num_beams=num_beams,
+                                           early_stopping=early_stopping)
+
+        return outputs
+
+
 def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 16,
                    tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
     """
@@ -147,15 +223,16 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
         masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
 
 
-        #sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
-        #paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{masked_sentence}"
+        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
+        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
+        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
         #print("input: ", formatted_sentence)
 
         sentences.append(formatted_sentence)
 
         if not is_test:
             sentence2 = row['sentence2']
+            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
             formatted_sentence2 = f"{sentence2}"
             #print("target: ", formatted_sentence2)
             target_sentences.append(formatted_sentence2)
@@ -203,7 +280,7 @@ def train_model(model: BartForConditionalGeneration,
                 val_loader: DataLoader,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
-                epochs: int = 3,
+                epochs: int = 5,
                 learning_rate: float = 1e-5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
@@ -423,6 +500,12 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     model.to(device)
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
 
+    # Create PrefixModel
+    prefix_length = 10
+    model = PrefixModel(model, prefix_length, prefix_method='direct')
+    model.to(device)
+    # indirect_prefix_model = PrefixModel(model, prefix_length, prefix_method='indirect')
+
     train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
     dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
     test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
@@ -431,9 +514,9 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # we split the train and generated dev, then usd dev as the validation set
 
     # subset for development
-    #train_dataset = train_dataset.sample(frac=0.01)
-    #dev_dataset = dev_dataset.sample(frac=0.01)
-    #test_dataset = test_dataset.sample(frac=0.01)
+    train_dataset = train_dataset.sample(frac=0.001)
+    dev_dataset = dev_dataset.sample(frac=0.001)
+    test_dataset = test_dataset.sample(frac=0.001)
     ###########################################################################
 
     train_loader = transform_data(train_dataset, shuffle=True)
@@ -452,7 +535,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     test_ids = test_dataset["id"]
     test_results = test_model(test_loader, test_ids, device, model, tokenizer)
     test_results.to_csv(
-        "predictions/bart/etpc-paraphrase-generation-test-output_p1.csv", index=False, sep="\t"
+        "predictions/bart/etpc-paraphrase-generation-test-output.csv", index=False, sep="\t"
     )
 
 
