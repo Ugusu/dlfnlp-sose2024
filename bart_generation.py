@@ -6,12 +6,17 @@ import numpy as np
 import pandas as pd
 import torch
 from sacrebleu.metrics import BLEU
+from torch import nn
+
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from transformers import AutoTokenizer, BartForConditionalGeneration
+from transformers import AutoTokenizer, BartForConditionalGeneration, BartConfig, BartModel
 from torch.optim.lr_scheduler import StepLR
 
-from optimizer import AdamW
+from optimizer import AdamW, SophiaG
+from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
+from typing import Optional, Tuple
+from rouge_score import rouge_scorer
 
 TQDM_DISABLE = False
 
@@ -19,8 +24,94 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
+def modified_BART_model():
+    """
+    Modify  the BART model architecture.
+    """
+    config = BartConfig.from_pretrained("facebook/bart-large", local_files_only=True)
+
+    ## change config
+    # layers
+    config.activation_function = 'gelu_new'  # options: 'gelu', 'relu', 'silu', 'gelu_new'
+    config.d_model = 1024
+    config.decoder_attention_heads = 16
+    config.encoder_attention_heads = 16
+    config.decoder_layers = 12
+    config.encoder_layers = 12
+    config.dropout = 0.0
+    config.attention_dropout = 0.0
+    config.activation_dropout = 0.0
+    config.max_position_embeddings = 1024
+
+    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", config=config, local_files_only=True)
+
+    # Replace the activation function with SwiGLU
+    def replace_activation_fn(module, config):
+       for name, child in module.named_children():
+           if name == 'activation_fn':
+               setattr(module, name, SwiGLUFeedForward(config))
+           else:
+               replace_activation_fn(child, config)
+
+    replace_activation_fn(model, config)
+
+    # Replace layer norm with Root Mean Squared
+    def replace_layer_norm(module):
+        for name, child in module.named_children():
+            if isinstance(child, nn.LayerNorm):
+                setattr(module, name, RMSNorm(child.normalized_shape[0]))
+            else:
+                replace_layer_norm(child)
+
+    replace_layer_norm(model)
+
+    # replace the positional embedding to rotary positional embedding RoPE
+    rope = RotaryPositionalEmbedding(config.d_model // config.encoder_attention_heads)
+
+    def apply_rope(module):
+        if isinstance(module, nn.MultiheadAttention):
+            old_forward = module.forward
+
+            def new_forward(
+                    query: torch.Tensor,
+                    key: torch.Tensor,
+                    value: torch.Tensor,
+                    key_padding_mask: Optional[torch.Tensor] = None,
+                    need_weights: bool = True,
+                    attn_mask: Optional[torch.Tensor] = None,
+                    average_attn_weights: bool = True,
+            ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+                seq_len = query.shape[0]
+                cos, sin = rope(query, seq_len=seq_len)
+                query = apply_rotary_pos_emb(query, cos, sin)
+                key = apply_rotary_pos_emb(key, cos, sin)
+                return old_forward(query, key, value, key_padding_mask, need_weights, attn_mask, average_attn_weights)
+
+            module.forward = new_forward
+        else:
+            for child in module.children():
+                apply_rope(child)
+
+    apply_rope(model)
+
+    # remove dropout layers
+    def remove_dropout(module):
+        for name, child in module.named_children():
+            if isinstance(child, nn.Dropout):
+                setattr(module, name, nn.Identity())
+            else:
+                remove_dropout(child)
+
+    remove_dropout(model)
+
+    # print the model architecture
+    print(model)
+
+    return model
+
+
 def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 16,
-                   tokenizer_name: str = 'facebook/bart-large') -> DataLoader:
+                   tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
     """
      Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
      Args:
@@ -32,6 +123,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
      DataLoader: DataLoader containing the tokenized data.
      """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
     is_test = False
     if 'sentence2' not in dataset:
@@ -40,30 +132,70 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     sentences = []
     target_sentences = []
     for _, row in dataset.iterrows():
-        sentence1 = row['sentence1']
-        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
-        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{sentence1}"
+
+        # TODO choose the most important tokens to mask using ROUGE score
+        sentence1 = row['sentence1'] # input sentence
+        sentence2 = row['sentence2'] if not is_test else None # target sentence
+
+        # TODO get the most important tokens
+        #sentence1_tokens = row['sentence1_tokenized']
+        tokens = tokenizer.tokenize(sentence1)
+        important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
+
+
+        # TODO mask the most important tokens
+        masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
+
+
+        #sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
+        #paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
+        formatted_sentence = f"{masked_sentence}"
+        #print("input: ", formatted_sentence)
+
         sentences.append(formatted_sentence)
 
         if not is_test:
             sentence2 = row['sentence2']
             formatted_sentence2 = f"{sentence2}"
+            #print("target: ", formatted_sentence2)
             target_sentences.append(formatted_sentence2)
 
     # Tokenize the sentences
     inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
-    shuffle_state = False
     if not is_test:
         labels = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
-        shuffle_state = True
     else:
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
 
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle_state)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     return data_loader
+
+
+def get_important_tokens(sentence1: str, sentence2: str, scorer: rouge_scorer.RougeScorer, tokens: list) -> list:
+    """
+    Get the most important tokens based on ROUGE score.
+    """
+    if sentence2 is None:
+        # For test data, randomly select tokens as important
+        return random.sample(tokens, k=min(5, len(tokens)))
+
+    important_tokens = []
+    for token in tokens:
+        score = scorer.score(sentence1, sentence2)['rougeL'].fmeasure
+        score_without_token = scorer.score(sentence1.replace(token, ''), sentence2)['rougeL'].fmeasure
+        if score - score_without_token > 0.01:  # Threshold can be adjusted
+            important_tokens.append(token)
+    return important_tokens
+
+
+def mask_important_tokens(tokens: list, important_tokens: list, tokenizer: AutoTokenizer) -> str:
+    """
+    Mask the important tokens in the sentence.
+    """
+    masked_tokens = [tokenizer.mask_token if token in important_tokens else token for token in tokens]
+    return tokenizer.convert_tokens_to_string(masked_tokens)
 
 
 def train_model(model: BartForConditionalGeneration,
@@ -71,7 +203,7 @@ def train_model(model: BartForConditionalGeneration,
                 val_loader: DataLoader,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
-                epochs: int = 5,
+                epochs: int = 3,
                 learning_rate: float = 1e-5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
@@ -94,8 +226,9 @@ def train_model(model: BartForConditionalGeneration,
 
     # Prepare the optimizer
     #optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
-    #scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    #optimizer = AdamW(model.parameters(), lr=learning_rate)
+    optimizer = SophiaG(model.parameters(), lr=learning_rate)
+    #scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
 
     # configured loss function
     loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
@@ -199,18 +332,19 @@ def test_model(test_data: DataLoader,
 def evaluate_model(model, test_data, device, tokenizer):
     """
     You can use your train/validation set to evaluate models performance with the BLEU score.
+    test_data is a Pandas Dataframe, the column "sentence1" contains all input sentence and
+    the column "sentence2" contains all target sentences
     """
     model.eval()
     bleu = BLEU()
     predictions = []
-    references = []
 
+    dataloader = transform_data(test_data, shuffle=False)
     with torch.no_grad():
-        for batch in test_data:
-            input_ids, attention_mask, labels = batch
+        for batch in dataloader:
+            input_ids, attention_mask, _ = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
-            labels = labels.to(device)
 
             # Generate paraphrases
             outputs = model.generate(
@@ -225,19 +359,26 @@ def evaluate_model(model, test_data, device, tokenizer):
                 tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
                 for g in outputs
             ]
-            ref_text = [
-                tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-                for g in labels
-            ]
 
             predictions.extend(pred_text)
-            references.extend(ref_text)
+
+    inputs = test_data["sentence1"].tolist()
+    references = test_data["sentence2"].tolist()
 
     model.train()
-
     # Calculate BLEU score
-    bleu_score = bleu.corpus_score(predictions, [references])
-    return bleu_score.score
+    bleu_score_reference = bleu.corpus_score(references, [predictions]).score
+    # Penalize BLEU score if its to close to the input
+    bleu_score_inputs = 100 - bleu.corpus_score(inputs, [predictions]).score
+
+    print(f"BLEU Score: {bleu_score_reference}", f"Negative BLEU Score with input: {bleu_score_inputs}")
+
+    # Penalize BLEU and rescale it to 0-100
+    # If you perfectly predict all the targets, you should get a penalized BLEU score of around 52
+    penalized_bleu = bleu_score_reference * bleu_score_inputs / 52
+    print(f"Penalized BLEU Score: {penalized_bleu}")
+
+    return penalized_bleu
 
 
 def seed_everything(seed: int = 11711) -> None:
@@ -277,9 +418,10 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # clear cache
     torch.cuda.empty_cache()
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
-    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
+    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", local_files_only=True)
+    # model = modified_BART_model()
     model.to(device)
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
 
     train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
     dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
@@ -289,28 +431,28 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # we split the train and generated dev, then usd dev as the validation set
 
     # subset for development
-    train_dataset = train_dataset.sample(frac=0.001, random_state=42)
-    dev_dataset = dev_dataset.sample(frac=0.001, random_state=42)
-    test_dataset = test_dataset.sample(frac=0.001, random_state=42)
+    #train_dataset = train_dataset.sample(frac=0.01)
+    #dev_dataset = dev_dataset.sample(frac=0.01)
+    #test_dataset = test_dataset.sample(frac=0.01)
     ###########################################################################
 
-    train_data = transform_data(train_dataset)
-    dev_data = transform_data(dev_dataset)
-    test_data = transform_data(test_dataset)
+    train_loader = transform_data(train_dataset, shuffle=True)
+    dev_loader = transform_data(dev_dataset, shuffle=False)
+    test_loader = transform_data(test_dataset, shuffle=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, dev_data, device, tokenizer)
+    model = train_model(model, train_loader, dev_loader, device, tokenizer)
 
     print("Training finished.")
 
-    bleu_score = evaluate_model(model, dev_data, device, tokenizer)
-    print(f"The BLEU-score of the model is: {bleu_score:.3f}")
+    bleu_score = evaluate_model(model, dev_dataset, device, tokenizer)
+    print(f"The penalized BLEU-score of the model is: {bleu_score:.3f}")
 
     test_ids = test_dataset["id"]
-    test_results = test_model(test_data, test_ids, device, model, tokenizer)
+    test_results = test_model(test_loader, test_ids, device, model, tokenizer)
     test_results.to_csv(
-        "predictions/bart/etpc-paraphrase-generation-test-output.csv", index=False, sep="\t"
+        "predictions/bart/etpc-paraphrase-generation-test-output_p1.csv", index=False, sep="\t"
     )
 
 

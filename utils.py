@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from zipfile import ZipFile, is_zipfile
 
 import importlib_metadata
+import numpy as np
 import requests
 import torch
 import torch.nn as nn
@@ -22,6 +23,7 @@ from filelock import FileLock
 from huggingface_hub.hf_api import HfFolder
 from torch import Tensor
 from tqdm.auto import tqdm
+from torch.nn import functional as F
 
 __version__ = "4.0.0"
 _torch_version = importlib_metadata.version("torch")
@@ -378,3 +380,113 @@ def get_extended_attention_mask(attention_mask: Tensor, dtype) -> Tensor:
     extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
     extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
     return extended_attention_mask
+
+
+class SwiGLU1(nn.Module):
+    def __init__(self):
+        super(SwiGLU1, self).__init__()
+
+    def forward(self, x):
+        # Split input tensor into two halves along the last dimension
+        x1, x2 = x.chunk(2, dim=-1)
+        if x.shape[0] == 1:
+            output = F.silu(x)
+        else:
+            output = x1 * F.silu(x2)
+        if output.shape != x.shape:
+            output = output.view(x.shape[1::])
+        return output
+
+
+class SwiGLU2(nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(SwiGLU2, self).__init__()
+        self.linear1 = nn.Linear(input_dim, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, input_dim)
+        self.gate = nn.Linear(input_dim, hidden_dim)
+        self.activation = nn.GELU()
+
+    def forward(self, x):
+        return self.linear2(self.activation(self.linear1(x))) * torch.sigmoid(self.gate(x))
+
+class GELU(nn.Module):
+    def forward(self, x):
+        print(x.shape)
+        output = 0.5 * x * (1 + torch.tanh(torch.sqrt(2 / torch.tensor(torch.pi)) * (x + 0.044715 * torch.pow(x, 3))))
+        print(output.shape)
+        return output
+
+
+class SwiGLU(nn.Module):
+    def __init__(self):
+        super(SwiGLU, self).__init__()
+        self.silu = nn.SiLU()  # Swish activation function
+
+    def forward(self, x, gate):
+        return self.silu(x) * gate
+
+
+class SwiGLUFeedForward(nn.Module):
+    def __init__(self, config):
+        super(SwiGLUFeedForward, self).__init__()
+        self.config = config
+        self.linear1 = nn.Linear(config.d_model, config.decoder_ffn_dim)
+        self.linear2 = nn.Linear(config.decoder_ffn_dim, config.d_model)
+        self.gate_linear = nn.Linear(config.d_model, config.decoder_ffn_dim)
+        self.swiglu = SwiGLU()
+        self.dropout = nn.Dropout(config.dropout)
+
+    def forward(self, x):
+        input_shape = x.shape[-1]
+        gate = nn.Linear(input_shape, self.config.decoder_ffn_dim)(x)
+        x = nn.Linear(input_shape, self.config.decoder_ffn_dim)(x)
+        x = self.swiglu(x, gate)
+        x = self.dropout(x)
+        x = nn.Linear(self.config.decoder_ffn_dim, input_shape)(x)
+        x = self.dropout(x)
+        return x
+
+class RMSNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.eps = eps
+
+    def forward(self, x):
+        mean_square = torch.mean(x ** 2, dim=-1, keepdim=True)
+        x = x * torch.rsqrt(mean_square + self.eps)
+        return self.weight * x
+
+def rotate_half(x):
+    x1, x2 = x.chunk(2, dim=-1)
+    return torch.cat((-x2, x1), dim=-1)
+
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(self, dim, max_position_embeddings=2048, base=10000):
+        super().__init__()
+        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+        self.register_buffer("inv_freq", inv_freq)
+        self.max_seq_len_cached = max_position_embeddings
+        t = torch.arange(self.max_seq_len_cached).type_as(self.inv_freq)
+        freqs = torch.einsum("i,j->ij", t, self.inv_freq)
+        emb = torch.cat((freqs, freqs), dim=-1)
+        self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
+        self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+
+    def forward(self, x, seq_len=None):
+        if seq_len > self.max_seq_len_cached:
+            self.max_seq_len_cached = seq_len
+            t = torch.arange(self.max_seq_len_cached).type_as(self.inv_freq)
+            freqs = torch.einsum("i,j->ij", t, self.inv_freq)
+            emb = torch.cat((freqs, freqs), dim=-1)
+            self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
+            self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+        return (
+            self.cos_cached[:, :, :seq_len, ...].to(x.device),
+            self.sin_cached[:, :, :seq_len, ...].to(x.device),
+        )
+
+def apply_rotary_pos_emb(x, cos, sin):
+    cos = cos.repeat_interleave(2, dim=-1)
+    sin = sin.repeat_interleave(2, dim=-1)
+    return (x * cos) + (rotate_half(x) * sin)
