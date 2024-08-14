@@ -594,9 +594,16 @@ def get_args():
     return args
 
 
+
+def load_path(subset_size=None):
+    if subset_size:
+        return f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}--data_size_{subset_size}.pt"
+    return f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}--data_size_default.pt"
+
+
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = load_path(args.subset_size)  # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
     test_model(args)
