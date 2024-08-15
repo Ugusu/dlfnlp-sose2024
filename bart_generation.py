@@ -24,7 +24,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 32,
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
                    tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
     """
      Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
@@ -37,7 +37,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
      DataLoader: DataLoader containing the tokenized data.
      """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    #scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
     is_test = False
     if 'sentence2' not in dataset:
@@ -53,17 +53,15 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
         # TODO get the most important tokens
         #sentence1_tokens = row['sentence1_tokenized']
-        #tokens = tokenizer.tokenize(sentence1)
-        #important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
-
+        tokens = tokenizer.tokenize(sentence1)
+        important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
 
         # TODO mask the most important tokens
-        #masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
-
+        masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
 
         sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
         paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
         #print("input: ", formatted_sentence)
 
         sentences.append(formatted_sentence)
@@ -73,6 +71,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
             formatted_sentence2 = f"{sentence2}"
             #print("target: ", formatted_sentence2)
             target_sentences.append(formatted_sentence2)
+
 
     # Tokenize the sentences
     inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
@@ -117,7 +116,7 @@ def train_model(model: BartForConditionalGeneration,
                 val_loader: DataLoader,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
-                epochs: int = 10,
+                epochs: int = 3,
                 learning_rate: float = 1e-5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
@@ -164,8 +163,8 @@ def train_model(model: BartForConditionalGeneration,
             optimizer.zero_grad()
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            #loss = loss_value(outputs, labels)
-            loss = outputs.loss
+            loss = loss_value(outputs, labels)
+            #loss = outputs.loss
             loss.backward()
             optimizer.step()
 
@@ -322,9 +321,9 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # we split the train and generated dev, then usd dev as the validation set
 
     # subset for development
-    train_dataset = train_dataset.sample(frac=0.001)
-    dev_dataset = dev_dataset.sample(frac=0.001)
-    test_dataset = test_dataset.sample(frac=0.001)
+    train_dataset = train_dataset.sample(frac=0.1)
+    dev_dataset = dev_dataset.sample(frac=0.1)
+    test_dataset = test_dataset.sample(frac=0.1)
     ###########################################################################
 
     train_loader = transform_data(train_dataset, shuffle=True)
