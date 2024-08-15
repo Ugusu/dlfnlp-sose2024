@@ -24,169 +24,7 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 
-def modified_BART_model():
-    """
-    Modify  the BART model architecture.
-    """
-    config = BartConfig.from_pretrained("facebook/bart-large", local_files_only=True)
-
-    ## change config
-    # layers
-    config.activation_function = 'gelu_new'  # options: 'gelu', 'relu', 'silu', 'gelu_new'
-    config.d_model = 1024
-    config.decoder_attention_heads = 16
-    config.encoder_attention_heads = 16
-    config.decoder_layers = 12
-    config.encoder_layers = 12
-    config.dropout = 0.0
-    config.attention_dropout = 0.0
-    config.activation_dropout = 0.0
-    config.max_position_embeddings = 1024
-
-    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", config=config, local_files_only=True)
-
-    # Replace the activation function with SwiGLU
-    def replace_activation_fn(module, config):
-       for name, child in module.named_children():
-           if name == 'activation_fn':
-               setattr(module, name, SwiGLUFeedForward(config))
-           else:
-               replace_activation_fn(child, config)
-
-    replace_activation_fn(model, config)
-
-    # Replace layer norm with Root Mean Squared
-    def replace_layer_norm(module):
-        for name, child in module.named_children():
-            if isinstance(child, nn.LayerNorm):
-                setattr(module, name, RMSNorm(child.normalized_shape[0]))
-            else:
-                replace_layer_norm(child)
-
-    replace_layer_norm(model)
-
-    # replace the positional embedding to rotary positional embedding RoPE
-    rope = RotaryPositionalEmbedding(config.d_model // config.encoder_attention_heads)
-
-    def apply_rope(module):
-        if isinstance(module, nn.MultiheadAttention):
-            old_forward = module.forward
-
-            def new_forward(
-                    query: torch.Tensor,
-                    key: torch.Tensor,
-                    value: torch.Tensor,
-                    key_padding_mask: Optional[torch.Tensor] = None,
-                    need_weights: bool = True,
-                    attn_mask: Optional[torch.Tensor] = None,
-                    average_attn_weights: bool = True,
-            ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-                seq_len = query.shape[0]
-                cos, sin = rope(query, seq_len=seq_len)
-                query = apply_rotary_pos_emb(query, cos, sin)
-                key = apply_rotary_pos_emb(key, cos, sin)
-                return old_forward(query, key, value, key_padding_mask, need_weights, attn_mask, average_attn_weights)
-
-            module.forward = new_forward
-        else:
-            for child in module.children():
-                apply_rope(child)
-
-    apply_rope(model)
-
-    # remove dropout layers
-    def remove_dropout(module):
-        for name, child in module.named_children():
-            if isinstance(child, nn.Dropout):
-                setattr(module, name, nn.Identity())
-            else:
-                remove_dropout(child)
-
-    remove_dropout(model)
-
-    # print the model architecture
-    print(model)
-
-    return model
-
-
-class PrefixModel(nn.Module):
-    def __init__(self, base_model, prefix_length, prefix_method='direct'):
-        super().__init__()
-        self.base_model = base_model
-        self.prefix_length = prefix_length
-        self.prefix_method = prefix_method
-
-        # Initialize the prefix
-        self.prefix = nn.Parameter(torch.randn(1, prefix_length, base_model.config.d_model))
-
-        if prefix_method == 'indirect':
-            # For indirect method, we'll use an MLP to generate the prefix
-            self.prefix_mlp = nn.Sequential(
-                nn.Linear(base_model.config.d_model, base_model.config.d_model),
-                nn.ReLU(),
-                nn.Linear(base_model.config.d_model, base_model.config.d_model)
-            )
-
-    def get_prefix(self, batch_size):
-        if self.prefix_method == 'direct':
-            return self.prefix.expand(batch_size, -1, -1)
-        elif self.prefix_method == 'indirect':
-            # Generate prefix through MLP
-            prefix = self.prefix.expand(batch_size, -1, -1)
-            return self.prefix_mlp(prefix)
-
-    def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, labels=None):
-        batch_size = input_ids.shape[0]
-
-        # Get the prefix
-        prefix = self.get_prefix(batch_size)
-
-        # Get the embeddings from the base model
-        inputs_embeds = self.base_model.model.encoder.embed_tokens(input_ids)
-
-        # Concatenate the prefix with the input embeddings
-        inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
-
-        # Adjust the attention mask to account for the prefix
-        if attention_mask is not None:
-            prefix_attention_mask = torch.ones(batch_size, self.prefix_length, device=attention_mask.device)
-            attention_mask = torch.cat([prefix_attention_mask, attention_mask], dim=1)
-
-        # Forward pass through the base model
-        outputs = self.base_model(inputs_embeds=inputs_embeds,
-                                  attention_mask=attention_mask,
-                                  decoder_input_ids=decoder_input_ids,
-                                  labels=labels)
-
-        return outputs
-
-    def save_pretrained(self, output_dir):
-        self.base_model.save_pretrained(output_dir)
-
-    def generate(self, input_ids, attention_mask=None, max_length=None, num_beams=None, early_stopping=None):
-        batch_size = input_ids.shape[0]
-
-        # Get the prefix
-        prefix = self.get_prefix(batch_size)
-
-        # Get the embeddings from the base model
-        inputs_embeds = self.base_model.model.encoder.embed_tokens(input_ids)
-
-        # Concatenate the prefix with the input embeddings
-        inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
-
-        # Forward pass through the base model
-        outputs = self.base_model.generate(inputs_embeds=inputs_embeds,
-                                           attention_mask=attention_mask,
-                                           max_length=max_length,
-                                           num_beams=num_beams,
-                                           early_stopping=early_stopping)
-
-        return outputs
-
-
-def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 16,
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 32,
                    tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
     """
      Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
@@ -199,7 +37,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
      DataLoader: DataLoader containing the tokenized data.
      """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    #scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
     is_test = False
     if 'sentence2' not in dataset:
@@ -215,23 +53,22 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
         # TODO get the most important tokens
         #sentence1_tokens = row['sentence1_tokenized']
-        tokens = tokenizer.tokenize(sentence1)
-        important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
+        #tokens = tokenizer.tokenize(sentence1)
+        #important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
 
 
         # TODO mask the most important tokens
-        masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
+        #masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
 
 
         sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
         paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
         #print("input: ", formatted_sentence)
 
         sentences.append(formatted_sentence)
 
         if not is_test:
-            sentence2 = row['sentence2']
             sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
             formatted_sentence2 = f"{sentence2}"
             #print("target: ", formatted_sentence2)
@@ -280,7 +117,7 @@ def train_model(model: BartForConditionalGeneration,
                 val_loader: DataLoader,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
-                epochs: int = 5,
+                epochs: int = 10,
                 learning_rate: float = 1e-5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
@@ -333,29 +170,6 @@ def train_model(model: BartForConditionalGeneration,
             optimizer.step()
 
             print(f"Loss: {loss.item()}")
-
-        # Evaluate the model
-        val_loss = 0
-        model.eval()
-        with torch.no_grad():
-            for batch in tqdm(val_loader, desc="Validation"):
-                input_ids, attention_mask, labels = batch
-                input_ids = input_ids.to(device)
-                attention_mask = attention_mask.to(device)
-                labels = labels.to(device)
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                #loss = loss_value(outputs, labels)
-                loss = outputs.loss
-                val_loss += loss.item()
-
-        #scheduler.step()
-        val_loss = val_loss / len(val_loader)
-        print(f"Validation loss: {val_loss}")
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            # Save the model
-            model.save_pretrained(output_dir)
 
     return model
 
@@ -499,12 +313,6 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # model = modified_BART_model()
     model.to(device)
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
-
-    # Create PrefixModel
-    prefix_length = 10
-    model = PrefixModel(model, prefix_length, prefix_method='direct')
-    model.to(device)
-    # indirect_prefix_model = PrefixModel(model, prefix_length, prefix_method='indirect')
 
     train_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-train.csv", sep="\t")
     dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
