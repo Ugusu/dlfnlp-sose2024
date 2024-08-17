@@ -11,7 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from bert import BertModel
+from bert import BertModel, GlobalContextLayer
 from datasets import (
     SentenceClassificationDataset,
     SentencePairDataset,
@@ -61,6 +61,9 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
 
+        # Global Context Layer
+        self.global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
+
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.sentiment_classifier = nn.Linear(
@@ -101,10 +104,15 @@ class MultitaskBERT(nn.Module):
 
         outputs = self.bert(input_ids, attention_mask=attention_mask)
 
-        if return_pooler_output:
-            return outputs["pooler_output"]  # CLS token output
-        else:
-            return outputs["last_hidden_state"]  # Sequence of hidden states
+        sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
+
+        # Apply the Global Context Layer
+        context_output = self.global_context_layer(sequence_output)  # [batch_size, seq_len, hidden_size]
+
+        # Extract the CLS token output
+        cls_output = context_output[:, 0, :]  # [batch_size, hidden_size]
+
+        return cls_output
 
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
