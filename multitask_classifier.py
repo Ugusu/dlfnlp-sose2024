@@ -148,7 +148,7 @@ class MultitaskBERT(nn.Module):
         pooled_output: torch.Tensor = self.forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            pooling_strategy=args.pooling_strategy
+            pooling_strategy=args.pooling
         )
 
         # Apply dropout
