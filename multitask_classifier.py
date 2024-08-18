@@ -169,7 +169,13 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask)
+        embedding = self.forward(all_input_ids, all_attention_mask, return_pooler_output=False)
+
+        cls_token = input_tensor[:, 0, :]
+        average_tokens = input_tensor[:, 1:, :].mean(dim=1)
+
+        embedding = cls_token + average_tokens
+
         embedding = self.dropout(embedding)
 
         is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
