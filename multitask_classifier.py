@@ -171,8 +171,8 @@ class MultitaskBERT(nn.Module):
 
         embedding = self.forward(all_input_ids, all_attention_mask, return_pooler_output=False)
 
-        cls_token = input_tensor[:, 0, :]
-        average_tokens = input_tensor[:, 1:, :].mean(dim=1)
+        cls_token = embedding[:, 0, :]
+        average_tokens = embedding[:, 1:, :].mean(dim=1)
 
         embedding = cls_token + average_tokens
 
