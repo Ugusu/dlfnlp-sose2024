@@ -3,29 +3,44 @@ import itertools
 import json
 from tqdm import tqdm
 
+import traceback
+
 
 def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
-    args = get_args()
-    args.pooling = pooling_strategy
-    args.lr = learning_rate
-    args.hidden_dropout_prob = hidden_dropout_prob
-    args.batch_size = batch_size
-    args.filepath = f"models/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
+    try:
+        args = get_args()
+        args.pooling = pooling_strategy
+        args.lr = learning_rate
+        args.hidden_dropout_prob = hidden_dropout_prob
+        args.batch_size = batch_size
+        args.filepath = f"models/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
 
-    seed_everything(args.seed)
-    train_multitask(args)
-    quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = test_model(args)
+        seed_everything(args.seed)
+        train_multitask(args)
+        quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = test_model(args)
 
-    return {
-        "pooling_strategy": pooling_strategy,
-        "learning_rate": learning_rate,
-        "hidden_dropout_prob": hidden_dropout_prob,
-        "batch_size": batch_size,
-        "quora_accuracy": quora_accuracy,
-        "sst_accuracy": sst_accuracy,
-        "sts_correlation": sts_corr,
-        "average_performance": (quora_accuracy + sst_accuracy + sts_corr) / 3
-    }
+        return {
+            "pooling_strategy": pooling_strategy,
+            "learning_rate": learning_rate,
+            "hidden_dropout_prob": hidden_dropout_prob,
+            "batch_size": batch_size,
+            "quora_accuracy": quora_accuracy,
+            "sst_accuracy": sst_accuracy,
+            "sts_correlation": sts_corr,
+            "average_performance": (quora_accuracy + sst_accuracy + sts_corr) / 3,
+            "status": "success"
+        }
+    except Exception as e:
+        print(f"Error in experiment: {str(e)}")
+        traceback.print_exc()
+        return {
+            "pooling_strategy": pooling_strategy,
+            "learning_rate": learning_rate,
+            "hidden_dropout_prob": hidden_dropout_prob,
+            "batch_size": batch_size,
+            "status": "failed",
+            "error": str(e)
+        }
 
 
 def grid_search():
