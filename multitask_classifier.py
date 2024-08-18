@@ -19,6 +19,7 @@ from datasets import (
 )
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW
+from utils import PoolingStrategy
 
 TQDM_DISABLE = False
 
@@ -84,34 +85,46 @@ class MultitaskBERT(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
+                pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                 ) -> torch.Tensor:
         """
-        Processes input sentences and produces embeddings using the BERT model.
+        Processes input sentences and produces embeddings using the BERT model based on the selected pooling strategy.
 
         Args:
             input_ids (torch.Tensor): Tensor of input token IDs.
             attention_mask (torch.Tensor): Tensor of attention masks.
-            return_pooler_output (bool, optional): If True (default), return the pooled output (CLS token's hidden
-                                                   state); otherwise, return the sequence of hidden states.
+            pooling_strategy (PoolingStrategy): Enum indicating the pooling strategy.
 
         Returns:
-            torch.Tensor: Pooled output or sequence of hidden states.
+            torch.Tensor: The pooled output tensor.
         """
 
-        # When thinking of improvements, you can later try modifying this
-        # (e.g., by adding other layers).
-
         outputs = self.bert(input_ids, attention_mask=attention_mask)
-
         sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
 
-        # Apply the Global Context Layer
-        context_output = self.global_context_layer(sequence_output)  # [batch_size, seq_len, hidden_size]
+        match pooling_strategy:
+            case PoolingStrategy.AVERAGE:
+                # Apply average pooling over the sequence length
+                pooled_output = torch.mean(sequence_output, dim=1)  # [batch_size, hidden_size]
 
-        # Extract the CLS token output
-        cls_output = context_output[:, 0, :]  # [batch_size, hidden_size]
+            case PoolingStrategy.MAX:
+                # Apply max pooling over the sequence length
+                pooled_output, _ = torch.max(sequence_output, dim=1)  # [batch_size, hidden_size]
 
-        return cls_output
+            case PoolingStrategy.ATTENTION:
+                # Use attention scores from the Global Context Layer for pooling
+                attention_scores = self.global_context_layer.get_attention_scores(
+                    sequence_output)  # [batch_size, seq_len, 1]
+                attention_weights = torch.softmax(attention_scores, dim=1)  # [batch_size, seq_len, 1]
+
+                # Weighted sum of token embeddings
+                pooled_output = torch.sum(attention_weights * sequence_output, dim=1)  # [batch_size, hidden_size]
+
+            case _:
+                # Default to CLS token pooling
+                pooled_output = sequence_output[:, 0, :]  # [batch_size, hidden_size]
+
+        return pooled_output
 
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
@@ -132,10 +145,7 @@ class MultitaskBERT(nn.Module):
             torch.Tensor: Logits for each sentiment class for each sentence of shape (batch_size, 5).
         """
         # Get the pooled output from the forward method (CLS token's hidden state by default)
-        pooled_output: torch.Tensor = self.forward(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
+        pooled_output: torch.Tensor = self.forward(input_ids=input_ids, attention_mask=attention_mask)
 
         # Apply dropout
         pooled_output = self.dropout(pooled_output)
@@ -459,7 +469,8 @@ def train_multitask(args):
             "sts": (sts_train_corr, sts_dev_corr),
             "qqp": (quora_train_acc, quora_dev_acc),
             "multitask": ((sst_train_acc + sts_train_corr + quora_train_acc) / 3,
-                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3) if args.task == "multitask" else (None, None),
+                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3) if args.task == "multitask" else (
+            None, None),
         }[args.task]
 
         print(
