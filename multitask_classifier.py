@@ -524,7 +524,19 @@ def get_args():
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Number of examples to load from each dataset for testing")
 
+    # Pooling strategy
+    parser.add_argument(
+        "--pooling",
+        type=str,
+        help='Choose the pooling strategy: "cls", "average", "max", or "attention".',
+        choices=[strategy.value for strategy in PoolingStrategy],
+        default="cls",
+    )
+
     args, _ = parser.parse_known_args()
+
+    # Convert pooling strategy argument to PoolingStrategy enum
+    args.pooling_strategy = PoolingStrategy(args.pooling)
 
     # Dataset paths
     parser.add_argument("--sst_train", type=str, default="data/sst-sentiment-train.csv")
