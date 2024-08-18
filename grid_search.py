@@ -4,6 +4,7 @@ import json
 from tqdm import tqdm
 
 import traceback
+import os
 
 
 def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
@@ -19,6 +20,11 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         train_multitask(args)
         quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = test_model(args)
 
+        # Delete the saved model file after evaluation
+        if os.path.exists(args.filepath):
+            os.remove(args.filepath)
+            print(f"Deleted model file: {args.filepath}")
+
         return {
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
@@ -33,6 +39,12 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
     except Exception as e:
         print(f"Error in experiment: {str(e)}")
         traceback.print_exc()
+
+        # Attempt to delete the model file even if an error occurred
+        if os.path.exists(args.filepath):
+            os.remove(args.filepath)
+            print(f"Deleted model file after error: {args.filepath}")
+
         return {
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
