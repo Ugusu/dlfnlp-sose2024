@@ -21,9 +21,7 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = test_model(args)
 
         # Delete the saved model file after evaluation
-        if os.path.exists(args.filepath):
-            os.remove(args.filepath)
-            print(f"Deleted model file: {args.filepath}")
+        delete_model(args.filepath)
 
         return {
             "pooling_strategy": pooling_strategy,
@@ -41,9 +39,7 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         traceback.print_exc()
 
         # Attempt to delete the model file even if an error occurred
-        if os.path.exists(args.filepath):
-            os.remove(args.filepath)
-            print(f"Deleted model file after error: {args.filepath}")
+        delete_model(args.filepath)
 
         return {
             "pooling_strategy": pooling_strategy,
@@ -84,6 +80,12 @@ def grid_search():
     print(json.dumps(best_result, indent=2))
 
     return results, best_result
+
+
+def delete_model(args_filepath: str) -> None:
+    if os.path.exists(args_filepath):
+        os.remove(args_filepath)
+        print(f"Deleted model file after error: {args_filepath}")
 
 
 if __name__ == "__main__":
