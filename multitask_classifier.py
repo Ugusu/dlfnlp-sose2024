@@ -128,7 +128,8 @@ class MultitaskBERT(nn.Module):
 
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
-                          attention_mask: torch.Tensor
+                          attention_mask: torch.Tensor,
+                          pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                           ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
@@ -148,7 +149,7 @@ class MultitaskBERT(nn.Module):
         pooled_output: torch.Tensor = self.forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            pooling_strategy=args.pooling
+            pooling_strategy=pooling_strategy
         )
 
         # Apply dropout
@@ -376,7 +377,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask)
+                logits = model.predict_sentiment(b_ids, b_mask, args.pooling)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
                 loss.backward()
                 optimizer.step()
