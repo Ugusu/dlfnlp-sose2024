@@ -1,3 +1,5 @@
+import sys
+
 from multitask_classifier import get_args, seed_everything, train_multitask, test_model
 import itertools
 import json
@@ -18,7 +20,12 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
 
         seed_everything(args.seed)
         train_multitask(args)
-        quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = test_model(args)
+        result = test_model(args)
+
+        if result is None:
+            raise ValueError("test_model returned None")
+
+        quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = result
 
         # Delete the saved model file after evaluation
         delete_model(args.filepath)
@@ -35,11 +42,13 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
             "status": "success"
         }
     except Exception as e:
-        print(f"Error in experiment: {str(e)}")
-        traceback.print_exc()
-
-        # Attempt to delete the model file even if an error occurred
-        delete_model(args.filepath)
+        print(f"\nError in experiment with parameters:")
+        print(f"  pooling_strategy: {pooling_strategy}")
+        print(f"  learning_rate: {learning_rate}")
+        print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
+        print(f"  batch_size: {batch_size}")
+        print("\nFull stack trace:")
+        traceback.print_exc(file=sys.stdout)
 
         return {
             "pooling_strategy": pooling_strategy,
@@ -47,7 +56,8 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
             "status": "failed",
-            "error": str(e)
+            "error": str(e),
+            "traceback": traceback.format_exc()
         }
 
 
@@ -69,15 +79,26 @@ def grid_search():
         result = run_experiment(*combo)
         results.append(result)
 
+        # Print status after each experiment
+        print(f"\nExperiment completed with status: {result['status']}")
+        if result['status'] == 'failed':
+            print(f"Error: {result['error']}")
+            print("Full traceback:")
+            print(result['traceback'])
+
         # Save results after each experiment
         with open("grid_search_results.json", "w") as f:
             json.dump(results, f, indent=2)
 
-    # Find best configuration
-    best_result = max(results, key=lambda x: x["average_performance"])
-
-    print("Best configuration:")
-    print(json.dumps(best_result, indent=2))
+        # Find best configuration
+    successful_results = [r for r in results if r['status'] == 'success']
+    if successful_results:
+        best_result = max(successful_results, key=lambda x: x["average_performance"])
+        print("\nBest configuration:")
+        print(json.dumps(best_result, indent=2))
+    else:
+        print("\nNo successful experiments found.")
+        best_result = None
 
     return results, best_result
 
