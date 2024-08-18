@@ -84,7 +84,6 @@ class MultitaskBERT(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
-                return_pooler_output: bool = True
                 ) -> torch.Tensor:
         """
         Processes input sentences and produces embeddings using the BERT model.
