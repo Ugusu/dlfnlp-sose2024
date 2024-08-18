@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=grid-search-multitask
-#SBATCH -t 1:00:00                  # estimated time # TODO: adapt to your needs
+#SBATCH -t 01:00:00                  # estimated time # TODO: adapt to your needs
 #SBATCH -p grete                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G A100:1                    # take 1 GPU, see https://docs.hpc.gwdg.de/compute_partitions/gpu_partitions/index.html for more options
-#SBATCH --mem-per-gpu=16G            # setting the right constraints for the splitted gpu partitions
+#SBATCH --mem-per-gpu=8G            # setting the right constraints for the splitted gpu partitions
 #SBATCH --nodes=1                    # total number of nodes
 #SBATCH --ntasks=1                   # total number of tasks
 #SBATCH --cpus-per-task=8            # number cores per task
@@ -32,7 +32,7 @@ echo "Latest Commit: $(git rev-parse --short HEAD)"
 echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the grid search script:
-python -u grid_search.py --local_files_only --option finetune --task sst
+python -u grid_search.py --use_gpu --local_files_only --option finetune --task sst
 
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-grid-search-multitask-<jobid>.out
