@@ -62,14 +62,19 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
 
 
 def grid_search():
-    pooling_strategies = ["cls", "average", "max", "attention"]
-    # learning_rates = [1e-5, 3e-5, 5e-5]
-    # hidden_dropout_probs = [0.1, 0.3, 0.5]
-    # batch_sizes = [16, 32, 64]
+    
+    run_test = True
 
-    learning_rates = [1e-5, 1e-5]
-    hidden_dropout_probs = [0.3]
-    batch_sizes = [64]
+    if run_test:
+        pooling_strategies = ["cls", "average"]
+        learning_rates = [1e-5, 1e-5]
+        hidden_dropout_probs = [0.3]
+        batch_sizes = [64]
+    else:
+        pooling_strategies = ["cls", "average", "max", "attention"]
+        learning_rates = [1e-5, 3e-5, 5e-5]
+        hidden_dropout_probs = [0.1, 0.3, 0.5]
+        batch_sizes = [16, 32, 64]
 
     all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
 
