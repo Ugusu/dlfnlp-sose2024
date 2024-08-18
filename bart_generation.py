@@ -35,7 +35,7 @@ config_dict = {
     "scheduler_gamma": 0.2,
     "batch_size": 16,
     "max_length": 256,
-    "num_layers_to_freeze": 6,
+    "num_layers_to_freeze": 8,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -694,7 +694,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
 
     # Create PrefixModel
-    if config_dict["prefix"] is not None:
+    if config_dict["prefix"]:
         model = PrefixModel(model, config_dict["prefix_length"], config_dict["prefix_method"])
         model.to(device)
 
