@@ -145,7 +145,11 @@ class MultitaskBERT(nn.Module):
             torch.Tensor: Logits for each sentiment class for each sentence of shape (batch_size, 5).
         """
         # Get the pooled output from the forward method (CLS token's hidden state by default)
-        pooled_output: torch.Tensor = self.forward(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            pooling_strategy=args.pooling_strategy
+        )
 
         # Apply dropout
         pooled_output = self.dropout(pooled_output)
