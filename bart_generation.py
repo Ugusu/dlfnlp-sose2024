@@ -8,7 +8,7 @@ import torch
 from sacrebleu.metrics import BLEU
 from torch import nn
 
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, Dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration, BartConfig, BartModel
 from torch.optim.lr_scheduler import StepLR
@@ -17,6 +17,8 @@ from optimizer import AdamW, SophiaG
 from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
 from typing import Optional, Tuple
 from rouge_score import rouge_scorer
+
+from utils import nums2word_word2nums, tag_pos
 
 TQDM_DISABLE = False
 
@@ -37,7 +39,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
      DataLoader: DataLoader containing the tokenized data.
      """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    #scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
     is_test = False
     if 'sentence2' not in dataset:
@@ -51,30 +53,69 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
         sentence1 = row['sentence1'] # input sentence
         sentence2 = row['sentence2'] if not is_test else None # target sentence
 
+        # TODO converting numbers to words, this is to make sure the model does not hallucinate numbers
+        #sentence1 = nums2word_word2nums(sentence1, input_type='digits', num_tag=False)
+
+        # TODO tag the POS of the sentence
+        sentence1_tokens, sentence1_tags = tag_pos(sentence1)
+        ## must be removed ##
+        # join the tokens and tags with "/"
+        #sentence1 = [f"{token}/{tag}" for token, tag in zip(sentence1_tokens, sentence1_tags)]
+        #taggged_sentence = ' '.join(sentence1)
+        ## must be removed ##
+
         # TODO get the most important tokens
         #sentence1_tokens = row['sentence1_tokenized']
-        tokens = tokenizer.tokenize(sentence1)
-        important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
+        #tokens = tokenizer.tokenize(sentence1)
+        #important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
 
         # TODO mask the most important tokens
-        masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
+        #masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
+
+        # TODO maks random verbs
+        verb_tokens = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if
+                       tag == 'VERB']  # assumes there exists a tag for verbs
+        if len(verb_tokens) > 0:
+            # take a  verb randomly and mask
+            verb_token = random.choice(verb_tokens)
+            masked_sentence = sentence1.replace(verb_token, tokenizer.mask_token)
+        else:
+            masked_sentence = sentence1
+
+        # rotate the sentence parts if there is , in the between
+        if ',' in masked_sentence:
+            masked_sentence = masked_sentence.split(',')
+            masked_sentence = masked_sentence[::-1]
+            masked_sentence = ','.join(masked_sentence)
+
+        # mask a random adjective
+        adj_tokens = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if
+                      tag == 'ADJ']
+        if len(adj_tokens) > 0:
+            adj_token = random.choice(adj_tokens)
+            masked_sentence = masked_sentence.replace(adj_token, tokenizer.mask_token)
+        else:
+            masked_sentence = masked_sentence
+
 
         sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
         paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
-        #print("input: ", formatted_sentence)
+        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
+        #formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        print("input: ", formatted_sentence)
 
         sentences.append(formatted_sentence)
 
         if not is_test:
             sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
             formatted_sentence2 = f"{sentence2}"
-            #print("target: ", formatted_sentence2)
+            print("target: ", formatted_sentence2)
             target_sentences.append(formatted_sentence2)
 
 
     # Tokenize the sentences
     inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+
     if not is_test:
         labels = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
@@ -85,6 +126,52 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
     return data_loader
 
+
+'''def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,  tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
+    """
+    Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
+    Args:
+    dataset (pd.DataFrame): The dataset to transform.
+    max_length (int): Maximum token length. Defaults to 256.
+    batch_size (int): Size of data batches. Defaults to 16.
+    tokenizer_name (str): Name of the tokenizer to use. Defaults to 'facebook/bart-large'.
+    Returns:
+    DataLoader: DataLoader containing the tokenized data.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+
+    is_test = False
+    if 'sentence2' not in dataset:
+        is_test = True
+
+    sentences = []
+    target_sentences = []
+    for _, row in dataset.iterrows():
+        sentence1 = row['sentence1']
+        sentence2 = row['sentence2'] if not is_test else None
+
+        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
+        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
+        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
+        print("input: ", formatted_sentence)
+
+        sentences.append(formatted_sentence)
+
+        if not is_test:
+            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
+            formatted_sentence2 = f"{sentence2}"
+            print("target: ", formatted_sentence2)
+            target_sentences.append(formatted_sentence2)
+
+
+
+    encodings = tokenizer(sentences, target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+    target_encodings = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+    dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'], target_encodings['input_ids'])
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return data_loader
+'''
 
 def get_important_tokens(sentence1: str, sentence2: str, scorer: rouge_scorer.RougeScorer, tokens: list) -> list:
     """
@@ -117,7 +204,7 @@ def train_model(model: BartForConditionalGeneration,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
                 epochs: int = 3,
-                learning_rate: float = 1e-5,
+                learning_rate: float = 3e-5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
     """
@@ -134,6 +221,8 @@ def train_model(model: BartForConditionalGeneration,
     Returns:
     BartForConditionalGeneration: The trained model.
     """
+
+
     # Set model to training mode
     model.train()
 
@@ -141,7 +230,7 @@ def train_model(model: BartForConditionalGeneration,
     #optimizer = AdamW(model.parameters(), lr=learning_rate, betas=(0.1, 0.001), eps=1e-8, weight_decay=0.01)
     #optimizer = AdamW(model.parameters(), lr=learning_rate)
     optimizer = SophiaG(model.parameters(), lr=learning_rate)
-    #scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
+    #scheduler = StepLR(optimizer, step_size=1, gamma=0.2)
 
     # configured loss function
     loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
@@ -168,10 +257,89 @@ def train_model(model: BartForConditionalGeneration,
             loss.backward()
             optimizer.step()
 
+            #scheduler.step()
+
             print(f"Loss: {loss.item()}")
 
-    return model
+        # Evaluate the model with penalized BLEU score
+        penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
 
+        # TODO using genetic algorithm to optimize the model with the best hyperparameters and objective best penalized BLEU score
+
+    return model
+'''
+
+def train_model(model: BartForConditionalGeneration,
+                train_loader: DataLoader,
+                val_dataset: Dataset,
+                device: torch.device,
+                tokenizer: AutoTokenizer,
+                num_trials: int = 10,
+                output_dir: str = "models/bart_finetuned_model"
+                ) -> BartForConditionalGeneration:
+    """
+    Train the BART model using random hyperparameter search.
+    """
+
+    def train_with_params(epochs, learning_rate, step_size, gamma):
+        model.train()
+        optimizer = SophiaG(model.parameters(), lr=learning_rate)
+        scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
+        loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
+
+        for epoch in range(epochs):
+            for batch in train_loader:
+                input_ids, attention_mask, labels = [x.to(device) for x in batch]
+                optimizer.zero_grad()
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                loss = loss_fc(outputs.logits.view(-1, tokenizer.vocab_size), labels.view(-1))
+                loss.backward()
+                optimizer.step()
+            scheduler.step()
+
+            try:
+                penalized_bleu = evaluate_model(model, val_dataset, device, tokenizer)
+            except:
+                penalized_bleu = 0
+
+        return penalized_bleu
+
+    best_score = float("-inf")
+    best_params = None
+
+    for trial in range(num_trials):
+        # Random hyperparameter sampling
+        epochs = 3
+        learning_rate = random.uniform(1e-6, 1e-3)
+        step_size = random.randint(1, 2)
+        gamma = random.uniform(0.1, 0.9)
+
+        print(f"Trial {trial + 1}/{num_trials}")
+        print(f"Epochs: {epochs}, Learning rate: {learning_rate:.6f}, Step size: {step_size}, Gamma: {gamma:.3f}")
+
+        # Train and evaluate with these hyperparameters
+        score = train_with_params(epochs, learning_rate, step_size, gamma)
+
+        print(f"Penalized BLEU Score: {score}")
+
+        if score > best_score:
+            best_score = score
+            best_params = (epochs, learning_rate, step_size, gamma)
+
+        print(f"Best score so far: {best_score}")
+        print()
+
+    print("Best hyperparameters found:")
+    print(f"Epochs: {best_params[0]}")
+    print(f"Learning rate: {best_params[1]:.6f}")
+    print(f"Step size: {best_params[2]}")
+    print(f"Gamma: {best_params[3]:.3f}")
+
+    # Train the final model with the best hyperparameters
+    final_model = train_with_params(*best_params)
+
+    return final_model
+'''
 
 def test_model(test_data: DataLoader,
                test_ids: pd.Series,
@@ -252,8 +420,13 @@ def evaluate_model(model, test_data, device, tokenizer):
 
             predictions.extend(pred_text)
 
+
     inputs = test_data["sentence1"].tolist()
     references = test_data["sentence2"].tolist()
+
+    print("inputs: ", inputs)
+    print("references: ", references)
+    print("predictions: ", predictions)
 
     model.train()
     # Calculate BLEU score
@@ -321,18 +494,18 @@ def finetune_paraphrase_generation(args: argparse.Namespace) -> None:
     # we split the train and generated dev, then usd dev as the validation set
 
     # subset for development
-    train_dataset = train_dataset.sample(frac=0.1)
-    dev_dataset = dev_dataset.sample(frac=0.1)
-    test_dataset = test_dataset.sample(frac=0.1)
+    train_dataset = train_dataset.sample(frac=0.005)
+    dev_dataset = dev_dataset.sample(frac=0.005)
+    test_dataset = test_dataset.sample(frac=0.005)
     ###########################################################################
 
     train_loader = transform_data(train_dataset, shuffle=True)
-    dev_loader = transform_data(dev_dataset, shuffle=False)
+    #dev_loader = transform_data(dev_dataset, shuffle=False)
     test_loader = transform_data(test_dataset, shuffle=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_loader, dev_loader, device, tokenizer)
+    model = train_model(model, train_loader, dev_dataset, device, tokenizer)
 
     print("Training finished.")
 

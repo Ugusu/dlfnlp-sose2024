@@ -25,6 +25,12 @@ from torch import Tensor
 from tqdm.auto import tqdm
 from torch.nn import functional as F
 
+import re
+from num2words import num2words
+from words2num import w2n as word2num
+
+import spacy
+
 __version__ = "4.0.0"
 _torch_version = importlib_metadata.version("torch")
 
@@ -490,3 +496,115 @@ def apply_rotary_pos_emb(x, cos, sin):
     cos = cos.repeat_interleave(2, dim=-1)
     sin = sin.repeat_interleave(2, dim=-1)
     return (x * cos) + (rotate_half(x) * sin)
+
+def nums2word_word2nums(sentence: str, input_type: str = "digits", num_tag: bool = True) -> str:
+    """
+    Replace numbers with letters.
+    :param sentence: Input sentence
+    :param input_type: Type of input sentence (digits or words) - words only works if there are <num> </num> tokens
+    :param num_tag: Tag the numbers with <num> </num> tokens
+    """
+
+    # TODO not perfect can be improved
+    """def create_number_dictionary():
+        number_dict = {}
+
+        # Single digits and teens
+        for i in range(0, 20):
+            number_dict[num2words(i)] = str(i)
+
+        # Tens
+        for i in range(20, 101, 10):
+            number_dict[num2words(i)] = str(i)
+
+        # Hundreds
+        for i in range(100, 1001, 100):
+            number_dict[num2words(i)] = str(i)
+
+        # Large numbers
+        large_numbers = [1000, 1000000, 1000000000, 1000000000000]
+        for num in large_numbers:
+            number_dict[num2words(num)] = str(num)
+
+        # Special cases
+        number_dict['a'] = '1'
+        number_dict['an'] = '1'
+        number_dict['zero'] = '0'
+        number_dict['oh'] = '0'
+        number_dict['point'] = '.'
+        number_dict['negative'] = '-'
+        number_dict['million'] = 'million'
+
+        return number_dict"""
+
+    text = sentence
+    def digits_to_words(match):
+
+        number = match.group(0)
+        #print(' I am the match: ', number)
+        # if there is a string in the number, it probably has a scale
+        scale = ''
+        splits = number.split()
+        if len(splits) > 1:
+            number = splits[0]
+            scale = ' ' + splits[1]
+
+        if '.' in number:
+            integer_part, decimal_part = number.split('.')
+            integer_words = num2words(int(integer_part))
+            decimal_words = ' point ' + num2words(int(decimal_part))
+            word_num = integer_words + decimal_words
+            if num_tag:
+                # add a special token so that we can distinguish between the synthetic numbers and the rest of the text
+                return '<num> ' + word_num + scale + ' </num>'
+            else:
+                return word_num + scale
+        else:
+            # add a special token so that we can distinguish between the synthetic numbers and the rest of the text
+            word_num = num2words(int(number))
+            if num_tag:
+                return '<num> ' + word_num + scale + ' </num>'
+            else:
+                return word_num + scale
+
+    def words_to_digits(text):
+        # find the tagged numbers
+        tagged_numbers = re.findall(r'<num> (.*?) <', text)
+        for num in tagged_numbers:
+            # convert the number to digits
+            digit = word2num(num, 'en')
+            #print('I am the digit: ', digit)
+            # replace the tagged number with the digit
+            text = text.replace(f'<num> {num} </num>', str(digit))
+
+        return text
+
+    if input_type == "digits":
+        text = re.sub(r'\b-?\d+(?:\.\d+)?\b', digits_to_words, sentence)
+        print("digit_to_word output: ", text)
+
+    elif input_type == "words":
+        text = words_to_digits(sentence)
+        print("word_to_digit output: ", text)
+
+    return text
+
+
+#nums2word_word2nums("I have 25 apples and 30.05 oranges. The temperature is -2.3 degrees Celsius.", input_type="digits")
+#nums2word_word2nums("I have <num> twenty-five </num> apples and <num> thirty point zero five </num> oranges. The temperature is -<num> two point three </num> degrees Celsius.", input_type="words")
+
+
+def tag_pos(sentence: str):
+    """
+    Using spacy to tag the POS of the sentence
+    """
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp(sentence)
+    w_tokens = []
+    w_pos = []
+
+    for token in doc:
+        w_tokens.append(token.text)
+        w_pos.append(token.pos_)
+
+    return w_tokens, w_pos
