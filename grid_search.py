@@ -1,5 +1,3 @@
-import sys
-
 from multitask_classifier import get_args, seed_everything, train_multitask, test_model
 import itertools
 import json
@@ -10,26 +8,28 @@ import os
 
 
 def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
+    args = get_args()
+    args.pooling = pooling_strategy
+    args.lr = learning_rate
+    args.hidden_dropout_prob = hidden_dropout_prob
+    args.batch_size = batch_size
+    args.filepath = f"models/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
+
+    # Saved model for testing
+    # args.filepath = f"models/experiment-cls-1e-05-0.3-64.pt"
+
     try:
-        args = get_args()
-        args.pooling = pooling_strategy
-        args.lr = learning_rate
-        args.hidden_dropout_prob = hidden_dropout_prob
-        args.batch_size = batch_size
-        args.filepath = f"models/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
-
-        # Saved model for testing
-        # args.filepath = f"models/experiment-cls-1e-05-0.3-64.pt"
-
         seed_everything(args.seed)
         train_multitask(args)
+
+        if not os.path.exists(args.filepath):
+            raise FileNotFoundError(f"Model file not found after training: {args.filepath}")
+
         sst_accuracy, quora_accuracy, sts_corr = test_model(args)
 
-        if all(metric is None for metric in [sst_accuracy, quora_accuracy, sts_corr]):
-            raise ValueError("All evaluation metrics are None")
-
-        # Delete the saved model file after evaluation
-        delete_model(args.filepath)
+        # Only delete the file after successful testing
+        os.remove(args.filepath)
+        print(f"Deleted model file: {args.filepath}")
 
         return {
             "pooling_strategy": pooling_strategy,
@@ -49,8 +49,14 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
         print(f"  batch_size: {batch_size}")
+        print(f"\nError: {str(e)}")
         print("\nFull stack trace:")
         traceback.print_exc()
+
+        # Attempt to delete the model file if it exists
+        if os.path.exists(args.filepath):
+            os.remove(args.filepath)
+            print(f"Deleted model file after error: {args.filepath}")
 
         return {
             "pooling_strategy": pooling_strategy,
@@ -69,7 +75,7 @@ def grid_search():
 
     if run_test:
         pooling_strategies = ["cls", "average"]
-        learning_rates = [1e-5, 1e-5]
+        learning_rates = [1e-5]
         hidden_dropout_probs = [0.3]
         batch_sizes = [64]
     else:
