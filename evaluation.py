@@ -364,3 +364,15 @@ def test_model_multitask(args, model, device):
             f.write("id,Predicted_Similarity\n")
             for p, s in zip(test_sts_sent_ids, test_sts_y_pred):
                 f.write(f"{p}\t{s}\n")
+
+    # Return values for grid search
+    if task == "sst":
+        return dev_sst_accuracy, None, None
+    elif task == "qqp":
+        return None, dev_quora_accuracy, None
+    elif task == "sts":
+        return None, None, dev_sts_corr
+    elif task == "multitask":
+        return dev_sst_accuracy, dev_quora_accuracy, dev_sts_corr
+    else:
+        raise ValueError(f"Unknown task: {task}")

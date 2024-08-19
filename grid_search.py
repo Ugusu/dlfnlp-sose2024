@@ -18,14 +18,15 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         args.batch_size = batch_size
         args.filepath = f"models/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
 
+        # Saved model for testing
+        # args.filepath = f"models/experiment-cls-1e-05-0.3-64.pt"
+
         seed_everything(args.seed)
         train_multitask(args)
-        result = test_model(args)
+        sst_accuracy, quora_accuracy, sts_corr = test_model(args)
 
-        if result is None:
-            raise ValueError("test_model returned None")
-
-        quora_accuracy, _, _, sst_accuracy, _, _, sts_corr, _, _ = result
+        if all(metric is None for metric in [sst_accuracy, quora_accuracy, sts_corr]):
+            raise ValueError("All evaluation metrics are None")
 
         # Delete the saved model file after evaluation
         delete_model(args.filepath)
@@ -35,10 +36,11 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
-            "quora_accuracy": quora_accuracy,
             "sst_accuracy": sst_accuracy,
+            "quora_accuracy": quora_accuracy,
             "sts_correlation": sts_corr,
-            "average_performance": (quora_accuracy + sst_accuracy + sts_corr) / 3,
+            "average_performance": sum(filter(None, [sst_accuracy, quora_accuracy, sts_corr])) / sum(
+                1 for metric in [sst_accuracy, quora_accuracy, sts_corr] if metric is not None),
             "status": "success"
         }
     except Exception as e:
@@ -48,7 +50,7 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
         print(f"  batch_size: {batch_size}")
         print("\nFull stack trace:")
-        traceback.print_exc(file=sys.stdout)
+        traceback.print_exc()
 
         return {
             "pooling_strategy": pooling_strategy,
