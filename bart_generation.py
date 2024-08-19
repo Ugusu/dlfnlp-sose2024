@@ -26,16 +26,16 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 10,
+    "epochs": 5,
     "learning_rate": 1e-4,
     "optimizer": "SophiaG",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.2,
-    "batch_size": 16,
+    "batch_size": 8,
     "max_length": 256,
-    "num_layers_to_freeze": 8,
+    "num_layers_to_freeze": 4,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
