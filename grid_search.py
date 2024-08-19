@@ -70,7 +70,6 @@ def run_experiment(pooling_strategy, learning_rate, hidden_dropout_prob, batch_s
 
 
 def grid_search():
-    
     run_test = True
 
     if run_test:
@@ -87,6 +86,7 @@ def grid_search():
     all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
 
     results = []
+    best_result = None
 
     for combo in tqdm(all_combinations, desc="Grid Search Progress"):
         result = run_experiment(*combo)
@@ -99,19 +99,25 @@ def grid_search():
             print("Full traceback:")
             print(result['traceback'])
 
-        # Save results after each experiment
-        with open("grid_search_results.json", "w") as f:
-            json.dump(results, f, indent=2)
+        # Update best_result if this experiment was successful and better than previous best
+        if result['status'] == 'success':
+            if best_result is None or result['average_performance'] > best_result['average_performance']:
+                best_result = result
 
-        # Find best configuration
-    successful_results = [r for r in results if r['status'] == 'success']
-    if successful_results:
-        best_result = max(successful_results, key=lambda x: x["average_performance"])
+        # Save results and best_result after each experiment
+        output = {
+            "all_results": results,
+            "best_result": best_result
+        }
+        with open("grid_search_results.json", "w") as f:
+            json.dump(output, f, indent=2)
+
+    # Print best configuration
+    if best_result:
         print("\nBest configuration:")
         print(json.dumps(best_result, indent=2))
     else:
         print("\nNo successful experiments found.")
-        best_result = None
 
     return results, best_result
 
