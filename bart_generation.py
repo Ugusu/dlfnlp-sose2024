@@ -14,8 +14,8 @@ from transformers import AutoTokenizer, BartForConditionalGeneration, BartConfig
 from torch.optim.lr_scheduler import StepLR
 
 from optimizer import AdamW, SophiaG
-from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
-from typing import Optional, Tuple
+#from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
+#from typing import Optional, Tuple
 from rouge_score import rouge_scorer
 
 from utils import nums2word_word2nums, tag_pos
