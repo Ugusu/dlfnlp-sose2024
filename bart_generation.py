@@ -27,12 +27,12 @@ data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
     "epochs": 5,
-    "learning_rate": 1e-3,
+    "learning_rate": 5e-5,
     "optimizer": "SophiaG",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.5,
+    "scheduler_gamma": 0.8,
     "batch_size": 32,
     "max_length": 256,
     "num_layers_to_freeze": 4,
