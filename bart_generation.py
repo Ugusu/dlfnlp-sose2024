@@ -1,11 +1,13 @@
 import argparse
 import os
 import random
+#from cgitb import reset
 
 import numpy as np
 import pandas as pd
 import torch
 from sacrebleu.metrics import BLEU
+#from spacy.symbols import punct
 from torch import nn
 
 from torch.utils.data import DataLoader, TensorDataset, Dataset
@@ -18,7 +20,10 @@ from optimizer import AdamW, SophiaG
 #from typing import Optional, Tuple
 from rouge_score import rouge_scorer
 
+#from split_train_dev import dev_dataset
 from utils import nums2word_word2nums, tag_pos
+
+import joblib
 
 TQDM_DISABLE = False
 
@@ -26,16 +31,16 @@ TQDM_DISABLE = False
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 5,
-    "learning_rate": 5e-5,
+    "epochs": 3,
+    "learning_rate": 3e-5,
     "optimizer": "SophiaG",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.8,
+    "scheduler_gamma": 0.5,
     "batch_size": 16,
     "max_length": 256,
-    "num_layers_to_freeze": 6,
+    "num_layers_to_freeze": 8,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -56,6 +61,166 @@ config_dict = {
 }
 
 
+def process_row(row, tokenizer_sep_token, tokenizer_mask_token ,is_test):
+
+    formatted_sentence2 = None
+
+    sentence1_tokens, sentence1_tags = tag_pos(row['sentence1'])
+
+    # Masking operations
+    masked_sentence, sentence1_tags_str = mask_tokens(row['sentence1'], sentence1_tokens, sentence1_tags, tokenizer_mask_token)
+
+    # Format input sentence
+    formatted_sentence = f"{masked_sentence}  {tokenizer_sep_token} {sentence1_tags_str}"
+
+    if not is_test:
+        formatted_sentence2 = f"{row['sentence2']}"
+
+    return formatted_sentence, formatted_sentence2
+
+
+def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
+
+    # Mask a random verb
+    verb_tokens = [token for token, tag in zip(tokens, tags) if tag == 'VERB']
+    if verb_tokens:
+        verb_token = random.choice(verb_tokens)
+        # replace the token in tokens
+        tokens = [tokenizer_mask_token if token == verb_token else token for token in tokens]
+        #masked_sentence = masked_sentence.replace(verb_token, tokenizer_mask_token)
+
+    # Convert conjunctions to comma
+    sconjs = [token for token, tag in zip(tokens, tags) if tag == 'SCONJ']
+    if sconjs:
+        sconj = random.choice(sconjs)
+        # replace the token in tokens
+        tokens = [',' if token == sconj else token for token in tokens]
+        # masked_sentence = masked_sentence.replace(sconjs[0], ',')
+
+    # Rotate sentence parts if there's a comma
+    # order the tags to match the tokens by zipping them together
+    # find the tag of the comma
+    if ',' in sentence:
+        punctuations = [token for token, tag in zip(tokens, tags) if token == ',']
+        if punctuations:
+            punctuation_token = random.choice(punctuations)
+            punctuation_index = tokens.index(punctuation_token)
+            # rotate sentence and tags based on the punctuation index
+            # Rotate the masked sentence, tokens, and tags based on the punctuation index
+            tokens = tokens[punctuation_index + 1:] + tokens[:punctuation_index + 1]
+            tags = tags[punctuation_index + 1:] + tags[:punctuation_index + 1]
+
+
+    # Mask a random adjective
+    adj_tokens = [token for token, tag in zip(tokens, tags) if tag == 'ADJ']
+    if adj_tokens:
+        adj_token = random.choice(adj_tokens)
+        # replace the token in tokens
+        tokens = [tokenizer_mask_token if token == adj_token else token for token in tokens]
+        #masked_sentence = masked_sentence.replace(adj_token, tokenizer_mask_token)
+
+    # Mask a random noun
+    noun_tokens = [token for token, tag in zip(tokens, tags) if tag == 'NOUN']
+    if noun_tokens:
+        noun_token = random.choice(noun_tokens)
+        # replace the token in tokens
+        tokens = [tokenizer_mask_token if token == noun_token else token for token in tokens]
+        #masked_sentence = masked_sentence.replace(noun_token, tokenizer_mask_token)
+
+    # join tokens to form the masked sentence
+    masked_sentence = ' '.join(tokens)
+    sentence_tags = ' '.join(tags)
+
+    return masked_sentence, sentence_tags
+
+
+'''import pandas as pd
+from typing import List, Tuple
+import joblib
+from contextlib import contextmanager
+import threading
+
+# Global lock to ensure atomic execution
+_process_lock = threading.Lock()
+
+
+@contextmanager
+def atomic_execution():
+    """Context manager to ensure atomic execution of a block of code."""
+    with _process_lock:
+        yield
+
+
+def process_sentences(dataset: pd.DataFrame) -> Tuple[List[str], List[str]]:
+    """
+    Transform the dataset for model input in parallel. Tokenizes and formats data.
+
+    Args:
+    dataset (pd.DataFrame): The dataset to transform.
+
+    Returns:
+    Tuple[List[str], List[str]]: A tuple containing two lists - input sentences and target sentences.
+    """
+    print("len(dataset): ", len(dataset))
+    with atomic_execution():
+        tokenizer_sep_token = "</s>"
+        tokenizer_mask_token = "<mask>"
+        print(tokenizer_sep_token, tokenizer_mask_token)
+
+        is_test = 'sentence2' not in dataset
+
+        # Perform multiprocessing
+        results = joblib.Parallel(n_jobs=-1, backend="multiprocessing")(
+            joblib.delayed(process_row)(row, tokenizer_sep_token, tokenizer_mask_token, is_test)
+            for _, row in dataset.iterrows()
+        )
+
+        # Unpack results only after all processing is complete
+        sentences, target_sentences = zip(*results)
+
+        print(f"Processed {len(sentences)} sentences")
+
+        assert len(sentences) == len(dataset), "Number of processed sentences doesn't match input dataset size"
+
+        return list(sentences), list(target_sentences)'''
+
+
+def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
+                   tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
+    """
+    Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
+    Args:
+    dataset (pd.DataFrame): The dataset to transform.
+    max_length (int): Maximum token length. Defaults to 256.
+    batch_size (int): Size of data batches. Defaults to 16.
+    tokenizer_name (str): Name of the tokenizer to use. Defaults to 'facebook/bart-large'.
+    Returns:
+    DataLoader: DataLoader containing the tokenized data.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+
+    print("Processing sentences...")
+    with joblib.Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
+        sentences, target_sentences = zip(*parallel(joblib.delayed(process_row)(row, tokenizer.sep_token, tokenizer.mask_token, 'sentence2' not in dataset) for _, row in dataset.iterrows()))
+
+    print("Done processing sentences.")
+    print(sentences[0], target_sentences[0])
+    print(len(sentences), len(target_sentences))
+
+    # Tokenize the sentences
+    inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+
+    if target_sentences[0]:
+        labels = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
+        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
+    else:
+        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
+
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return data_loader
+
+'''
 def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
                    tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
     """
@@ -174,7 +339,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
 
     return data_loader
-
+'''
 def modified_BART_model(num_layers_to_freeze: int = 8):
     """
     Modifies a BARTForConditionalGeneration model for paraphrasing by freezing some encoder layers.
@@ -579,6 +744,7 @@ def evaluate_model(model, test_data, device, tokenizer):
     test_data is a Pandas Dataframe, the column "sentence1" contains all input sentence and
     the column "sentence2" contains all target sentences
     """
+    model.to(device)
     model.eval()
     bleu = BLEU()
     predictions = []
@@ -746,7 +912,32 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
 
     return bleu_score
 
+'''def test_pipeline():
 
+    # load the model saved
+    model = BartForConditionalGeneration.from_pretrained("models/bart_finetuned_model")
+    model.eval()
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
+
+    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
+    test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
+    dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
+    test_loader = transform_data(test_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"])
+
+    bleu_score = evaluate_model(model, dev_dataset, device, tokenizer)
+    print(f"The penalized BLEU-score of the model is: {bleu_score:.3f}")
+
+    test_ids = test_dataset["id"]
+    test_results = test_model(test_loader, test_ids, device, model, tokenizer)
+    test_results.to_csv(
+        "predictions/bart/etpc-paraphrase-generation-test-output.csv", index=False, sep="\t"
+    )
+
+    collect_logs(config_dict)
+
+    return'''
+
+'''
 ## Optimization using genetic algorithm
 # Mutation function
 def mutate(config):
@@ -782,8 +973,8 @@ def mutate(config):
         mutated_config[key] = random.choice(["indirect", "direct"])
 
     return mutated_config
-
-
+'''
+'''
 # Crossover function
 def crossover(parent1, parent2):
     """
@@ -793,8 +984,8 @@ def crossover(parent1, parent2):
     for key in parent1.keys():
         child[key] = random.choice([parent1[key], parent2[key]])
     return child
-
-
+'''
+"""
 # Genetic Algorithm
 def genetic_algorithm(config_dict, population_size=10, generations=5, args=None):
     # Initialize population
@@ -833,7 +1024,7 @@ def genetic_algorithm(config_dict, population_size=10, generations=5, args=None)
     collect_logs(best_individual, output_dir="logs/genetic_algorithm")
 
     return
-
+"""
 
 if __name__ == "__main__":
     args = get_args()
