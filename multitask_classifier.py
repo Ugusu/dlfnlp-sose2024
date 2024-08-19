@@ -65,6 +65,8 @@ class MultitaskBERT(nn.Module):
         # Global Context Layer
         self.global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
 
+        self.global_context_layer2 = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
+
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.sentiment_classifier = nn.Linear(
@@ -101,6 +103,8 @@ class MultitaskBERT(nn.Module):
 
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
+
+        sequence_output = self.global_context_layer2(sequence_output)
 
         match pooling_strategy:
             case PoolingStrategy.AVERAGE:
