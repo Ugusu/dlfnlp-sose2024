@@ -37,10 +37,10 @@ config_dict = {
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.5,
-    "batch_size": 16,
+    "scheduler_gamma": 0.2,
+    "batch_size": 32,
     "max_length": 256,
-    "num_layers_to_freeze": 8,
+    "num_layers_to_freeze": 6,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -217,6 +217,11 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
         dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
 
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    # log information
+    config_dict["input_format"] = "{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
+    config_dict["target_format"] = "{sentence2}"
+    config_dict["other_details"] = "masked a random verb, adjective, noun, and conjunction"
 
     return data_loader
 
