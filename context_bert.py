@@ -27,8 +27,10 @@ class ContextualAttention(nn.Module):
         self.context_key_proj = nn.Linear(hidden_size, hidden_size)
 
         # Gating parameters
-        self.hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
-        self.context_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.query_hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.key_hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.query_context_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.key_context_gate = nn.Parameter(torch.randn(hidden_size, 1))
 
     def forward(self,
                 hidden_states: torch.Tensor,
@@ -53,10 +55,10 @@ class ContextualAttention(nn.Module):
 
         # Gating mechanism
         query_gate = torch.sigmoid(
-            query.matmul(self.hidden_gate) + context_vector.matmul(self.context_query_proj.weight.t()).unsqueeze(1)
+            query.matmul(self.query_hidden_gate) + context_vector.matmul(self.query_context_gate).unsqueeze(1)
         )  # [batch_size, seq_len, 1]
         key_gate = torch.sigmoid(
-            key.matmul(self.hidden_gate) + context_vector.matmul(self.context_key_proj.weight.t()).unsqueeze(1)
+            key.matmul(self.key_hidden_gate) + context_vector.matmul(self.key_context_gate).unsqueeze(1)
         )  # [batch_size, seq_len, 1]
 
         # Incorporate context into queries and keys
@@ -147,8 +149,10 @@ class ContextualAttentionRegularized(nn.Module):
         self.context_key_proj = nn.Linear(hidden_size, hidden_size)
 
         # Gating parameters
-        self.hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
-        self.context_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.query_hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.key_hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.query_context_gate = nn.Parameter(torch.randn(hidden_size, 1))
+        self.key_context_gate = nn.Parameter(torch.randn(hidden_size, 1))
 
         # Layer normalization
         self.layer_norm1 = nn.LayerNorm(hidden_size)
@@ -183,10 +187,10 @@ class ContextualAttentionRegularized(nn.Module):
 
         # Gating mechanism
         query_gate = torch.sigmoid(
-            query.matmul(self.hidden_gate) + context_vector.matmul(self.context_query_proj.weight.t()).unsqueeze(1)
+            query.matmul(self.query_hidden_gate) + context_vector.matmul(self.query_context_gate).unsqueeze(1)
         )  # [batch_size, seq_len, 1]
         key_gate = torch.sigmoid(
-            key.matmul(self.hidden_gate) + context_vector.matmul(self.context_key_proj.weight.t()).unsqueeze(1)
+            key.matmul(self.key_hidden_gate) + context_vector.matmul(self.key_context_gate).unsqueeze(1)
         )  # [batch_size, seq_len, 1]
 
         # Incorporate context into queries and keys
