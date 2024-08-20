@@ -62,10 +62,9 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
 
-        # Global Context Layer
-        self.global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
-
-        self.global_context_layer2 = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
+        # Global Context Layers
+        self.encoding_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
+        self.pooling_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
 
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -104,7 +103,7 @@ class MultitaskBERT(nn.Module):
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
 
-        sequence_output = self.global_context_layer2(sequence_output)
+        sequence_output = self.encoding_global_context_layer(sequence_output)
 
         match pooling_strategy:
             case PoolingStrategy.AVERAGE:
@@ -117,7 +116,7 @@ class MultitaskBERT(nn.Module):
 
             case PoolingStrategy.ATTENTION:
                 # Use attention scores from the Global Context Layer for pooling
-                attention_scores = self.global_context_layer.get_attention_scores(
+                attention_scores = self.pooling_global_context_layer.get_attention_scores(
                     sequence_output)  # [batch_size, seq_len, 1]
                 attention_weights = torch.softmax(attention_scores, dim=1)  # [batch_size, seq_len, 1]
 
