@@ -24,8 +24,12 @@ from rouge_score import rouge_scorer
 from utils import nums2word_word2nums, tag_pos
 
 import joblib
+import concurrent.futures
+import multiprocessing
+from functools import partial
 
 TQDM_DISABLE = False
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # define the local path to the data
 data_path = os.path.join(os.getcwd(), 'data')
@@ -200,8 +204,28 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     print("Processing sentences...")
-    with joblib.Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
-        sentences, target_sentences = zip(*parallel(joblib.delayed(process_row)(row, tokenizer.sep_token, tokenizer.mask_token, 'sentence2' not in dataset) for _, row in dataset.iterrows()))
+    #with joblib.Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
+    #    sentences, target_sentences = zip(*parallel(joblib.delayed(process_row)(row, tokenizer.sep_token, tokenizer.mask_token, 'sentence2' not in dataset) for _, row in dataset.iterrows()))
+
+    # Initialize tokenizer outside of the multiprocessing to avoid issues
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    sep_token = tokenizer.sep_token
+    mask_token = tokenizer.mask_token
+    is_test = 'sentence2' not in dataset
+
+    # Prepare the process_row function with fixed arguments
+    process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, is_test=is_test)
+
+    # Use multiprocessing for parallel processing
+    num_cores = multiprocessing.cpu_count()
+    with multiprocessing.Pool(processes=num_cores) as pool:
+        results = list(tqdm(
+            pool.imap(process_row_partial, [row for _, row in dataset.iterrows()]),
+            total=len(dataset),
+            desc="Processing rows"
+        ))
+
+    sentences, target_sentences = zip(*results)
 
     print("Done processing sentences.")
     print(sentences[0], target_sentences[0])
