@@ -46,7 +46,7 @@ class ContextualAttention(nn.Module):
         attention_probs = F.softmax(attention_scores, dim=-1)  # [batch_size, seq_len, seq_len]
         O = torch.matmul(attention_probs, V)  # [batch_size, seq_len, hidden_size]
 
-        return O
+        return O, attention_scores
 
 
 class GlobalContextLayer(nn.Module):
@@ -64,9 +64,9 @@ class GlobalContextLayer(nn.Module):
         C = torch.mean(H, dim=1)  # [batch_size, hidden_size]
 
         # Apply custom contextual attention mechanism
-        O = self.custom_attention(H, C)  # [batch_size, seq_len, hidden_size]
+        O, attention_scores = self.custom_attention(H, C)  # [batch_size, seq_len, hidden_size]
 
-        return O
+        return O, attention_scores
 
 
 class ContextualAttentionRegularized(nn.Module):
@@ -129,7 +129,7 @@ class ContextualAttentionRegularized(nn.Module):
         # Apply second layer normalization and residual connection
         O = self.layer_norm2(O + H)
 
-        return O
+        return O, attention_scores
 
 
 class GlobalContextLayerRegularized(nn.Module):
@@ -164,9 +164,9 @@ class GlobalContextLayerRegularized(nn.Module):
         C = self.dropout(C)
 
         # Apply custom contextual attention mechanism
-        O = self.custom_attention(H, C)  # [batch_size, seq_len, hidden_size]
+        O, attention_scores = self.custom_attention(H, C)  # [batch_size, seq_len, hidden_size]
 
         # Apply final layer normalization and residual connection
         O = self.layer_norm(O + H)
 
-        return O
+        return O, attention_scores
