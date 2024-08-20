@@ -58,6 +58,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         delete_model(args.filepath)
 
         return {
+            "sophia_optimizer": "True",
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
             "pooling_strategy": pooling_strategy_str,
@@ -73,6 +74,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         }
     except Exception as e:
         print(f"\nError in experiment with parameters:")
+        print(f"  sopia_optiizer: True")
         print(f"  extra_context_layer: {context_layer}")
         print(f"  regularize_context: {regularize_context}")
         print(f"  pooling_strategy: {pooling_strategy_str}")
@@ -87,6 +89,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         delete_model(args.filepath)
 
         return {
+            "sophia_optimizer": "True",
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
             "pooling_strategy": pooling_strategy_str,
