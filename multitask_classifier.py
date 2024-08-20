@@ -64,6 +64,7 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
 
         # Global Context Layers
+        args = get_args()
         self.encoding_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE) \
             if args.regularize_context is False \
             else GlobalContextLayerRegularized(hidden_size=BERT_HIDDEN_SIZE)
