@@ -153,7 +153,7 @@ def grid_search():
 def delete_model(args_filepath: str) -> None:
     if os.path.exists(args_filepath):
         os.remove(args_filepath)
-        print(f"Deleted model file after error: {args_filepath}")
+        print(f"Deleted model file: {args_filepath}")
 
 
 if __name__ == "__main__":
