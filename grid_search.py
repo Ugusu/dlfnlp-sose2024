@@ -104,18 +104,11 @@ def grid_search():
     results_dir = f"results/{run_id}"
     ensure_directory(results_dir)
 
-    run_test = False
-
-    if run_test:
-        pooling_strategies = [PoolingStrategy.ATTENTION, PoolingStrategy.CLS]
-        learning_rates = [1e-5]
-        hidden_dropout_probs = [0.3]
-        batch_sizes = [64]
-    else:
-        pooling_strategies = [PoolingStrategy.CLS, PoolingStrategy.CLS, PoolingStrategy.MAX, PoolingStrategy.ATTENTION]
-        learning_rates = [1e-5, 5e-5]
-        hidden_dropout_probs = [0.3, 0.5]
-        batch_sizes = [16, 32, 64]
+    pooling_strategies = [PoolingStrategy.CLS, PoolingStrategy.AVERAGE, PoolingStrategy.MAX, PoolingStrategy.ATTENTION]
+    learning_rates = [1e-5, 5e-5]
+    hidden_dropout_probs = [0.3, 0.5]
+    batch_sizes = [16, 32, 64]
+        
 
     all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
 
