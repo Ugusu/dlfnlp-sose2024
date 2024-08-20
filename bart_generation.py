@@ -36,15 +36,16 @@ data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
     "epochs": 5,
-    "learning_rate": 1e-3,
+    "learning_rate": 1e-4,
     "optimizer": "SophiaG",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.1,
-    "batch_size": 16,
+    "batch_size": 10,
     "max_length": 256,
-    "num_layers_to_freeze": 0,
+    "gradual_unfreezing": True,
+    "num_layers_to_freeze": 12,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -54,7 +55,7 @@ config_dict = {
     "penalized_bleu_test": 0.0,
     "prefix": False,
     "prefix_length": 10,
-    "prefix_method": "direct",
+    "prefix_method": "indirect",
     "use_gpu": True,
     "seed": 11711,
     "model": "facebook/bart-large",
@@ -227,9 +228,9 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
     sentences, target_sentences = zip(*results)
 
-    print("Done processing sentences.")
-    print(sentences[0], target_sentences[0])
-    print(len(sentences), len(target_sentences))
+    #print("Done processing sentences.")
+    #print(sentences[0], target_sentences[0])
+    #print(len(sentences), len(target_sentences))
 
     # Tokenize the sentences
     inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
@@ -387,6 +388,30 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
     for i in range(num_layers_to_freeze):
         for param in model.model.encoder.layers[i].parameters():
             param.requires_grad = False
+
+    for i in range(num_layers_to_freeze):
+        for param in model.model.decoder.layers[i].parameters():
+            param.requires_grad = False
+
+    return model
+
+def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
+    """
+    Gradually unfreezes the encoder layers of a BART model.
+
+    Args:
+    model (BartForConditionalGeneration): The pre-trained BART model
+    num_layers_to_unfreeze (int): Number of encoder layers to unfreeze (default: 2)
+    does not work with PreFixModel
+    """
+    # Unfreeze the specified number of last layers in encoder and decoder
+    for i in range(num_layers_to_unfreeze):
+        for param in model.model.encoder.layers[-i:].parameters():
+            param.requires_grad = True
+
+    for i in range(num_layers_to_unfreeze):
+        for param in model.model.decoder.layers[-i:].parameters():
+            param.requires_grad = True
 
     return model
 
@@ -552,6 +577,7 @@ def train_model(model: BartForConditionalGeneration,
                 optimizer_name: str = "AdamW",
                 optimizer_params: dict = {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
                 use_scheduler: bool = False,
+                gradual_unfreeze: bool = False,
                 scheduler_step_size: int = 1,
                 scheduler_gamma: float = 0.2,
                 output_dir: str = "models/bart_finetuned_model"
@@ -574,6 +600,13 @@ def train_model(model: BartForConditionalGeneration,
 
     # Set model to training mode
     model.train()
+
+    try:
+        num_layers = model.config.encoder_layers
+        num_trainable_layers = 0
+    except:
+        num_layers = 12
+        num_trainable_layers = 0
 
     # Prepare the optimizer
     if optimizer_name == "AdamW":
@@ -600,6 +633,16 @@ def train_model(model: BartForConditionalGeneration,
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
 
+        if gradual_unfreeze:
+            if epochs <= num_layers:
+                num_layers_to_unfreeze = num_layers//epochs
+                if num_trainable_layers > num_layers:
+                    num_layers_to_unfreeze = 0
+                    num_trainable_layers = num_layers
+                num_trainable_layers += num_layers_to_unfreeze
+            print(f"Unfreezing {num_layers_to_unfreeze} layers. Total trainable layers: {num_trainable_layers}")
+            model = gradual_unfreezing(model, num_layers_to_unfreeze= num_trainable_layers)
+
         # Train the model
         for batch in tqdm(train_loader, desc="Training"):
             input_ids, attention_mask, labels = batch
@@ -615,10 +658,11 @@ def train_model(model: BartForConditionalGeneration,
             loss.backward()
             optimizer.step()
 
-            if use_scheduler:
-                scheduler.step()
+        if use_scheduler:
+            print(f"scheduler step, learning rate: {optimizer.param_groups[0]['lr']}")
+            scheduler.step()
 
-            print(f"Loss: {loss.item()}")
+        print(f"Loss: {loss.item()}")
 
         # Evaluate the model with penalized BLEU score
         penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
@@ -923,6 +967,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
                         optimizer_params=config_dict["optimizer_params"],
                         learning_rate=config_dict["learning_rate"],
                         use_scheduler=config_dict["use_scheduler"],
+                        gradual_unfreeze=config_dict["gradual_unfreezing"],
                         scheduler_step_size=config_dict["scheduler_step_size"],
                         scheduler_gamma=config_dict["scheduler_gamma"])
 
