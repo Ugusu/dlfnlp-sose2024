@@ -511,7 +511,7 @@ def train_multitask(args):
 def test_model(args):
     with torch.no_grad():
         device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
-        saved = torch.load(args.filepath, map_location=torch.device('cpu'))
+        saved = torch.load(args.filepath)
         config = saved["model_config"]
 
         model = MultitaskBERT(config)

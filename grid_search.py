@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Dict, List, Tuple, Any, Optional
 
 from multitask_classifier import get_args, seed_everything, train_multitask, test_model
 import itertools
@@ -12,20 +13,49 @@ import os
 from utils import PoolingStrategy
 
 
-def create_run_id():
-    """Create a unique identifier for the grid search run."""
+def create_run_id() -> str:
+    """
+    Create a unique identifier for the grid search run.
+
+    Returns:
+        str: A unique identifier composed of a timestamp and a UUID.
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of a UUID
     return f"{timestamp}_{unique_id}"
 
 
-def ensure_directory(directory):
-    """Ensure that a directory exists, creating it if necessary."""
+def ensure_directory(directory: str) -> None:
+    """
+    Ensure that a directory exists, creating it if necessary.
+
+    Args:
+        directory (str): The path of the directory to ensure.
+    """
     if not os.path.exists(directory):
         os.makedirs(directory)
 
 
-def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
+def run_experiment(
+        run_id: str,
+        pooling_strategy: PoolingStrategy,
+        learning_rate: float,
+        hidden_dropout_prob: float,
+        batch_size: int
+) -> Dict[str, Any]:
+    """
+    Run a single experiment with the given parameters.
+
+    Args:
+        run_id (str): The unique identifier for this run.
+        pooling_strategy (PoolingStrategy): The pooling strategy to use.
+        learning_rate (float): The learning rate for the experiment.
+        hidden_dropout_prob (float): The hidden dropout probability.
+        batch_size (int): The batch size for training.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the results of the experiment.
+    """
     args = get_args()
     args.pooling = pooling_strategy
     args.lr = learning_rate
@@ -39,8 +69,9 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""
     regularize_context_str = "-regularize_context" if context_layer else ""
-    args.filepath = (f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
-                     f"{extra_context_layer_str}{regularize_context_str}.pt")
+    args.filepath = (
+        f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
+        f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
     ensure_directory(os.path.dirname(args.filepath))
@@ -102,7 +133,14 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         }
 
 
-def grid_search():
+def grid_search() -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    """
+    Perform a grid search over specified hyperparameters.
+
+    Returns:
+        Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]: A tuple containing a list of all experiment results
+        and the best result (if any successful experiments were run).
+    """
     run_id = create_run_id()
     results_dir = f"results/{run_id}"
     ensure_directory(results_dir)
@@ -111,7 +149,6 @@ def grid_search():
     learning_rates = [1e-5, 5e-5]
     hidden_dropout_probs = [0.3, 0.5]
     batch_sizes = [16, 32, 64]
-        
 
     all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
 
@@ -154,6 +191,12 @@ def grid_search():
 
 
 def delete_model(args_filepath: str) -> None:
+    """
+    Delete the model file at the specified path.
+
+    Args:
+        args_filepath (str): The path to the model file to be deleted.
+    """
     if os.path.exists(args_filepath):
         os.remove(args_filepath)
         print(f"Deleted model file: {args_filepath}")
