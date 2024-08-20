@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Tuple
 
 
 class ContextualAttention(nn.Module):
@@ -14,7 +15,7 @@ class ContextualAttention(nn.Module):
         hidden_size (int): The size of the hidden representations.
     """
 
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size: int):
         super().__init__()
         self.hidden_size = hidden_size
 
@@ -29,7 +30,10 @@ class ContextualAttention(nn.Module):
         self.hidden_gate = nn.Parameter(torch.randn(hidden_size, 1))
         self.context_gate = nn.Parameter(torch.randn(hidden_size, 1))
 
-    def forward(self, hidden_states, context_vector):
+    def forward(self,
+                hidden_states: torch.Tensor,
+                context_vector: torch.Tensor
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass of the contextual attention mechanism.
 
@@ -38,7 +42,7 @@ class ContextualAttention(nn.Module):
             context_vector (torch.Tensor): Global context tensor of shape [batch_size, hidden_size].
 
         Returns:
-            tuple: A tuple containing:
+            Tuple[torch.Tensor, torch.Tensor]: A tuple containing:
                 - output (torch.Tensor): Attended output of shape [batch_size, seq_len, hidden_size].
                 - attention_scores (torch.Tensor): Attention scores of shape [batch_size, seq_len, seq_len].
         """
@@ -49,21 +53,24 @@ class ContextualAttention(nn.Module):
 
         # Gating mechanism
         query_gate = torch.sigmoid(
-            query.matmul(self.hidden_gate) + context_vector.matmul(self.context_query_proj.weight.t()).unsqueeze(
-                1))  # [batch_size, seq_len, 1]
+            query.matmul(self.hidden_gate) + context_vector.matmul(self.context_query_proj.weight.t()).unsqueeze(1)
+        )  # [batch_size, seq_len, 1]
         key_gate = torch.sigmoid(
-            key.matmul(self.hidden_gate) + context_vector.matmul(self.context_key_proj.weight.t()).unsqueeze(
-                1))  # [batch_size, seq_len, 1]
+            key.matmul(self.hidden_gate) + context_vector.matmul(self.context_key_proj.weight.t()).unsqueeze(1)
+        )  # [batch_size, seq_len, 1]
 
         # Incorporate context into queries and keys
         query_hat = (1 - query_gate) * query + query_gate * context_vector.unsqueeze(1).matmul(
-            self.context_query_proj.weight.t())  # [batch_size, seq_len, hidden_size]
+            self.context_query_proj.weight.t()
+        )  # [batch_size, seq_len, hidden_size]
         key_hat = (1 - key_gate) * key + key_gate * context_vector.unsqueeze(1).matmul(
-            self.context_key_proj.weight.t())  # [batch_size, seq_len, hidden_size]
+            self.context_key_proj.weight.t()
+        )  # [batch_size, seq_len, hidden_size]
 
         # Scaled dot-product attention
         attention_scores = torch.matmul(query_hat, key_hat.transpose(-2, -1)) / torch.sqrt(
-            torch.tensor(self.hidden_size, dtype=torch.float32))  # [batch_size, seq_len, seq_len]
+            torch.tensor(self.hidden_size, dtype=torch.float32)
+        )  # [batch_size, seq_len, seq_len]
         attention_probs = F.softmax(attention_scores, dim=-1)  # [batch_size, seq_len, seq_len]
         output = torch.matmul(attention_probs, value)  # [batch_size, seq_len, hidden_size]
 
@@ -81,14 +88,16 @@ class GlobalContextLayer(nn.Module):
         hidden_size (int): The size of the hidden representations.
     """
 
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size: int):
         super().__init__()
         self.hidden_size = hidden_size
 
         # Instantiate the custom attention mechanism
         self.custom_attention = ContextualAttention(hidden_size)
 
-    def forward(self, hidden_states):
+    def forward(self,
+                hidden_states: torch.Tensor
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass of the GlobalContextLayer.
 
@@ -96,7 +105,7 @@ class GlobalContextLayer(nn.Module):
             hidden_states (torch.Tensor): Input tensor of shape [batch_size, seq_len, hidden_size].
 
         Returns:
-            tuple: A tuple containing:
+            Tuple[torch.Tensor, torch.Tensor]: A tuple containing:
                 - output (torch.Tensor): Attended output of shape [batch_size, seq_len, hidden_size].
                 - attention_scores (torch.Tensor): Attention scores of shape [batch_size, seq_len, seq_len].
         """
@@ -104,8 +113,9 @@ class GlobalContextLayer(nn.Module):
         context_vector = torch.mean(hidden_states, dim=1)  # [batch_size, hidden_size]
 
         # Apply custom contextual attention mechanism
-        output, attention_scores = self.custom_attention(hidden_states,
-                                                         context_vector)  # [batch_size, seq_len, hidden_size]
+        output, attention_scores = self.custom_attention(
+            hidden_states, context_vector
+        )  # [batch_size, seq_len, hidden_size]
 
         return output, attention_scores
 
