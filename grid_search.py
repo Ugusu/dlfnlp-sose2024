@@ -25,14 +25,15 @@ def ensure_directory(directory):
         os.makedirs(directory)
 
 
-def run_experiment(run_id, context_layer, regularize_context, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
+def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
     args = get_args()
-    args.context_layer = context_layer
-    args.regularize_context = regularize_context
     args.pooling = pooling_strategy
     args.lr = learning_rate
     args.hidden_dropout_prob = hidden_dropout_prob
     args.batch_size = batch_size
+
+    context_layer = args.context_layer
+    regularize_context = args.regularize_context
 
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""
