@@ -19,7 +19,7 @@ from datasets import (
     load_multitask_data,
 )
 from evaluation import model_eval_multitask, test_model_multitask
-from optimizer import AdamW
+from optimizer import AdamW, SophiaG
 from utils import PoolingStrategy
 
 TQDM_DISABLE = False
@@ -365,7 +365,7 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr)
+    optimizer = SophiaG(model.parameters(), lr=lr)
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
