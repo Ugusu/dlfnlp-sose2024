@@ -406,11 +406,11 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     """
     # Unfreeze the specified number of last layers in encoder and decoder
     for i in range(num_layers_to_unfreeze):
-        for param in model.model.encoder.layers[-i:].parameters():
+        for param in model.model.encoder.layers[i].parameters():
             param.requires_grad = True
 
     for i in range(num_layers_to_unfreeze):
-        for param in model.model.decoder.layers[-i:].parameters():
+        for param in model.model.decoder.layers[i].parameters():
             param.requires_grad = True
 
     return model
