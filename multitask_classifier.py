@@ -11,7 +11,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from bert import BertModel, GlobalContextLayer
+from bert import BertModel
+from context_bert import GlobalContextLayer
 from datasets import (
     SentenceClassificationDataset,
     SentencePairDataset,
@@ -86,6 +87,7 @@ class MultitaskBERT(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
+                add_extra_layer: bool = False,
                 pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                 ) -> torch.Tensor:
         """
@@ -103,7 +105,8 @@ class MultitaskBERT(nn.Module):
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
 
-        sequence_output = self.encoding_global_context_layer(sequence_output)
+        if add_extra_layer:
+            sequence_output = self.encoding_global_context_layer(sequence_output)
 
         match pooling_strategy:
             case PoolingStrategy.AVERAGE:
@@ -132,6 +135,7 @@ class MultitaskBERT(nn.Module):
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
                           attention_mask: torch.Tensor,
+                          add_extra_layer: bool = False,
                           pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                           ) -> torch.Tensor:
         """
@@ -152,6 +156,7 @@ class MultitaskBERT(nn.Module):
         pooled_output: torch.Tensor = self.forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
+            add_extra_layer=add_extra_layer,
             pooling_strategy=pooling_strategy
         )
 
@@ -380,7 +385,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask, args.pooling)
+                logits = model.predict_sentiment(b_ids, b_mask, args.context_layer, args.pooling)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
                 loss.backward()
                 optimizer.step()
@@ -533,6 +538,9 @@ def get_args():
     # Add this line to include subset_size
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Number of examples to load from each dataset for testing")
+
+    # Add this line to include context_layer as a boolean flag
+    parser.add_argument("--context_layer", action="store_true", help="Include context layer if this flag is set.")
 
     # Pooling strategy
     parser.add_argument(

@@ -25,15 +25,18 @@ def ensure_directory(directory):
         os.makedirs(directory)
 
 
-def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
+def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
     args = get_args()
+    args.context_layer = context_layer
     args.pooling = pooling_strategy
     args.lr = learning_rate
     args.hidden_dropout_prob = hidden_dropout_prob
     args.batch_size = batch_size
 
     # Use run_id in the filepath
-    args.filepath = f"models/{run_id}/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}.pt"
+    extra_context_layer_str = "-context_layer" if context_layer else ""
+    args.filepath = (f"models/{run_id}/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
+                     f"{extra_context_layer_str}.pt")
 
     # Saved model for testing
     # args.filepath = f"models/experiment-cls-1e-05-0.3-64.pt"
@@ -54,6 +57,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         delete_model(args.filepath)
 
         return {
+            "extra_context_layer": context_layer,
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
@@ -67,6 +71,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         }
     except Exception as e:
         print(f"\nError in experiment with parameters:")
+        print(f"  extra_context_layer: {context_layer}")
         print(f"  pooling_strategy: {pooling_strategy}")
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
@@ -79,6 +84,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         delete_model(args.filepath)
 
         return {
+            "extra_context_layer": context_layer,
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
@@ -104,7 +110,7 @@ def grid_search():
     else:
         pooling_strategies = [PoolingStrategy.CLS, PoolingStrategy.CLS, PoolingStrategy.MAX, PoolingStrategy.ATTENTION]
         learning_rates = [1e-5, 5e-5]
-        hidden_dropout_probs = [0.1, 0.3, 0.5]
+        hidden_dropout_probs = [0.3, 0.5]
         batch_sizes = [16, 32, 64]
 
     all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
