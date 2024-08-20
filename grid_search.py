@@ -34,11 +34,12 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
 
     context_layer = args.context_layer
     regularize_context = args.regularize_context
+    pooling_strategy_str = pooling_strategy.value
 
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""
     regularize_context_str = "-regularize_context" if context_layer else ""
-    args.filepath = (f"models/{run_id}/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
+    args.filepath = (f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
                      f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
@@ -59,7 +60,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         return {
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
-            "pooling_strategy": pooling_strategy,
+            "pooling_strategy": pooling_strategy_str,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
@@ -74,7 +75,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         print(f"\nError in experiment with parameters:")
         print(f"  extra_context_layer: {context_layer}")
         print(f"  regularize_context: {regularize_context}")
-        print(f"  pooling_strategy: {pooling_strategy}")
+        print(f"  pooling_strategy: {pooling_strategy_str}")
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
         print(f"  batch_size: {batch_size}")
@@ -88,7 +89,7 @@ def run_experiment(run_id, pooling_strategy, learning_rate, hidden_dropout_prob,
         return {
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
-            "pooling_strategy": pooling_strategy,
+            "pooling_strategy": pooling_strategy_str,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
