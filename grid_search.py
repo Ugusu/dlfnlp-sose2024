@@ -9,6 +9,8 @@ from tqdm import tqdm
 import traceback
 import os
 
+from utils import PoolingStrategy
+
 
 def create_run_id():
     """Create a unique identifier for the grid search run."""
@@ -92,16 +94,16 @@ def grid_search():
     results_dir = f"results/{run_id}"
     ensure_directory(results_dir)
 
-    run_test = True
+    run_test = False
 
     if run_test:
-        pooling_strategies = ["cls", "average"]
+        pooling_strategies = [PoolingStrategy.ATTENTION, PoolingStrategy.CLS]
         learning_rates = [1e-5]
         hidden_dropout_probs = [0.3]
         batch_sizes = [64]
     else:
-        pooling_strategies = ["cls", "average", "max", "attention"]
-        learning_rates = [1e-5, 3e-5, 5e-5]
+        pooling_strategies = [PoolingStrategy.CLS, PoolingStrategy.CLS, PoolingStrategy.MAX, PoolingStrategy.ATTENTION]
+        learning_rates = [1e-5, 5e-5]
         hidden_dropout_probs = [0.1, 0.3, 0.5]
         batch_sizes = [16, 32, 64]
 
