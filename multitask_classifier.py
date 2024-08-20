@@ -112,9 +112,13 @@ class MultitaskBERT(nn.Module):
         sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
 
         if add_extra_layer:
-            sequence_output = self.encoding_global_context_layer(sequence_output)
+            sequence_output, attention_scores = self.encoding_global_context_layer(sequence_output)
 
         match pooling_strategy:
+            case PoolingStrategy.CLS:
+                # Use CLS token embedding as aggregate of whole sequence embedding
+                pooled_output = sequence_output[:, 0, :]  # [batch_size, hidden_size]
+
             case PoolingStrategy.AVERAGE:
                 # Apply average pooling over the sequence length
                 pooled_output = torch.mean(sequence_output, dim=1)  # [batch_size, hidden_size]
@@ -125,16 +129,19 @@ class MultitaskBERT(nn.Module):
 
             case PoolingStrategy.ATTENTION:
                 # Use attention scores from the Global Context Layer for pooling
-                attention_scores = self.pooling_global_context_layer.get_attention_scores(
-                    sequence_output)  # [batch_size, seq_len, 1]
-                attention_weights = torch.softmax(attention_scores, dim=1)  # [batch_size, seq_len, 1]
+                _, attention_scores = self.pooling_global_context_layer(sequence_output)  # [batch_size, seq_len, 1]
 
-                # Weighted sum of token embeddings
-                pooled_output = torch.sum(attention_weights * sequence_output, dim=1)  # [batch_size, hidden_size]
+                # Sum attention scores across the second dimension (attending to all tokens)
+                attention_weights = attention_scores.sum(dim=2)
+
+                # Apply softmax to get proper weights
+                attention_weights = F.softmax(attention_weights, dim=1) # [batch_size, seq_len, 1]
+
+                # Compute weighted sum
+                pooled_output = torch.bmm(attention_weights.unsqueeze(1), sequence_output).squeeze(1) # [batch_size, hidden_size]
 
             case _:
-                # Default to CLS token pooling
-                pooled_output = sequence_output[:, 0, :]  # [batch_size, hidden_size]
+                raise ValueError(f"Unknown pooling strategy: {pooling_strategy}")
 
         return pooled_output
 
