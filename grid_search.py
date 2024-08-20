@@ -25,9 +25,10 @@ def ensure_directory(directory):
         os.makedirs(directory)
 
 
-def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
+def run_experiment(run_id, context_layer, regularize_context, pooling_strategy, learning_rate, hidden_dropout_prob, batch_size):
     args = get_args()
     args.context_layer = context_layer
+    args.regularize_context = regularize_context
     args.pooling = pooling_strategy
     args.lr = learning_rate
     args.hidden_dropout_prob = hidden_dropout_prob
@@ -35,11 +36,9 @@ def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidde
 
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""
+    regularize_context_str = "-regularize_context" if context_layer else ""
     args.filepath = (f"models/{run_id}/experiment-{pooling_strategy}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
-                     f"{extra_context_layer_str}.pt")
-
-    # Saved model for testing
-    # args.filepath = f"models/experiment-cls-1e-05-0.3-64.pt"
+                     f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
     ensure_directory(os.path.dirname(args.filepath))
@@ -58,6 +57,7 @@ def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidde
 
         return {
             "extra_context_layer": context_layer,
+            "regularize_context": regularize_context,
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
@@ -72,6 +72,7 @@ def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidde
     except Exception as e:
         print(f"\nError in experiment with parameters:")
         print(f"  extra_context_layer: {context_layer}")
+        print(f"  regularize_context: {regularize_context}")
         print(f"  pooling_strategy: {pooling_strategy}")
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
@@ -85,6 +86,7 @@ def run_experiment(run_id, context_layer, pooling_strategy, learning_rate, hidde
 
         return {
             "extra_context_layer": context_layer,
+            "regularize_context": regularize_context,
             "pooling_strategy": pooling_strategy,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,

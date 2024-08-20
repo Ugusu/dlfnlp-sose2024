@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from bert import BertModel
-from context_bert import GlobalContextLayer
+from context_bert import GlobalContextLayer, GlobalContextLayerRegularized
 from datasets import (
     SentenceClassificationDataset,
     SentencePairDataset,
@@ -64,8 +64,13 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
 
         # Global Context Layers
-        self.encoding_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
-        self.pooling_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE)
+        self.encoding_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE) \
+            if args.regularize_context is False \
+            else GlobalContextLayerRegularized(hidden_size=BERT_HIDDEN_SIZE)
+
+        self.pooling_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE) \
+            if args.regularize_context is False \
+            else GlobalContextLayerRegularized(hidden_size=BERT_HIDDEN_SIZE)
 
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -541,6 +546,10 @@ def get_args():
 
     # Add this line to include context_layer as a boolean flag
     parser.add_argument("--context_layer", action="store_true", help="Include context layer if this flag is set.")
+
+    # Add this line to include regularized_context as a boolean flag
+    parser.add_argument("--regularize_context", action="store_true",
+                        help="Use regularized context layer variant if this flag is set.")
 
     # Pooling strategy
     parser.add_argument(
