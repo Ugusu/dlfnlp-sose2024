@@ -36,13 +36,13 @@ data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
     "epochs": 5,
-    "learning_rate": 1e-4,
-    "optimizer": "SophiaG",
+    "learning_rate": 1e-3,
+    "optimizer": "AdamW",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.8,
-    "batch_size": 96,
+    "scheduler_gamma": 0.2,
+    "batch_size": 100,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
@@ -406,11 +406,11 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     """
     # Unfreeze the specified number of layers in encoder and decoder
     for i in range(num_layers_to_unfreeze):
-        for param in model.model.encoder.layers[i].parameters():
+        for param in model.model.encoder.layers[-i:].parameters():
             param.requires_grad = True
 
     for i in range(num_layers_to_unfreeze):
-        for param in model.model.decoder.layers[i].parameters():
+        for param in model.model.decoder.layers[-i:].parameters():
             param.requires_grad = True
 
     return model
@@ -634,6 +634,7 @@ def train_model(model: BartForConditionalGeneration,
         print(f"Epoch {epoch + 1}/{epochs}")
 
         if gradual_unfreeze:
+            # more epochs > fewer layers to unfreeze
             if epochs <= num_layers:
                 num_layers_to_unfreeze = num_layers//epochs
                 if num_trainable_layers > num_layers:
