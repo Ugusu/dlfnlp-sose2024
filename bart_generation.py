@@ -36,12 +36,12 @@ data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
     "epochs": 5,
-    "learning_rate": 1e-4,
+    "learning_rate": 3e-5,
     "optimizer": "AdamW",
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.5,
+    "scheduler_gamma": 0.9,
     "batch_size": 64,
     "max_length": 256,
     "gradual_unfreezing": False,
