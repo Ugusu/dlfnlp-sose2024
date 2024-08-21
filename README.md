@@ -188,9 +188,7 @@ The integration of context in self-attention is defined by the following key for
 
    This formula computes the global context vector as the average of the hidden states across the entire input sequence.
 
-   $$
-   \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
-   $$
+   $\mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i$
 
 For further details on the workings of the CGA, refer to the original paper and the implementation in the code.
 
