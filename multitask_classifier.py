@@ -20,7 +20,7 @@ from datasets import (
 )
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW, SophiaG
-from utils import PoolingStrategy
+from utils import PoolingStrategy, OptimizerType
 
 TQDM_DISABLE = False
 
@@ -372,7 +372,15 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = SophiaG(model.parameters(), lr=lr)
+
+    match args.optimizer:
+        case "adamw":
+            optimizer = AdamW(model.parameters(), lr=lr)
+        case "sophia":
+            optimizer = SophiaG(model.parameters(), lr=lr)
+        case _:
+            raise ValueError(f"Unsupported optimizer type: {args.optimizer_type}")
+
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -568,10 +576,15 @@ def get_args():
         default="cls",
     )
 
+    # Update optimizer argument
+    parser.add_argument("--optimizer", type=str, default="sophia", choices=[opt.value for opt in OptimizerType],
+                        help="Optimizer to use")
+
     args, _ = parser.parse_known_args()
 
-    # Convert pooling strategy argument to PoolingStrategy enum
+    # Convert arguments to enums when necessary
     args.pooling_strategy = PoolingStrategy(args.pooling)
+    args.optimizer_type = OptimizerType(args.optimizer)
 
     # Dataset paths
     parser.add_argument("--sst_train", type=str, default="data/sst-sentiment-train.csv")
