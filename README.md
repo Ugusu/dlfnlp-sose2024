@@ -248,9 +248,97 @@ $$
 where $\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ and $\mathbf{C}$ is the global context vector.
 
 
+### **2.3 Optimizer Choice**
+
+In the training process, two optimizers were evaluated: **AdamW** and **SophiaG**. Each optimizer was implemented to understand their impact on model performance, particularly in the context of sentiment analysis.
+
+1. **AdamW Optimizer:**
+   AdamW is a widely used optimizer in training deep learning models, particularly for transformers like BERT. It combines the advantages of Adam with weight decay regularization to improve generalization. The update rule for AdamW is as follows:
+   $$
+   \mathbf{p} \leftarrow \mathbf{p} - \eta \cdot \left(\frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon} + \lambda \mathbf{p}\right)
+   $$
+   where:
+   - $\hat{\mathbf{m}}$ and $\hat{\mathbf{v}}$ are bias-corrected first and second moment estimates,
+   - $\lambda$ is the weight decay factor,
+   - $\eta$ is the learning rate,
+   - $\epsilon$ is a small constant to avoid division by zero.
+
+2. **SophiaG Optimizer:**
+   SophiaG is a newer optimizer that adapts the learning rate based on an estimate of the Hessian matrix. It aims to improve convergence speed and training efficiency. The update rule for SophiaG involves:
+   $$
+   \mathbf{p} \leftarrow \mathbf{p} - \eta \cdot \frac{\mathbf{m}}{\rho \cdot \text{bs} \cdot \mathbf{h} + \epsilon}
+   $$
+   where:
+   - $\mathbf{m}$ is the exponential moving average of gradients,
+   - $\rho$ is a hyperparameter influencing the adaptation based on the Hessian,
+   - $\text{bs}$ is the batch size,
+   - $\mathbf{h}$ is the Hessian estimate,
+   - $\eta$ and $\epsilon$ have similar roles as in AdamW.
+
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
 
 Additional arguments were introduced to the training script to toggle between different options and combinations, as outlined in the arguments section.
+
+---
+
+## **3. Experiments**
+
+### **3.1 Grid Search for Hyperparameter Optimization**
+
+A comprehensive grid search was conducted to identify the optimal hyperparameters for the sentiment 
+analysis task, particularly focusing on the integration of the newly introduced Contextual Global Attention. 
+The search encompassed various combinations of pooling strategies, learning rates, dropout probabilities, 
+batch sizes, epochs, and optimizers, resulting in 192 unique configurations. When combined with the four 
+variations in the Contextual Global Attention (see bash scripts below), this amounts to a total of 
+768 different configurations.
+
+**Grid Search Configuration:**
+
+- **Pooling Strategies:** CLS Token, Average, Max, Attention-based
+- **Learning Rates:** 1e-5, 5e-5
+- **Hidden Dropout Probabilities:** 0.3, 0.5
+- **Batch Sizes:** 16, 32, 64
+- **Epochs:** 5, 10
+- **Optimizers:** AdamW, SophiaG
+
+**Execution Overview:**
+
+The grid search was executed on the HPC cluster (as described in the setup section above), with the following key points:
+
+- **Bash Scripts:** To initiate the grid search for different configurations of the Global Context Layer, 
+use the provided bash scripts. These scripts correspond to various setups, including options with or 
+without the extra layer and with or without regularization:
+
+  ```sh
+  bash run_grid_search_extra_layer_non_regularized.sh
+  ```
+  
+  ```sh
+  bash run_grid_search_extra_layer_regularized.sh
+  
+  ```
+  
+  ```sh
+  bash run_grid_search_no_extra_layer_non_regularized.sh
+  ```
+  
+  ```sh
+  bash run_grid_search_no_extra_layer_regularized.sh
+  ```
+
+- **Result Storage:** Results for each grid search run were saved in JSON format, facilitating easy retrieval and analysis of the performance metrics for each configuration.
+
+- **Sequential Execution:** Although the grid search could be parallelized, all configurations were tested sequentially in this setup. The full grid search can take several hours to complete, depending on the complexity of the configurations.
+
+- **Manual Tuning:** Configuration options within the `grid_search()` function can be manually adjusted to tweak the parameters being tested.
+
+- **Focus:** This grid search primarily focused on optimizing the SST task. However, the framework can be extended to investigate behavior on other tasks, such as paraphrase detection or semantic textual similarity.
+
+- **Submission Script:** An executable script was also provided to manage the submission of grid search jobs on the HPC cluster efficiently.
+
+  ```sh
+  submit_grid_search_jobs.sh
+  ```
 
 ---
 
