@@ -105,15 +105,9 @@ The model is evaluated after each epoch on the validation set. Results are print
 
 ---
 
-## Methodology
+## Phase I
 
 We implemented the base BERT and BART for the first phase of the project.
-
-#TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
-
----
-
-## Phase I
 
 ### BERT
 
@@ -196,10 +190,6 @@ effectiveness in sentiment analysis.
 To enhance BERT's ability to capture long-range dependencies, a **Global Context Layer** was integrated into the model. This layer computes a global context vector by averaging token embeddings and refining it through a feed-forward network. The refined context vector is incorporated into BERT’s self-attention mechanism via a custom **Contextual Global Attention (CGA)** mechanism, implemented in the `context_bert.py` file. The CGA mechanism introduces additional weight matrices and gating parameters that modulate the influence of the global context on token-level representations.
 
 The **Contextual Global Attention (CGA)** was tested in three configurations: as an extra layer on top of the 12 stacked vanilla BERT layers, as a layer used for attention-based pooling, and in both configurations simultaneously.
-
-**Mathematical Foundations:**
-
-The integration of context in self-attention is defined by the following key formulae:
 
 **Contextualized Query and Key Transformations**: 
 
@@ -335,7 +325,6 @@ without the extra layer and with or without regularization:
   
   ```sh
   bash run_grid_search_extra_layer_regularized.sh
-  
   ```
   
   ```sh

@@ -152,7 +152,7 @@ def grid_search() -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
         and the best result (if any successful experiments were run).
     """
     run_id = create_run_id()
-    results_dir = f"results/{run_id}"
+    results_dir = f"grid_search_results/{run_id}"
     ensure_directory(results_dir)
 
     pooling_strategies = list(PoolingStrategy)
