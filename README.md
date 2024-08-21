@@ -58,7 +58,7 @@ bash setup_gwdg.sh
 ---
 
 ## Training
-### local: 
+### Local: 
 
 To train the model, activate the environment and run:
 
@@ -66,11 +66,31 @@ To train the model, activate the environment and run:
 python -u multitask_classifier.py --use_gpu
 ```
 
-Important parameters and their descriptions can be seen by running:
+There are a lot of parameters that can be set. The most important ones are:
+
+| Parameter               | Description                                                                           |
+|-------------------------|---------------------------------------------------------------------------------------|
+| `--task`                | Choose between `"sst"`, `"sts"`, `"qqp"`, `"multitask"` to train for different tasks. |
+| `--seed`                | Random seed for reproducibility.                                                      |
+| `--epochs`              | Number of epochs to train the model.                                                  |
+| `--option`              | Determines if BERT parameters are frozen (`pretrain`) or updated (`finetune`).        |
+| `--use_gpu`             | Whether to use the GPU for training.                                                  |
+| `--subset_size`         | Number of examples to load from each dataset for testing.                             |
+| `--context_layer`       | Include context layer if this flag is set.                                            |
+| `--regularize_context`  | Use regularized context layer variant if this flag is set.                            |
+| `--pooling`             | Choose the pooling strategy: `"cls"`, `"average"`, `"max"`, or `"attention"`.         |
+| `--optimizer`           | Optimizer to use.                                                                     |
+| `--batch_size`          | Batch size for training, recommended 64 for 12GB GPU.                                 |
+| `--hidden_dropout_prob` | Dropout probability for hidden layers.                                                |
+| `--lr`                  | Learning rate, defaults to `1e-3` for `pretrain`, `1e-5` for `finetune`.              |
+| `--local_files_only`    | Force the use of local files only (do not download from remote repositories).         |
+
+All parameters and their descriptions can be seen by running:
 
 ```sh
 python multitask_classifier.py --help
 ```
+
 ### HPC:
 to submit the job to a node in the GWDG HPC cluster, run:
 settings can be configured according to the requirements in the `run_train.sh` file.
