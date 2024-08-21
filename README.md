@@ -184,32 +184,15 @@ The integration of context in self-attention is defined by the following key for
    \end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
    $$
 
-2. **Gating Mechanism for Contextual Influence**: 
-
-   This formula determines how much the global context influences the query and key matrices through a gating mechanism.
-
-   $$
-   \begin{bmatrix}
-   \lambda_Q \\
-   \lambda_K
-   \end{bmatrix} = \sigma \left(\mathbf{Q} \mathbf{V}_Q^H + \mathbf{K} \mathbf{V}_K^H + \mathbf{C} \left[\mathbf{U}_Q \mathbf{V}_Q^C + \mathbf{U}_K \mathbf{V}_K^C \right]\right)
-   $$
-
-3. **Output Representation**:
-
-   This formula represents the final output of the context-aware self-attention mechanism.
-
-   $$
-   \mathbf{O} = \text{ATT}(\hat{\mathbf{Q}}, \hat{\mathbf{K}})\mathbf{V}
-   $$
-
-4. **Global Context Vector**:
+2. **Global Context Vector**:
 
    This formula computes the global context vector as the average of the hidden states across the entire input sequence.
 
    $$
    \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
    $$
+
+For further details on the workings of the CGA, refer to the original paper and the implementation in the code.
 
 
 ---
