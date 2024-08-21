@@ -38,7 +38,7 @@ config_dict = {
     "epochs": 5,
     "learning_rate": 1e-2,
     "optimizer": "AdamW",
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
+    "optimizer_params": {"lr": 1e-2, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.3,
