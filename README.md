@@ -91,6 +91,10 @@ We implemented the base BERT and BART for the first phase of the project.
 
 #TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
 
+---
+
+## Phase I
+
 ### BERT
 
 For the BERT model we implemented 3 tasks:
@@ -126,6 +130,81 @@ BART has 2 tasks:
 - BART_detection: We used BART-large model to detect 7 differenct paraphrase types given a sentence. Tokenization was done using AutoTokenizer from the transformers library and using a pretrained BartModel from the same library, the model was fine-tuned on the etpc-paraphrase-train.csv using AdamW optimzer and CrossEntropyLoss loss function and validated on the etpc-paraphrase-dev.csv dataset for 5 epochs, learning rate 1e-5 and batch size 16. It is saved for best validation loss performance and was then tested on the etpc-paraphrase-generation-test-student dataset.
 
 BART version: BART Large.
+
+---
+
+## Phase II
+
+# Improvements upon Base Models
+
+## 1. Proposals
+
+### 1.1 Contextual Global Attention (CGA)
+As part of the improvements for the sentiment analysis task of the project, Contextual Global Attention 
+(CGA) was introduced to enhance BERT's performance on the sentiment analysis task and in the pooling of the 
+encoded output embeddings. This alternate mechanism aims to enhance BERT's ability to capture long-range 
+dependencies by  integrating global context into its self-attention mechanism. This shall enable BERT to make 
+more informed decisions, building on empirical evidence that global context enhances self-attention networks.
+
+### 1.2 Pooling Strategies
+While the **CLS** token is traditionally used as the aggregate representation in BERT's output, it may 
+not fully capture the semantic content of an entire sequence. To address this, alternative pooling 
+strategies—such as **average pooling, max pooling, and attention-based pooling**—were tested. 
+This experimentation aimed to identify whether these approaches could provide a more comprehensive 
+representation, thereby improving the model's performance in sentiment analysis by better encapsulating 
+the overall meaning of the input text.
+
+### 1.3 Optimizer Choice
+The choice of optimizer significantly impacts the training dynamics and final performance of models 
+like BERT. To explore potential improvements, the newly developed **Sophia** optimizer was tested against 
+the widely used **AdamW** optimizer. This comparison aimed to determine if Sophia could offer better 
+convergence and performance, thereby optimizing the training process and enhancing the model’s 
+effectiveness in sentiment analysis.
+
+### BERT
+
+### **1. Global Context Layer and Contextual Global Attention (CGA)**
+
+To enhance BERT's ability to capture long-range dependencies, a **Global Context Layer** was integrated into the model. This layer computes a global context vector by averaging token embeddings and refining it through a feed-forward network. The refined context vector is incorporated into BERT’s self-attention mechanism via a custom **Contextual Global Attention (CGA)** mechanism, implemented in the `context_bert.py` file. The CGA mechanism introduces additional weight matrices and gating parameters that modulate the influence of the global context on token-level representations.
+
+The **Contextual Global Attention (CGA)** was tested in three configurations: as an extra layer on top of the 12 stacked vanilla BERT layers, as a layer used for attention-based pooling, and in both configurations simultaneously.
+
+**Mathematical Foundations:**
+
+The integration of context in self-attention is defined by the following key formulae:
+
+1. **Contextualized Query and Key Transformations**: 
+
+$$
+\begin{bmatrix}
+\hat{\mathbf{Q}} \\
+\hat{\mathbf{K}}
+\end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
+$$
+
+2. **Gating Mechanism for Contextual Influence**: 
+
+\[
+\begin{bmatrix}
+\lambda_Q \\
+\lambda_K
+\end{bmatrix} = \sigma \left(\mathbf{Q} \mathbf{V}_Q^H + \mathbf{K} \mathbf{V}_K^H + \mathbf{C} \left[\mathbf{U}_Q \mathbf{V}_Q^C + \mathbf{U}_K \mathbf{V}_K^C \right]\right)
+\]
+
+3. **Output Representation**:
+
+\[
+\mathbf{O} = \text{ATT}(\mathbf{\hat{Q}}, \mathbf{\hat{K}})\mathbf{V}
+\]
+
+4. **Global Context Vector**:
+
+\[
+\mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
+\]
+
+These formulae underpin the CGA mechanism, enhancing BERT’s ability to incorporate global context and improve performance on tasks requiring a comprehensive understanding of the input sequence.
+
 
 ---
 
