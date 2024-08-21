@@ -41,7 +41,8 @@ def run_experiment(
         pooling_strategy: PoolingStrategy,
         learning_rate: float,
         hidden_dropout_prob: float,
-        batch_size: int
+        batch_size: int,
+        epochs: int
 ) -> Dict[str, Any]:
     """
     Run a single experiment with the given parameters.
@@ -52,6 +53,7 @@ def run_experiment(
         learning_rate (float): The learning rate for the experiment.
         hidden_dropout_prob (float): The hidden dropout probability.
         batch_size (int): The batch size for training.
+        epochs (int): The number of epochs for training.
 
     Returns:
         Dict[str, Any]: A dictionary containing the results of the experiment.
@@ -61,6 +63,7 @@ def run_experiment(
     args.lr = learning_rate
     args.hidden_dropout_prob = hidden_dropout_prob
     args.batch_size = batch_size
+    args.epochs = epochs
 
     context_layer = args.context_layer
     regularize_context = args.regularize_context
@@ -70,7 +73,7 @@ def run_experiment(
     extra_context_layer_str = "-context_layer" if context_layer else ""
     regularize_context_str = "-regularize_context" if context_layer else ""
     args.filepath = (
-        f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}"
+        f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}-{epochs}"
         f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
@@ -95,6 +98,7 @@ def run_experiment(
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
+            "epochs": epochs,
             "sst_accuracy": sst_accuracy,
             "quora_accuracy": quora_accuracy,
             "sts_correlation": sts_corr,
@@ -110,6 +114,7 @@ def run_experiment(
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
         print(f"  batch_size: {batch_size}")
+        print(f"  epochs: {epochs}")
         print(f"\nError: {str(e)}")
         print("\nFull stack trace:")
         traceback.print_exc()
@@ -124,6 +129,7 @@ def run_experiment(
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
+            "epochs": epochs,
             "status": "failed",
             "error": str(e),
             "traceback": traceback.format_exc()
@@ -146,8 +152,9 @@ def grid_search() -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     learning_rates = [1e-5, 5e-5]
     hidden_dropout_probs = [0.3, 0.5]
     batch_sizes = [16, 32, 64]
+    epochs = [5, 10]
 
-    all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes))
+    all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes, epochs))
 
     results = []
     best_result = None
