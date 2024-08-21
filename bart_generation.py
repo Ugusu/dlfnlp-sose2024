@@ -41,8 +41,8 @@ config_dict = {
     "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.1,
-    "batch_size": 16,
+    "scheduler_gamma": 0.8,
+    "batch_size": 96,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
@@ -404,7 +404,7 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     num_layers_to_unfreeze (int): Number of encoder layers to unfreeze (default: 2)
     does not work with PreFixModel
     """
-    # Unfreeze the specified number of last layers in encoder and decoder
+    # Unfreeze the specified number of layers in encoder and decoder
     for i in range(num_layers_to_unfreeze):
         for param in model.model.encoder.layers[i].parameters():
             param.requires_grad = True
