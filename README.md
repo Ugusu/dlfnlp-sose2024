@@ -133,9 +133,9 @@ BART version: BART Large.
 
 ---
 
-## Phase II
+# Phase II
 
-# Improvements upon Base Models
+## Improvements upon Base Models
 
 ## 1. Proposals
 
@@ -175,35 +175,41 @@ The integration of context in self-attention is defined by the following key for
 
 1. **Contextualized Query and Key Transformations**: 
 
-$$
-\begin{bmatrix}
-\hat{\mathbf{Q}} \\
-\hat{\mathbf{K}}
-\end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
-$$
+   This formula integrates the global context into the query and key matrices to capture context-aware dependencies.
+
+   $$
+   \begin{bmatrix}
+   \hat{\mathbf{Q}} \\
+   \hat{\mathbf{K}}
+   \end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
+   $$
 
 2. **Gating Mechanism for Contextual Influence**: 
 
-\[
-\begin{bmatrix}
-\lambda_Q \\
-\lambda_K
-\end{bmatrix} = \sigma \left(\mathbf{Q} \mathbf{V}_Q^H + \mathbf{K} \mathbf{V}_K^H + \mathbf{C} \left[\mathbf{U}_Q \mathbf{V}_Q^C + \mathbf{U}_K \mathbf{V}_K^C \right]\right)
-\]
+   This formula determines how much the global context influences the query and key matrices through a gating mechanism.
+
+   $$
+   \begin{bmatrix}
+   \lambda_Q \\
+   \lambda_K
+   \end{bmatrix} = \sigma \left(\mathbf{Q} \mathbf{V}_Q^H + \mathbf{K} \mathbf{V}_K^H + \mathbf{C} \left[\mathbf{U}_Q \mathbf{V}_Q^C + \mathbf{U}_K \mathbf{V}_K^C \right]\right)
+   $$
 
 3. **Output Representation**:
 
-\[
-\mathbf{O} = \text{ATT}(\mathbf{\hat{Q}}, \mathbf{\hat{K}})\mathbf{V}
-\]
+   This formula represents the final output of the context-aware self-attention mechanism.
+
+   $$
+   \mathbf{O} = \text{ATT}(\hat{\mathbf{Q}}, \hat{\mathbf{K}})\mathbf{V}
+   $$
 
 4. **Global Context Vector**:
 
-\[
-\mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
-\]
+   This formula computes the global context vector as the average of the hidden states across the entire input sequence.
 
-These formulae underpin the CGA mechanism, enhancing BERT’s ability to incorporate global context and improve performance on tasks requiring a comprehensive understanding of the input sequence.
+   $$
+   \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
+   $$
 
 
 ---
