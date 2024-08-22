@@ -145,6 +145,15 @@ BART has 2 tasks:
 
 BART version: BART Large.
 
+## Experiments
+
+### Learning all tasks vs. Learning one task:
+
+- A BERT model was trained to be able to solve all 3 tasks, and was compared to a BERT model trained on the tasks independetly.
+- The results for Sentiment Classification and Semantic Textual Similarity degrade, while for Paraphrase Detection increase.
+- Most probable explanation: Dataset sizes are not equal. Later or bigger trainings degrade previous or smaller trainings.
+- Possible solution: Trainings on bigger datasets first. Number of epochs relative to dataset size.
+
 ---
 
 # Phase II
@@ -315,35 +324,15 @@ variations in the Contextual Global Attention (see bash scripts below), this amo
 
 The grid search was executed on the HPC cluster (as described in the setup section above), with the following key points:
 
-- **Bash Scripts:** To initiate the grid search for different configurations of the Global Context Layer, 
-use the provided bash scripts. These scripts correspond to various setups, including options with or 
-without the extra layer and with or without regularization:
+- **Bash Scripts:** To initiate the grid search for different configurations of the CGA Layer, 
+use the provided [bash scripts](grid_search/experiment_scripts). These scripts correspond to various setups, including options with or 
+without the extra layer and with or without regularization.
 
-  ```sh
-  bash run_grid_search_extra_layer_non_regularized.sh
-  ```
-  
-  ```sh
-  bash run_grid_search_extra_layer_regularized.sh
-  ```
-  
-  ```sh
-  bash run_grid_search_no_extra_layer_non_regularized.sh
-  ```
-  
-  ```sh
-  bash run_grid_search_no_extra_layer_regularized.sh
-  ```
+- **Result Storage:** Results for each grid search run were [saved](grid_search/grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
 
-- **Result Storage:** Results for each grid search run were saved in JSON format, facilitating easy retrieval and analysis of the performance metrics for each configuration.
+- **Manual Tuning:** Configuration options within the grid search [Python script](grid_search/grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
 
-- **Sequential Execution:** Although the grid search could be parallelized, all configurations were tested sequentially in this setup. The full grid search can take several hours to complete, depending on the complexity of the configurations.
-
-- **Manual Tuning:** Configuration options within the `grid_search()` function can be manually adjusted to tweak the parameters being tested.
-
-- **Focus:** This grid search primarily focused on optimizing the SST task. However, the framework can be extended to investigate behavior on other tasks, such as paraphrase detection or semantic textual similarity.
-
-- **Submission Script:** An executable script was also provided to manage the submission of grid search jobs on the HPC cluster efficiently.
+- **Submission Script:** An executable script was also provided to manage the submission of all grid search jobs on the HPC cluster at once.
 
   ```sh
   submit_grid_search_jobs.sh
@@ -355,11 +344,13 @@ We recommend running these scripts from the project's home directory.
 
 ## **4. Results**
 
-### **4.1 Data Overview**
+### 4.1 Grid Search, CGA and Attention-based Pooling
+
+#### **4.1.1 Data Overview**
 
 A total of 768 experiments were conducted, all of which successfully completed. The experiments tested various configurations, including pooling strategies, learning rates, dropout probabilities, batch sizes, epochs, and optimizers.
 
-### **4.2 Overall Best SST Accuracy Performance**
+#### **4.1.2 Overall Best SST Accuracy Performance**
 
 The highest SST accuracy achieved was **0.530233** with the following configuration:
 - **Pooling Strategy:** CLS
@@ -377,60 +368,70 @@ This configuration can be replicated by running the following script:
 best_sst_performance.sh
 ```
 
-However, due to random variation in training and evaluation, the exact accuracy value may not be equa, but within
+However, due to random variation in training and evaluation, the exact accuracy value may not be equal, but within
 the same order of magnitude.
 
-#### **4.3 Impact of Global Context Layer**
+#### **4.1.3 Overall Effect of CGA Layer on SST Performance**
 
 The Global Context Layer showed the following impact on SST accuracy:
 
-| Global Context Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
-|----------------------|---------------------|--------------------|
-| False                | 0.429812            | 0.530233           |
-| True                 | 0.331061            | 0.522622           |
+| CGA Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
+|-----------|---------------------|--------------------|
+| False     | 0.430               | 0.530              |
+| True      | 0.331               | 0.523              |
+| Baseline  | N/A                 | 0.522              |
 
-**Visualization:**
-- A violin plot showed that the model without the Global Context Layer generally outperformed the one with it.
+The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
+selection optimized through the grid search.
 
-#### **4.4 Effectiveness of Pooling Strategies**
+| **Stanford Sentiment Treebank (SST)**   | **Dev accuracy** |
+|-----------------------------------------|------------------|
+| Baseline                                | 0.522            | 
+| Contextual Global Attention (CGA)       | 0.523            |
+| CGA-based Attention-pooling             | 0.522            |
+| Using Grid Search Best Results (no CGA) | 0.530            |
 
-Pooling strategies were evaluated, with the following results:
+The generated [violin plot](grid_search/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer generally outperformed the one with it, with most
+results being concentrated on the ~0.500 mark vs. ~0.300 for the models with the extra CGA layer. However, under certain hyperparameter
+selection, accuracy in the same orders of magnitude can be reached.
+
+#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
+
+A deeper insight into the effects of regularized and non-regularized CGA layers on SST performance across all experiments
+reveals:
+- Regularization increases STT accuracy when extra CGA layer is present.
+- Attention-based pooling using a CGA layer doesn't improve SST accuracy on average, even when regularized.
+
+Additionally, the best SST performance under different conditions was as follows:
+
+- **With Extra Context Layer:** 0.523 (CLS, Regularize Context: True, AdamW)
+- **With Attention Pooling:** 0.522 (Attention, Regularize Context: True, AdamW)
+- **With Both:** 0.505 (Regularize Context: True, AdamW)
+
+![alt text](grid_search/analyses_visualizations/sst_performance_comparison.png)
+
+#### **4.1.4 Effectiveness of Pooling Strategies**
+
+
+Pooling strategies were evaluated, with the best SST accuracy results being achieved with the standard CLS-token-based 
+pooling strategy:
 
 | Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
 |------------------|---------------------|--------------------|
-| CLS              | 0.429133            | 0.530233           |
-| Attention        | 0.426651            | 0.522199           |
-| Average          | 0.423904            | 0.512312           |
-| Max              | 0.421345            | 0.509856           |
+| CLS (default)    | 0.429               | 0.530              |
+| Attention        | 0.427               | 0.522              |
+| Average          | 0.424               | 0.512              |
+| Max              | 0.421               | 0.510              |
 
-**Visualization:**
-- Swarm and box plots indicated that CLS and Attention pooling strategies yielded the highest SST accuracy.
+For an illustrative comparison, refer to the corresponding [box plot](grid_search/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
 
-#### **4.5 Effect of Context-Aware Layers and Attention Pooling on SST Performance**
+#### **Metrics worth exploring further:**
+- Model stability
+- Training time
 
-The best SST performance under different conditions was as follows:
-
-- **With Extra Context Layer:** 0.522622 (CLS, Regularize Context: True, AdamW)
-- **With Attention Pooling:** 0.522199 (Attention, Regularize Context: True, AdamW)
-- **With Both:** 0.504863 (Regularize Context: True, AdamW)
-
-**Visualization:**
-- Box plots demonstrated the effect of using the extra context layer and attention pooling on SST accuracy.
-
-### **Further Details:**
+#### **Further Details:**
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
-
----
-
-## Experiments
-
-### Learning all tasks vs. Learning one task:
-
-- A BERT model was trained to be able to solve all 3 tasks, and was compared to a BERT model trained on the tasks independetly.
-- The results for Sentiment Classification and Semantic Textual Similarity degrade, while for Paraphrase Detection increase.
-- Most probable explanation: Dataset sizes are not equal. Later or bigger trainings degrade previous or smaller trainings.
-- Possible solution: Trainings on bigger datasets first. Number of epochs relative to dataset size.
 
 ---
 
@@ -440,11 +441,11 @@ locally.
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-| | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
-|----------|---------------|--------------|
-| Baseline | 0.833 | 44.053 |
-| Improvement 1 | ... | ... |
-| Improvement 2 | ... | ... |
+|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
+|---------------|-------------------------------------|---------------------------------------|
+| Baseline      | 0.833                               | 44.053                                |
+| Improvement 1 | ...                                 | ...                                   |
+| Improvement 2 | ...                                 | ...                                   |
 
 ### BERT
 
@@ -453,38 +454,21 @@ For BERT model, fine-tuning was done 2 times. For Multitask the model learned al
 The results for the dev dataset.
 
 | **Multitask** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|----------|---------------|--------------|--------------|
-| Baseline | 0.515 | 0.877 | 0.849 |
-| Improvement 1 | ... | ... | ... |
-| Improvement 2 | ... | ... | ... |
-| ... | ... | ... | ... |
+|---------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline      | 0.515                              | 0.877                          | 0.849                                 |
+| Improvement 1 | ...                                | ...                            | ...                                   |
+| Improvement 2 | ...                                | ...                            | ...                                   |
+| ...           | ...                                | ...                            | ...                                   |
 
 
 Here Paraphrase Detection was trained for 1 epoch:
 
 | **Independent** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|----------|---------------|--------------|--------------|
-| Baseline | 0.534 | 0.860 | 0.863 |
-| Improvement 1 | ... | ... | ... |
-| Improvement 2 | ... | ... | ... |
-| ... | ... | ... | ... |
-
-
-#TODO: Discuss your results, observations, correlations, etc.
-
----
-
-## Hyperparameter Optimization
-
-#TODO 
-
-Briefly describe how you optimized your hyperparameters. If you focused strongly on hyperparameter optimization, include it in the Experiment section.
-
-## Visualizations
-
-#TODO
-
-Add relevant graphs showing metrics like accuracy, validation loss, etc., during training. Compare different training processes of your improvements in these graphs.
+|-----------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline        | 0.534                              | 0.860                          | 0.863                                 |
+| Improvement 1   | ...                                | ...                            | ...                                   |
+| Improvement 2   | ...                                | ...                            | ...                                   |
+| ...             | ...                                | ...                            | ...                                   |
 
 ---
 
