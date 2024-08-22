@@ -77,7 +77,7 @@ class MultitaskBERT(nn.Module):
 
         self.sentiment_classifier = nn.Linear(
             in_features=BERT_HIDDEN_SIZE,  # Mapping the 768-dimension output embedding to...
-            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
+            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes,
         )
 
         self.paraphrase_classifier = nn.Linear(
@@ -102,6 +102,7 @@ class MultitaskBERT(nn.Module):
         Args:
             input_ids (torch.Tensor): Tensor of input token IDs.
             attention_mask (torch.Tensor): Tensor of attention masks.
+            add_extra_layer (bool): Flag to determine whether to add extra global context-aware layer
             pooling_strategy (PoolingStrategy): Enum indicating the pooling strategy.
 
         Returns:
@@ -406,7 +407,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask, args.context_layer, args.pooling)
+                logits = model.predict_sentiment(b_ids, b_mask, args.context_layer, args.pooling_strategy)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
                 loss.backward()
                 optimizer.step()
@@ -582,10 +583,6 @@ def get_args():
 
     args, _ = parser.parse_known_args()
 
-    # Convert arguments to enums when necessary
-    args.pooling_strategy = PoolingStrategy(args.pooling)
-    args.optimizer_type = OptimizerType(args.optimizer)
-
     # Dataset paths
     parser.add_argument("--sst_train", type=str, default="data/sst-sentiment-train.csv")
     parser.add_argument("--sst_dev", type=str, default="data/sst-sentiment-dev.csv")
@@ -669,6 +666,11 @@ def get_args():
     parser.add_argument("--local_files_only", action="store_true")
 
     args = parser.parse_args()
+
+    # Convert arguments to enums when necessary
+    args.pooling_strategy = PoolingStrategy(args.pooling)
+    args.optimizer_type = OptimizerType(args.optimizer)
+
     return args
 
 

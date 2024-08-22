@@ -38,7 +38,6 @@ python -u multitask_classifier.py \
   --option finetune \
   --task sst \
   --pooling cls \
-  --context_layer False \
   --regularize_context \
   --lr 0.00001 \
   --hidden_dropout_prob 0.3 \
