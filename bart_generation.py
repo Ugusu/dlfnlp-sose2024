@@ -35,17 +35,17 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 5,
+    "epochs": 6,
     "learning_rate": 3e-5,
-    "optimizer": "AdamW",
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01},
+    "optimizer": "SophiaG",
+    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": learning_rate, "betas": (0.965, 0.99), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
-    "scheduler_gamma": 0.9,
-    "batch_size": 64,
+    "scheduler_gamma": 0.675,
+    "batch_size": 96,
     "max_length": 256,
-    "gradual_unfreezing": False,
-    "num_layers_to_freeze": 8,
+    "gradual_unfreezing": True,
+    "num_layers_to_freeze": 12,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -60,7 +60,7 @@ config_dict = {
     "seed": 11711,
     "model": "facebook/bart-large",
     "tokenizer": "facebook/bart-large",
-    "input_format": "sentence1",
+    "input_format": "sentence1 {tokenizer.sep_token} {' '.join(sentence1_tags)}",
     "target_format": "sentence2",
     "other_details": "",
 }
@@ -102,7 +102,7 @@ def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
         tokens = [',' if token == sconj else token for token in tokens]
         # masked_sentence = masked_sentence.replace(sconjs[0], ',')
 
-    # Rotate sentence parts if there's a comma
+    # Rotate some of the sentences parts if there's a comma
     # order the tags to match the tokens by zipping them together
     # find the tag of the comma
     if ',' in sentence:
@@ -137,57 +137,6 @@ def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
     sentence_tags = ' '.join(tags)
 
     return masked_sentence, sentence_tags
-
-
-'''import pandas as pd
-from typing import List, Tuple
-import joblib
-from contextlib import contextmanager
-import threading
-
-# Global lock to ensure atomic execution
-_process_lock = threading.Lock()
-
-
-@contextmanager
-def atomic_execution():
-    """Context manager to ensure atomic execution of a block of code."""
-    with _process_lock:
-        yield
-
-
-def process_sentences(dataset: pd.DataFrame) -> Tuple[List[str], List[str]]:
-    """
-    Transform the dataset for model input in parallel. Tokenizes and formats data.
-
-    Args:
-    dataset (pd.DataFrame): The dataset to transform.
-
-    Returns:
-    Tuple[List[str], List[str]]: A tuple containing two lists - input sentences and target sentences.
-    """
-    print("len(dataset): ", len(dataset))
-    with atomic_execution():
-        tokenizer_sep_token = "</s>"
-        tokenizer_mask_token = "<mask>"
-        print(tokenizer_sep_token, tokenizer_mask_token)
-
-        is_test = 'sentence2' not in dataset
-
-        # Perform multiprocessing
-        results = joblib.Parallel(n_jobs=-1, backend="multiprocessing")(
-            joblib.delayed(process_row)(row, tokenizer_sep_token, tokenizer_mask_token, is_test)
-            for _, row in dataset.iterrows()
-        )
-
-        # Unpack results only after all processing is complete
-        sentences, target_sentences = zip(*results)
-
-        print(f"Processed {len(sentences)} sentences")
-
-        assert len(sentences) == len(dataset), "Number of processed sentences doesn't match input dataset size"
-
-        return list(sentences), list(target_sentences)'''
 
 
 def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
@@ -246,7 +195,8 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     # log information
     config_dict["input_format"] = "{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
     config_dict["target_format"] = "{sentence2}"
-    config_dict["other_details"] = "masked a random verb, adjective, noun, and conjunction"
+    config_dict["other_details"] = ("masked a random verb, adjective, noun, and conjunction \n"
+                                    "rotated the sentence parts if there is , in between")
 
     return data_loader
 
@@ -404,20 +354,24 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     num_layers_to_unfreeze (int): Number of encoder layers to unfreeze (default: 2)
     does not work with PreFixModel
     """
-    # Unfreeze the specified number of layers in encoder and decoder
-    for i in range(num_layers_to_unfreeze):
-        for param in model.model.encoder.layers[-i:].parameters():
-            param.requires_grad = True
+    if isinstance(model, PrefixModel):
+        model.gradual_unfreezing(num_layers_to_unfreeze)
+    else:
+        # Unfreeze the specified number of last layers in encoder and decoder
+        for i in range(num_layers_to_unfreeze):
+            for param in model.model.encoder.layers[-i:].parameters():
+                param.requires_grad = True
 
-    for i in range(num_layers_to_unfreeze):
-        for param in model.model.decoder.layers[-i:].parameters():
-            param.requires_grad = True
+        for i in range(num_layers_to_unfreeze):
+            for param in model.model.decoder.layers[-i:].parameters():
+                param.requires_grad = True
+
 
     return model
 
 
 class PrefixModel(nn.Module):
-    def __init__(self, base_model, prefix_length, prefix_method='direct'):
+    def __init__(self, base_model, prefix_length, prefix_method='indirect'):
         super().__init__()
         self.base_model = base_model
         self.prefix_length = prefix_length
@@ -441,6 +395,22 @@ class PrefixModel(nn.Module):
             # Generate prefix through MLP
             prefix = self.prefix.expand(batch_size, -1, -1)
             return self.prefix_mlp(prefix)
+
+    def gradual_unfreezing(self, num_layers_to_unfreeze: int = 2):
+        """
+        Gradually unfreezes the encoder and decoder layers of the base model.
+
+        Args:
+        num_layers_to_unfreeze (int): Number of encoder and decoder layers to unfreeze (default: 2)
+        """
+        # Unfreeze the specified number of last layers in encoder and decoder
+        for i in range(num_layers_to_unfreeze):
+            for param in self.base_model.model.encoder.layers[-i:].parameters():
+                param.requires_grad = True
+
+        for i in range(num_layers_to_unfreeze):
+            for param in self.base_model.model.decoder.layers[-i:].parameters():
+                param.requires_grad = True
 
     def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, labels=None):
         batch_size = input_ids.shape[0]
@@ -612,7 +582,6 @@ def train_model(model: BartForConditionalGeneration,
     if optimizer_name == "AdamW":
         optimizer = AdamW(model.parameters(), **optimizer_params)
     elif optimizer_name == "SophiaG":
-        optimizer_params = {"lr": learning_rate, "betas": (0.965, 0.99), "rho": 0.04, "weight_decay": 1e-1}
         optimizer = SophiaG(model.parameters(), **optimizer_params)
     else:
         raise ValueError(f"Unknown optimizer: {optimizer_name}")
@@ -629,6 +598,7 @@ def train_model(model: BartForConditionalGeneration,
         return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
 
     best_penalized_bleu = 0
+    best_loss = float("inf")
     penalized_bleu_list = []
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
@@ -668,14 +638,18 @@ def train_model(model: BartForConditionalGeneration,
         # Evaluate the model with penalized BLEU score
         penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
 
-        if penalized_bleu > best_penalized_bleu:
-            best_penalized_bleu = penalized_bleu
+        #if penalized_bleu > best_penalized_bleu:
+        #    best_penalized_bleu = penalized_bleu
+        #    # Save the best model
+        #    model.save_pretrained(output_dir)
+        #    print(f"Model with score {best_penalized_bleu} saved.")
+
+        if loss < best_loss:
+            best_loss = loss
             # Save the best model
             model.save_pretrained(output_dir)
-            print(f"Model with score {best_penalized_bleu} saved.")
+            print(f"Model with loss {best_loss} saved.")
 
-
-        # TODO using genetic algorithm to optimize the model with the best hyperparameters and objective best penalized BLEU score
 
         # log information
         # for each epoch, add penalized BLEU score like epoch 1: 0.5, epoch 2: 0.6, etc.
@@ -683,7 +657,8 @@ def train_model(model: BartForConditionalGeneration,
 
     # load the best model
     model = BartForConditionalGeneration.from_pretrained(output_dir)
-    print(f"Best model loaded with penalized BLEU score: {best_penalized_bleu}")
+    #print(f"Best model loaded with penalized BLEU score: {best_penalized_bleu}")
+    print(f"Best model loaded with lowest loss: {best_loss}")
 
     # log information
     config_dict["penalized_bleu_epochs"] = penalized_bleu_list
@@ -850,9 +825,9 @@ def evaluate_model(model, test_data, device, tokenizer):
     inputs = test_data["sentence1"].tolist()
     references = test_data["sentence2"].tolist()
 
-    #print("inputs: ", inputs)
-    #print("references: ", references)
-    #print("predictions: ", predictions)
+    print("inputs: ", inputs[:5])
+    print("references: ", references[:5])
+    print("predictions: ", predictions[:5])
 
     model.train()
     # Calculate BLEU score
@@ -1014,6 +989,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
 
 '''
 ## Optimization using genetic algorithm
+# TODO using genetic algorithm to optimize the model with the best hyperparameters and objective best penalized BLEU score
 # Mutation function
 def mutate(config):
     """
