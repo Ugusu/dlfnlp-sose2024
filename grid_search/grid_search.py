@@ -77,7 +77,7 @@ def run_experiment(
     extra_context_layer_str = "-context_layer" if context_layer else ""
     regularize_context_str = "-regularize_context" if context_layer else ""
     args.filepath = (
-        f"models/{run_id}/experiment-{pooling_strategy_name}-{learning_rate}-{hidden_dropout_prob}-{batch_size}-{epochs}-{optimizer_name}"
+        f"../models/{run_id}/experiment-{pooling_strategy_name}-{learning_rate}-{hidden_dropout_prob}-{batch_size}-{epochs}-{optimizer_name}"
         f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
