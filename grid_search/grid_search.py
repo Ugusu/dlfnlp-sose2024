@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
+import sys
 
-from multitask_classifier import get_args, seed_everything, train_multitask, test_model
+from multitask_classifier import *
+
 import itertools
 import json
 from tqdm import tqdm
@@ -162,7 +164,8 @@ def grid_search() -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     epochs = [5, 10]
     optimizers = list(OptimizerType)
 
-    all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes, epochs, optimizers))
+    all_combinations = list(
+        itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes, epochs, optimizers))
 
     results = []
     best_result = None
@@ -215,4 +218,5 @@ def delete_model(args_filepath: str) -> None:
 
 
 if __name__ == "__main__":
+    sys.path.append("..")
     results, best_result = grid_search()

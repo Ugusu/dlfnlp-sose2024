@@ -348,7 +348,9 @@ without the extra layer and with or without regularization:
   ```sh
   submit_grid_search_jobs.sh
   ```
-  
+
+We recommend running these scripts from the project's home directory.
+
 ---
 
 ## **4. Results**
@@ -374,6 +376,9 @@ This configuration can be replicated by running the following script:
 ```sh
 best_sst_performance.sh
 ```
+
+However, due to random variation in training and evaluation, the exact accuracy value may not be equa, but within
+the same order of magnitude.
 
 #### **4.3 Impact of Global Context Layer**
 
