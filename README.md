@@ -166,8 +166,7 @@ BART version: BART Large.
 As part of the improvements for the sentiment analysis task of the project, Contextual Global Attention 
 (CGA) was introduced to enhance BERT's performance on the sentiment analysis task and in the pooling of the 
 encoded output embeddings. This alternate mechanism aims to enhance BERT's ability to capture long-range 
-dependencies by  integrating global context into its self-attention mechanism. This shall enable BERT to make 
-more informed decisions, building on empirical evidence that global context enhances self-attention networks.
+dependencies by  integrating global context into its self-attention mechanism.
 
 ### 1.2 Pooling Strategies
 While the **CLS** token is traditionally used as the aggregate representation in BERT's output, it may 
@@ -183,26 +182,15 @@ This experimentation aimed to identify whether these approaches could provide a 
 representation, thereby improving the model's performance in sentiment analysis by better encapsulating 
 the overall meaning of the input text.
 
-### 1.3 Optimizer Choice
-The choice of optimizer significantly impacts the training dynamics and final performance of models 
-like BERT. To explore potential improvements, the newly developed **Sophia** optimizer was tested against 
-the widely used **AdamW** optimizer. This comparison aimed to determine if Sophia could offer better 
-convergence and performance, thereby optimizing the training process and enhancing the model’s 
-effectiveness in sentiment analysis.
-
 ## 2. Methodology
 
 ### BERT
 
-### **2.1 Contextual Global Attention (CGA)**
+### **2.1 Contextual Global Attention (CGA) Layer**
 
-To enhance BERT's ability to capture long-range dependencies, a **Global Context Layer** was integrated into the model. This layer computes a global context vector by averaging token embeddings and refining it through a feed-forward network. The refined context vector is incorporated into BERT’s self-attention mechanism via a custom **Contextual Global Attention (CGA)** mechanism, implemented in the `context_bert.py` file. The CGA mechanism introduces additional weight matrices and gating parameters that modulate the influence of the global context on token-level representations.
+This layer computes a global context vector by averaging token embeddings and refining it through a feed-forward network. The refined context vector is incorporated into BERT’s self-attention mechanism via a custom **Contextual Global Attention (CGA)** mechanism, implemented in the `context_bert.py` file. 
 
-The **Contextual Global Attention (CGA)** was tested in three configurations: as an extra layer on top of the 12 stacked vanilla BERT layers, as a layer used for attention-based pooling, and in both configurations simultaneously.
-
-**Contextualized Query and Key Transformations**: 
-
-This formula integrates the global context into the query and key matrices to capture context-aware dependencies.
+The CGA mechanism introduces additional weight matrices and gating parameters that modulate the influence of the global context on token-level representations. A regularized variant of CGA, implemented as the `GlobalContextLayerRegularized` class, incorporates layer normalization and dropout to enhance model generalization and stability during training.
 
 $$
 \begin{bmatrix}
@@ -211,27 +199,11 @@ $$
 \end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
 $$
 
-**Global Context Vector**:
+It was decided to use the average of the hidden states across the entire input sequence as choice of context representation. This is called **"global context"**:
 
-This formula computes the global context vector as the average of the hidden states across the entire input sequence.
-
- $$
-  \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
- $$
-
-
-**Regularized Variant of Contextual Global Attention (CGA)**
-
-The regularized variant of the **Contextual Global Attention (CGA)** mechanism was implemented to enhance model generalization and stability during training. This variant incorporates layer normalization and dropout, ensuring that the model remains robust against overfitting. The corresponding class is `GlobalContextLayerRegularized` in the `context_bert.py` file.
-
-**Key Points:**
-- **Layer Normalization:** Applied to both input and output tensors, improving training stability:
-
-  $$
-  \mathbf{O}_{\text{reg}} = \text{LayerNorm}\left(\text{Dropout}(\mathbf{O}) + \mathbf{h}\right)
-  $$
-
-- **Dropout:** Introduced to the attention probabilities and global context vector, mitigating overfitting.
+$$
+\mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
+$$
 
 For further details on the workings of the CGA, refer to the original paper and the implementation in the code.
 
@@ -265,34 +237,6 @@ $$
 \mathbf{p} = \sum_{i=1}^{n} \alpha_i \mathbf{h}_i
 $$
 where $\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ and $\mathbf{C}$ is the global context vector.
-
-
-### **2.3 Optimizer Choice**
-
-In the training process, two optimizers were evaluated: **AdamW** and **SophiaG**. Each optimizer was implemented to understand their impact on model performance, particularly in the context of sentiment analysis.
-
-1. **AdamW Optimizer:**
-   AdamW is a widely used optimizer in training deep learning models, particularly for transformers like BERT. It combines the advantages of Adam with weight decay regularization to improve generalization. The update rule for AdamW is as follows:
-   $$
-   \mathbf{p} \leftarrow \mathbf{p} - \eta \cdot \left(\frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon} + \lambda \mathbf{p}\right)
-   $$
-   where:
-   - $\hat{\mathbf{m}}$ and $\hat{\mathbf{v}}$ are bias-corrected first and second moment estimates,
-   - $\lambda$ is the weight decay factor,
-   - $\eta$ is the learning rate,
-   - $\epsilon$ is a small constant to avoid division by zero.
-
-2. **SophiaG Optimizer:**
-   SophiaG is a newer optimizer that adapts the learning rate based on an estimate of the Hessian matrix. It aims to improve convergence speed and training efficiency. The update rule for SophiaG involves:
-   $$
-   \mathbf{p} \leftarrow \mathbf{p} - \eta \cdot \frac{\mathbf{m}}{\rho \cdot \text{bs} \cdot \mathbf{h} + \epsilon}
-   $$
-   where:
-   - $\mathbf{m}$ is the exponential moving average of gradients,
-   - $\rho$ is a hyperparameter influencing the adaptation based on the Hessian,
-   - $\text{bs}$ is the batch size,
-   - $\mathbf{h}$ is the Hessian estimate,
-   - $\eta$ and $\epsilon$ have similar roles as in AdamW.
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
 
@@ -522,6 +466,7 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762): Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin
 - [Paraphrase Types for Generation and Detection](https://aclanthology.org/2023.emnlp-main.746.pdf): Jan Philip Wahle, Bela Gipp, Terry Ruas, University of Göttingen, Germany {wahle,gipp,ruas}@uni-goettingen.de
 - [SemEval-2016 Task 1: Semantic Textual Similarity, Monolingual and Cross-Lingual Evaluation](https://www.researchgate.net/publication/305334510_SemEval-2016_Task_1_Semantic_Textual_Similarity_Monolingual_and_Cross-Lingual_Evaluation): Eneko Agirre, Carmen Banea, Daniel Cer, Mona Diab
+- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
 
 #TODO: (Phase 2) List all references (repositories, papers, etc.) used for your project.
 
