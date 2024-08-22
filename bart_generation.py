@@ -37,12 +37,12 @@ data_path = os.path.join(os.getcwd(), 'data')
 config_dict = {
     "epochs": 6,
     "learning_rate": 3e-5,
-    "optimizer": "SophiaG",
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": learning_rate, "betas": (0.965, 0.99), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "optimizer": "AdamW",
+    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 96,
+    "batch_size": 100,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
@@ -76,7 +76,7 @@ def process_row(row, tokenizer_sep_token, tokenizer_mask_token ,is_test):
     masked_sentence, sentence1_tags_str = mask_tokens(row['sentence1'], sentence1_tokens, sentence1_tags, tokenizer_mask_token)
 
     # Format input sentence
-    formatted_sentence = f"{masked_sentence}  {tokenizer_sep_token} {sentence1_tags_str}"
+    formatted_sentence = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str}"
 
     if not is_test:
         formatted_sentence2 = f"{row['sentence2']}"
@@ -635,8 +635,12 @@ def train_model(model: BartForConditionalGeneration,
 
         print(f"Loss: {loss.item()}")
 
-        # Evaluate the model with penalized BLEU score
-        penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
+        try:
+            # Evaluate the model with penalized BLEU score
+            penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
+        except:
+            print("Failed to evaluate model. Probably the output is None.")
+            penalized_bleu = 0
 
         #if penalized_bleu > best_penalized_bleu:
         #    best_penalized_bleu = penalized_bleu
@@ -825,9 +829,9 @@ def evaluate_model(model, test_data, device, tokenizer):
     inputs = test_data["sentence1"].tolist()
     references = test_data["sentence2"].tolist()
 
-    print("inputs: ", inputs[:5])
-    print("references: ", references[:5])
-    print("predictions: ", predictions[:5])
+    print("inputs: ", inputs[0])
+    print("references: ", references[0])
+    print("predictions: ", predictions[0])
 
     model.train()
     # Calculate BLEU score
