@@ -257,12 +257,12 @@ variations in the Contextual Global Attention (see bash scripts below), this amo
 
 **Grid Search Configuration:**
 
-- **Pooling Strategies:** CLS Token, Average, Max, Attention-based
-- **Learning Rates:** 1e-5, 5e-5
-- **Hidden Dropout Probabilities:** 0.3, 0.5
-- **Batch Sizes:** 16, 32, 64
-- **Epochs:** 5, 10
-- **Optimizers:** AdamW, SophiaG
+- **Pooling Strategies:** `CLS Token`, `Average`, `Max`, `Attention`
+- **Learning Rates:** `1e-5`, `5e-5`
+- **Hidden Dropout Probabilities:** `0.3`, `0.5`
+- **Batch Sizes:** `16`, `32`, `64`
+- **Epochs:** `5`, `10`
+- **Optimizers:** `AdamW`, `SophiaG`
 
 **Execution Overview:**
 
@@ -297,14 +297,14 @@ A total of 768 experiments were conducted, all of which successfully completed. 
 #### **4.1.2 Overall Best SST Accuracy Performance**
 
 The highest SST accuracy achieved was **0.530233** with the following configuration:
-- **Pooling Strategy:** CLS
-- **Extra Context Layer:** False
-- **Regularize Context:** True
-- **Learning Rate:** 0.00001
-- **Hidden Dropout Probability:** 0.3
-- **Batch Size:** 64
-- **Optimizer:** AdamW
-- **Epochs:** 5
+- **Pooling Strategy:** `CLS`
+- **Extra Context Layer:** `False`
+- **Regularize Context:** `True`
+- **Learning Rate:** `1e-5`
+- **Hidden Dropout Probability:** `0.3`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Epochs:** `5`
 
 This configuration can be replicated by running the following script:
 
@@ -403,7 +403,6 @@ The results for the dev dataset.
 | Improvement 1 | ...                                | ...                            | ...                                   |
 | Improvement 2 | ...                                | ...                            | ...                                   |
 | ...           | ...                                | ...                            | ...                                   |
-
 
 Here Paraphrase Detection was trained for 1 epoch:
 
