@@ -167,8 +167,8 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, is_test=is_test)
 
     # Use multiprocessing for parallel processing
-    num_cores = multiprocessing.cpu_count()
-    with multiprocessing.Pool(processes=num_cores) as pool:
+    num_cores = multiprocessing.cpu_count() // 2
+    with multiprocessing.Pool(processes=num_cores//2) as pool:
         results = list(tqdm(
             pool.imap(process_row_partial, [row for _, row in dataset.iterrows()]),
             total=len(dataset),
