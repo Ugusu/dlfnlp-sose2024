@@ -348,6 +348,73 @@ without the extra layer and with or without regularization:
   ```sh
   submit_grid_search_jobs.sh
   ```
+  
+---
+
+## **4. Results**
+
+### **4.1 Data Overview**
+
+A total of 768 experiments were conducted, all of which successfully completed. The experiments tested various configurations, including pooling strategies, learning rates, dropout probabilities, batch sizes, epochs, and optimizers.
+
+### **4.2 Overall Best SST Accuracy Performance**
+
+The highest SST accuracy achieved was **0.530233** with the following configuration:
+- **Pooling Strategy:** CLS
+- **Extra Context Layer:** False
+- **Regularize Context:** True
+- **Learning Rate:** 0.00001
+- **Hidden Dropout Probability:** 0.3
+- **Batch Size:** 64
+- **Optimizer:** AdamW
+- **Epochs:** 5
+
+This configuration can be replicated by running the following script:
+
+```sh
+best_sst_performance.sh
+```
+
+#### **4.3 Impact of Global Context Layer**
+
+The Global Context Layer showed the following impact on SST accuracy:
+
+| Global Context Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
+|----------------------|---------------------|--------------------|
+| False                | 0.429812            | 0.530233           |
+| True                 | 0.331061            | 0.522622           |
+
+**Visualization:**
+- A violin plot showed that the model without the Global Context Layer generally outperformed the one with it.
+
+#### **4.4 Effectiveness of Pooling Strategies**
+
+Pooling strategies were evaluated, with the following results:
+
+| Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
+|------------------|---------------------|--------------------|
+| CLS              | 0.429133            | 0.530233           |
+| Attention        | 0.426651            | 0.522199           |
+| Average          | 0.423904            | 0.512312           |
+| Max              | 0.421345            | 0.509856           |
+
+**Visualization:**
+- Swarm and box plots indicated that CLS and Attention pooling strategies yielded the highest SST accuracy.
+
+#### **4.5 Effect of Context-Aware Layers and Attention Pooling on SST Performance**
+
+The best SST performance under different conditions was as follows:
+
+- **With Extra Context Layer:** 0.522622 (CLS, Regularize Context: True, AdamW)
+- **With Attention Pooling:** 0.522199 (Attention, Regularize Context: True, AdamW)
+- **With Both:** 0.504863 (Regularize Context: True, AdamW)
+
+**Visualization:**
+- Box plots demonstrated the effect of using the extra context layer and attention pooling on SST accuracy.
+
+### **Further Details:**
+For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
+locally.
 
 ---
 
