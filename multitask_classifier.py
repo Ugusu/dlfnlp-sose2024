@@ -500,6 +500,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
@@ -511,6 +513,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
