@@ -38,11 +38,11 @@ config_dict = {
     "epochs": 3,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-2}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 96,
+    "batch_size": 32,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
