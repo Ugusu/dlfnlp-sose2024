@@ -32,7 +32,7 @@ echo "Latest Commit: $(git rev-parse --short HEAD)"
 echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the grid search script:
-python -u grid_search/grid_search.py --use_gpu --local_files_only --option finetune --task sst --context_layer --regularize_context
+python -u grid_search.py --use_gpu --local_files_only --option finetune --task sst
 
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-grid-search-multitask-<jobid>.out

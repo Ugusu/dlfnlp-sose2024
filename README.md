@@ -269,10 +269,10 @@ variations in the Contextual Global Attention (see bash scripts below), this amo
 The grid search was executed on the HPC cluster (as described in the setup section above), with the following key points:
 
 - **Bash Scripts:** To initiate the grid search for different configurations of the CGA Layer, 
-use the provided [bash scripts](grid_search/experiment_scripts). These scripts correspond to various setups, including options with or 
+use the provided [bash scripts](sst_grid_search_experiments/experiment_scripts). These scripts correspond to various setups, including options with or 
 without the extra layer and with or without regularization.
 
-- **Result Storage:** Results for each grid search run were [saved](grid_search/grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
+- **Result Storage:** Results for each grid search run were [saved](sst_grid_search_experiments/grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
 
 - **Manual Tuning:** Configuration options within the grid search [Python script](grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
 
@@ -335,7 +335,7 @@ selection optimized through the grid search.
 | CGA-based Attention-pooling             | 0.522            |
 | Using Grid Search Best Results (no CGA) | 0.530            |
 
-The generated [violin plot](grid_search/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer generally outperformed the one with it, with most
+The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer generally outperformed the one with it, with most
 results being concentrated on the ~0.500 mark vs. ~0.300 for the models with the extra CGA layer. However, under certain hyperparameter
 selection, accuracy in the same orders of magnitude can be reached.
 
@@ -352,7 +352,7 @@ Additionally, the best SST performance under different conditions was as follows
 - **With Attention Pooling:** 0.522 (Attention, Regularize Context: True, AdamW)
 - **With Both:** 0.505 (Regularize Context: True, AdamW)
 
-![alt text](grid_search/analyses_visualizations/sst_performance_comparison.png)
+![alt text](sst_grid_search_experiments/analyses_visualizations/sst_performance_comparison.png)
 
 #### **4.1.4 Effectiveness of Pooling Strategies**
 
@@ -367,7 +367,7 @@ pooling strategy:
 | Average          | 0.424               | 0.512              |
 | Max              | 0.421               | 0.510              |
 
-For an illustrative comparison, refer to the corresponding [box plot](grid_search/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
+For an illustrative comparison, refer to the corresponding [box plot](sst_grid_search_experiments/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
 
 #### **Metrics worth exploring further:**
 - Model stability
