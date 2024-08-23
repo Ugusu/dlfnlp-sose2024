@@ -616,38 +616,35 @@ def tag_pos(sentence: str):
 
 
 
-def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str) -> list[Any]:
+def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str, all_sentence1_tokens: list) -> List[Any]:
     """
-    Find the two most important tokens from the given tokenized sentences using ROUGE metrics.
+    Find the two most important tokens from sentence2 using ROUGE metrics.
 
     This function calculates the importance of tokens based on their ROUGE scores and frequency.
-    It considers tokens with length greater than 3 and returns the two most important ones.
+    It considers tokens with length greater than 3 and returns the two most important ones from sentence2.
 
     Args:
-        sentence1_tokenized (List[str]): The first tokenized sentence.
-        sentence2_tokenized (List[str]): The second tokenized sentence.
+        sentence1_tokenized (str): The first tokenized sentence as a string representation of a list.
+        sentence2_tokenized (str): The second tokenized sentence as a string representation of a list.
 
     Returns:
-        Tuple[str, str]: A tuple containing the two most important tokens.
+        List[Any]: A list containing up to two most important tokens from sentence2.
 
     Raises:
-        ValueError: If there are fewer than two valid tokens (length > 3) in the input.
+        ValueError: If there are fewer than two valid tokens (length > 3) in sentence2.
     """
-    # convert and clean the tokenized sentences
-    sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
+    # Convert and clean the tokenized sentences
+    #sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
     sentence2_tokenized = ast.literal_eval(sentence2_tokenized)
 
-    # Combine both sentences
-    all_tokens = sentence1_tokenized + sentence2_tokenized
+    # Combine both sentences for reference, but only consider sentence2 for valid tokens
+    all_tokens = all_sentence1_tokens + sentence2_tokenized
+    valid_tokens = [token for token in sentence2_tokenized if len(token) > 3]
 
+    if len(valid_tokens) < 3:
+        raise ValueError("Insufficient number of valid tokens (length > 4) in sentence2.")
 
-    # Filter tokens with character length > 3
-    valid_tokens = [token for token in all_tokens if len(token) > 3]
-
-    if len(valid_tokens) < 2:
-        raise ValueError("Insufficient number of valid tokens (length > 3) in the input sentences.")
-
-    # Count occurrences of each valid token
+    # Count occurrences of each valid token in sentence2
     token_counts = Counter(valid_tokens)
 
     # Calculate ROUGE scores for each token
@@ -658,8 +655,7 @@ def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str) -> 
     for token in set(valid_tokens):
         hypothesis = token
         scores = rouge.get_scores(hypothesis, reference)
-
-        # Use ROUGE-L F1-score as the primary metric
+        # Use ROUGE-l F1-score as the primary metric
         token_scores[token] = scores[0]['rouge-l']['f']
 
     # Combine ROUGE scores with inverse frequency for final importance score
@@ -670,7 +666,7 @@ def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str) -> 
 
     # Sort tokens by importance score (descending) and return top 2
     important_tokens = sorted(token_importance.items(), key=lambda x: x[1], reverse=True)
-    return list(token for token, _ in important_tokens[:2])
+    return [token for token, _ in important_tokens[:3]]
 
 
 

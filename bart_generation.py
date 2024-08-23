@@ -1,7 +1,8 @@
 import argparse
+import ast
 import os
 import random
-from typing import Tuple, LiteralString
+from typing import Tuple
 
 #from cgitb import reset
 
@@ -10,8 +11,6 @@ import pandas as pd
 import torch
 from jedi.inference.gradual.typing import Tuple
 from sacrebleu.metrics import BLEU
-from spacy.matcher.levenshtein import Optional
-#from spacy.symbols import punct
 from torch import nn
 
 from torch.utils.data import DataLoader, TensorDataset, Dataset
@@ -22,13 +21,12 @@ from torch.optim.lr_scheduler import StepLR
 from optimizer import AdamW, SophiaG
 #from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
 #from typing import Optional, Tuple
-from rouge_score import rouge_scorer
 
 #from split_train_dev import dev_dataset
 from utils import nums2word_word2nums, tag_pos, get_important_tokens
 
-import joblib
-import concurrent.futures
+#import joblib
+#import concurrent.futures
 import multiprocessing
 from functools import partial
 
@@ -39,10 +37,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 6,
+    "epochs": 3,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
-    "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
@@ -57,7 +55,7 @@ config_dict = {
     "penalized_bleu_epochs": [],
     "penalized_bleu_val": 0.0,
     "penalized_bleu_test": 0.0,
-    "prefix": False,
+    "prefix": True,
     "prefix_length": 10,
     "prefix_method": "indirect",
     "use_gpu": True,
@@ -67,10 +65,13 @@ config_dict = {
     "input_format": "sentence1 {tokenizer.sep_token} {' '.join(sentence1_tags)}",
     "target_format": "sentence2",
     "other_details": "",
+    "example_inputs": [],
+    "example_references": [],
+    "example_predictions": []
 }
 
 
-def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_token: str ,is_test: bool =False, is_eval: bool =False):
+def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_token: str, all_sentence1_tokens: list ,is_test: bool = False, is_eval: bool = False):
     """
     Process a row from the dataset to generate the input and target sentences for the model.
     Args:
@@ -92,14 +93,14 @@ def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_toke
     least_freq_tokens = None
     if not is_test and not is_eval:
         # Get the most important tokens between the two sentences and add them to the training data, this ensures that the model learns to generate the most important tokens
-        important_tokens = get_important_tokens(row['sentence1_tokenized'], row['sentence2_tokenized'])
+        important_tokens = get_important_tokens(row['sentence1_tokenized'], row['sentence2_tokenized'], all_sentence1_tokens)
         least_freq_tokens = ' '.join(important_tokens)
 
         # Format input sentence
         formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token} {least_freq_tokens}"
 
     else:
-        formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token}"
+        formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str}"
 
     #print(formatted_sentence1)
 
@@ -109,8 +110,7 @@ def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_toke
     return formatted_sentence1, formatted_sentence2
 
 
-def mask_tokens(sentence: str, tokens: list, tags: list, tokenizer_mask_token: str) -> tuple[
-    LiteralString, LiteralString]:
+def mask_tokens(sentence: str, tokens: list, tags: list, tokenizer_mask_token: str):
     """
     Mask random tokens but for certain parts of speech in the sentence.
     making a verb, adjective, and a noun
@@ -201,8 +201,13 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     mask_token = tokenizer.mask_token
     is_test = 'sentence2' not in dataset
 
+    # all sentence1 tokens
+    all_sentence1_tokens = [ast.literal_eval(row["sentence1_tokenized"]) for _, row in dataset.iterrows()]
+    merged_tokens = [token for sublist in all_sentence1_tokens for token in sublist]
+    #print(all_sentence1_tokens)
+
     # Prepare the process_row function with fixed arguments
-    process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, is_test=is_test, is_eval=is_eval)
+    process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, all_sentence1_tokens=merged_tokens, is_test=is_test, is_eval=is_eval)
 
     # Use multiprocessing for parallel processing
     num_cores = multiprocessing.cpu_count() // 2
@@ -215,7 +220,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
 
     sentences, target_sentences = zip(*results)
 
-    #print("Done processing sentences.")
+    print("Done processing sentences.")
     #print(sentences[0], target_sentences[0])
     #print(len(sentences), len(target_sentences))
 
@@ -382,6 +387,21 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
         for param in model.model.decoder.layers[i].parameters():
             param.requires_grad = False
 
+    # Calculate the number of trainable layers
+    num_trainable = 0
+    for layer in model.model.encoder.layers:
+        trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+        if trainable_params > 0:
+            num_trainable += 1
+
+    num_trainable_d = 0
+    for layer in model.model.decoder.layers:
+        trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+        if trainable_params > 0:
+            num_trainable_d += 1
+
+    print("Number of trainable encoder-decoder layers:", num_trainable, '-', num_trainable_d)
+
     return model
 
 def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
@@ -398,13 +418,27 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     else:
         # Unfreeze the specified number of last layers in encoder and decoder
         for i in range(num_layers_to_unfreeze):
-            for param in model.model.encoder.layers[-i:].parameters():
+            for param in model.model.encoder.layers[-i].parameters():
                 param.requires_grad = True
 
         for i in range(num_layers_to_unfreeze):
-            for param in model.model.decoder.layers[-i:].parameters():
+            for param in model.model.decoder.layers[-i].parameters():
                 param.requires_grad = True
 
+        # Calculate the number of trainable layers
+        num_trainable = 0
+        for layer in model.model.encoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable += 1
+
+        num_trainable_d = 0
+        for layer in model.model.decoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable_d += 1
+
+        print("Number of trainable encoder layers:", num_trainable, '-', num_trainable_d)
 
     return model
 
@@ -448,12 +482,27 @@ class PrefixModel(nn.Module):
         """
         # Unfreeze the specified number of last layers in encoder and decoder
         for i in range(num_layers_to_unfreeze):
-            for param in self.base_model.model.encoder.layers[-i:].parameters():
+            for param in self.base_model.model.encoder.layers[-i].parameters():
                 param.requires_grad = True
 
         for i in range(num_layers_to_unfreeze):
-            for param in self.base_model.model.decoder.layers[-i:].parameters():
+            for param in self.base_model.model.decoder.layers[-i].parameters():
                 param.requires_grad = True
+
+        # Calculate the number of trainable layers
+        num_trainable = 0
+        for layer in self.base_model.model.encoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable += 1
+
+        num_trainable_d = 0
+        for layer in self.base_model.model.decoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable_d += 1
+
+        print("Number of trainable encoder layers:", num_trainable, '-', num_trainable_d)
 
     def forward(self, input_ids, attention_mask=None, decoder_input_ids=None, labels=None):
         batch_size = input_ids.shape[0]
@@ -632,7 +681,6 @@ def train_model(model: BartForConditionalGeneration,
                     num_layers_to_unfreeze = 0
                     num_trainable_layers = num_layers
                 num_trainable_layers += num_layers_to_unfreeze
-            print(f"Unfreezing {num_layers_to_unfreeze} layers. Total trainable layers: {num_trainable_layers}")
             model = gradual_unfreezing(model, num_layers_to_unfreeze= num_trainable_layers)
 
         # Train the model
@@ -674,7 +722,6 @@ def train_model(model: BartForConditionalGeneration,
             # Save the best model
             model.save_pretrained(output_dir)
             print(f"Model with loss {best_loss} saved.")
-
 
         # log information
         # for each epoch, add penalized BLEU score like epoch 1: 0.5, epoch 2: 0.6, etc.
@@ -869,6 +916,9 @@ def evaluate_model(model, test_data, device, tokenizer):
 
     # log information
     config_dict["penalized_bleu_val"] = penalized_bleu
+    config_dict["example_inputs"] = inputs[:5]
+    config_dict["example_references"] = references[:5]
+    config_dict["example_predictions"] = predictions[:5]
 
     return penalized_bleu
 
