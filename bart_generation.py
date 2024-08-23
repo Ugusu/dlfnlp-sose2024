@@ -46,7 +46,7 @@ config_dict = {
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 10,
+    "batch_size": 32,
     "max_length": 256,
     "gradual_unfreezing": False,
     "num_layers_to_freeze": 6,
