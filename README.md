@@ -242,15 +242,9 @@ $$
 \mathbf{p} = \sum_{i=1}^{n} \alpha_i \mathbf{h}_i
 $$
 
-where 
+where $\(\alpha_i\)$ represents the attention weight assigned to each hidden state.
 
-$$
-\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)
-$$
-
-and $\mathbf{C}$ is the global context vector.
-
-These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
+These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis$
 
 ---
 
