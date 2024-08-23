@@ -232,6 +232,7 @@ The maximum value across all token hidden states is selected for each dimension:
 $$
 \mathbf{p}_j = \max_{i} \mathbf{h}_{ij}
 $$
+
 where $\mathbf{h}_{ij}$ is the hidden state of token $i$ in dimension $j$.
 
 4. **Attention-Based Pooling:**
@@ -241,7 +242,15 @@ $$
 \mathbf{p} = \sum_{i=1}^{n} \alpha_i \mathbf{h}_i
 $$
 
-where $\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ and $\mathbf{C}$ is the global context vector.
+where 
+
+$\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ 
+
+and 
+
+$\mathbf{C}$ 
+
+is the global context vector.
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
 
