@@ -244,7 +244,7 @@ $$
 
 where $\(\alpha_i\)$ represents the attention weight assigned to each hidden state.
 
-These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis$
+These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis
 
 ---
 
