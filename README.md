@@ -244,13 +244,11 @@ $$
 
 where 
 
-$\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ 
+$$
+\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)
+$$
 
-and 
-
-$\mathbf{C}$ 
-
-is the global context vector.
+and $\mathbf{C}$ is the global context vector.
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
 
