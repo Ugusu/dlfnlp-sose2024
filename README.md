@@ -274,7 +274,7 @@ without the extra layer and with or without regularization.
 
 - **Result Storage:** Results for each grid search run were [saved](grid_search/grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
 
-- **Manual Tuning:** Configuration options within the grid search [Python script](grid_search/grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
+- **Manual Tuning:** Configuration options within the grid search [Python script](grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
 
 - **Submission Script:** An executable script was also provided to manage the submission of all grid search jobs on the HPC cluster at once.
 

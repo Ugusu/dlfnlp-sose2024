@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
-import sys
 
 from multitask_classifier import *
 
@@ -218,5 +217,4 @@ def delete_model(args_filepath: str) -> None:
 
 
 if __name__ == "__main__":
-    sys.path.append("..")
     results, best_result = grid_search()
