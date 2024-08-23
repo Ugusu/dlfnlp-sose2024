@@ -39,7 +39,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 3,
+    "epochs": 6,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
     "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
@@ -57,7 +57,7 @@ config_dict = {
     "penalized_bleu_epochs": [],
     "penalized_bleu_val": 0.0,
     "penalized_bleu_test": 0.0,
-    "prefix": True,
+    "prefix": False,
     "prefix_length": 10,
     "prefix_method": "indirect",
     "use_gpu": True,
