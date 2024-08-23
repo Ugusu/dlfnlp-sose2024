@@ -1,12 +1,16 @@
 import argparse
 import os
 import random
+from typing import Tuple, LiteralString
+
 #from cgitb import reset
 
 import numpy as np
 import pandas as pd
 import torch
+from jedi.inference.gradual.typing import Tuple
 from sacrebleu.metrics import BLEU
+from spacy.matcher.levenshtein import Optional
 #from spacy.symbols import punct
 from torch import nn
 
@@ -21,7 +25,7 @@ from optimizer import AdamW, SophiaG
 from rouge_score import rouge_scorer
 
 #from split_train_dev import dev_dataset
-from utils import nums2word_word2nums, tag_pos
+from utils import nums2word_word2nums, tag_pos, get_important_tokens
 
 import joblib
 import concurrent.futures
@@ -38,14 +42,14 @@ config_dict = {
     "epochs": 3,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.02, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 32,
+    "batch_size": 10,
     "max_length": 256,
-    "gradual_unfreezing": True,
-    "num_layers_to_freeze": 12,
+    "gradual_unfreezing": False,
+    "num_layers_to_freeze": 6,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -66,7 +70,17 @@ config_dict = {
 }
 
 
-def process_row(row, tokenizer_sep_token, tokenizer_mask_token ,is_test):
+def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_token: str ,is_test: bool =False, is_eval: bool =False):
+    """
+    Process a row from the dataset to generate the input and target sentences for the model.
+    Args:
+    row (pd.Series): The row to process.
+    tokenizer_sep_token (str): Tokenizer separator token.
+    tokenizer_mask_token (str): Tokenizer mask token.
+    is_test (bool): Whether the dataset is a test set. Defaults to False.
+    Returns:
+    Tuple[str, Optional[str]]: The input and target sentences.
+    """
 
     formatted_sentence2 = None
 
@@ -75,16 +89,41 @@ def process_row(row, tokenizer_sep_token, tokenizer_mask_token ,is_test):
     # Masking operations
     masked_sentence, sentence1_tags_str = mask_tokens(row['sentence1'], sentence1_tokens, sentence1_tags, tokenizer_mask_token)
 
-    # Format input sentence
-    formatted_sentence = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str}"
+    least_freq_tokens = None
+    if not is_test and not is_eval:
+        # Get the most important tokens between the two sentences and add them to the training data, this ensures that the model learns to generate the most important tokens
+        important_tokens = get_important_tokens(row['sentence1_tokenized'], row['sentence2_tokenized'])
+        least_freq_tokens = ' '.join(important_tokens)
+
+        # Format input sentence
+        formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token} {least_freq_tokens}"
+
+    else:
+        formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token}"
+
+    #print(formatted_sentence1)
 
     if not is_test:
         formatted_sentence2 = f"{row['sentence2']}"
 
-    return formatted_sentence, formatted_sentence2
+    return formatted_sentence1, formatted_sentence2
 
 
-def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
+def mask_tokens(sentence: str, tokens: list, tags: list, tokenizer_mask_token: str) -> tuple[
+    LiteralString, LiteralString]:
+    """
+    Mask random tokens but for certain parts of speech in the sentence.
+    making a verb, adjective, and a noun
+    converting a conjunction to a comma
+    rotating the sentence parts if there is a comma in between
+    Args:
+    sentence (str): The sentence to mask.
+    tokens (list): List of tokens in the sentence.
+    tags (list): List of POS tags for the tokens.
+    tokenizer_mask_token (str): Tokenizer mask token.
+    Returns:
+    Tuple[str, str]: The masked sentence and the sentence tags
+    """
 
     # Mask a random verb
     verb_tokens = [token for token, tag in zip(tokens, tags) if tag == 'VERB']
@@ -94,7 +133,7 @@ def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
         tokens = [tokenizer_mask_token if token == verb_token else token for token in tokens]
         #masked_sentence = masked_sentence.replace(verb_token, tokenizer_mask_token)
 
-    # Convert conjunctions to comma
+    # Convert a conjunction to comma
     sconjs = [token for token, tag in zip(tokens, tags) if tag == 'SCONJ']
     if sconjs:
         sconj = random.choice(sconjs)
@@ -140,7 +179,7 @@ def mask_tokens(sentence, tokens, tags, tokenizer_mask_token):
 
 
 def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
-                   tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
+                   tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False, is_eval = True) -> DataLoader:
     """
     Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
     Args:
@@ -151,7 +190,6 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     Returns:
     DataLoader: DataLoader containing the tokenized data.
     """
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     print("Processing sentences...")
     #with joblib.Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
@@ -164,11 +202,11 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     is_test = 'sentence2' not in dataset
 
     # Prepare the process_row function with fixed arguments
-    process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, is_test=is_test)
+    process_row_partial = partial(process_row, tokenizer_sep_token=sep_token, tokenizer_mask_token=mask_token, is_test=is_test, is_eval=is_eval)
 
     # Use multiprocessing for parallel processing
     num_cores = multiprocessing.cpu_count() // 2
-    with multiprocessing.Pool(processes=num_cores//2) as pool:
+    with multiprocessing.Pool(processes=num_cores) as pool:
         results = list(tqdm(
             pool.imap(process_row_partial, [row for _, row in dataset.iterrows()]),
             total=len(dataset),
@@ -196,7 +234,8 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     config_dict["input_format"] = "{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
     config_dict["target_format"] = "{sentence2}"
     config_dict["other_details"] = ("masked a random verb, adjective, noun, and conjunction \n"
-                                    "rotated the sentence parts if there is , in between")
+                                    "rotated the sentence parts if there is , in between"
+                                    "Adding the least frequent tokens between the two sentences to the training data")
 
     return data_loader
 
@@ -371,6 +410,10 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
 
 
 class PrefixModel(nn.Module):
+    """
+    PrefixModel class that adds a prefix to the input sequence before passing it to a BART model.
+    This helps the model to learn to generate a target sequence based on the prefix (finetuning on prefix) for specific task, here paraphrasing.
+    """
     def __init__(self, base_model, prefix_length, prefix_method='indirect'):
         super().__init__()
         self.base_model = base_model
@@ -512,29 +555,6 @@ class PrefixModel(nn.Module):
     return data_loader
 '''
 
-def get_important_tokens(sentence1: str, sentence2: str, scorer: rouge_scorer.RougeScorer, tokens: list) -> list:
-    """
-    Get the most important tokens based on ROUGE score.
-    """
-    if sentence2 is None:
-        # For test data, randomly select tokens as important
-        return random.sample(tokens, k=min(5, len(tokens)))
-
-    important_tokens = []
-    for token in tokens:
-        score = scorer.score(sentence1, sentence2)['rougeL'].fmeasure
-        score_without_token = scorer.score(sentence1.replace(token, ''), sentence2)['rougeL'].fmeasure
-        if score - score_without_token > 0.01:  # Threshold can be adjusted
-            important_tokens.append(token)
-    return important_tokens
-
-
-def mask_important_tokens(tokens: list, important_tokens: list, tokenizer: AutoTokenizer) -> str:
-    """
-    Mask the important tokens in the sentence.
-    """
-    masked_tokens = [tokenizer.mask_token if token in important_tokens else token for token in tokens]
-    return tokenizer.convert_tokens_to_string(masked_tokens)
 
 
 def train_model(model: BartForConditionalGeneration,
@@ -579,6 +599,7 @@ def train_model(model: BartForConditionalGeneration,
         num_trainable_layers = 0
 
     # Prepare the optimizer
+    optimizer_params["lr"] = learning_rate
     if optimizer_name == "AdamW":
         optimizer = AdamW(model.parameters(), **optimizer_params)
     elif optimizer_name == "SophiaG":
@@ -802,7 +823,7 @@ def evaluate_model(model, test_data, device, tokenizer):
     bleu = BLEU()
     predictions = []
 
-    dataloader = transform_data(test_data, shuffle=False)
+    dataloader = transform_data(test_data, shuffle=False, is_eval=True)
     with torch.no_grad():
         for batch in dataloader:
             input_ids, attention_mask, _ = batch
@@ -852,7 +873,7 @@ def evaluate_model(model, test_data, device, tokenizer):
     return penalized_bleu
 
 
-def collect_logs(logs: dict, output_dir: str = "logs") -> None:
+def collect_logs(logs: dict, output_dir: str = "logs/bart_generation") -> None:
     """
     Collect logs and save them to a file.
     Args:
@@ -931,9 +952,9 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
     test_dataset = test_dataset.sample(frac=frac)
     ###########################################################################
 
-    train_loader = transform_data(train_dataset, shuffle=True, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"])
-    #dev_loader = transform_data(dev_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=confing_dict["batch_size"])
-    test_loader = transform_data(test_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"])
+    train_loader = transform_data(train_dataset, shuffle=True, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"], is_eval=False)
+    #dev_loader = transform_data(dev_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=confing_dict["batch_size"], is_eval=True)
+    test_loader = transform_data(test_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"], is_eval=True)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 

@@ -1,3 +1,4 @@
+import ast
 import copy
 import fnmatch
 import json
@@ -10,7 +11,7 @@ from contextlib import contextmanager
 from functools import partial
 from hashlib import sha256
 from pathlib import Path
-from typing import BinaryIO, Dict, List, Optional, Tuple, Union
+from typing import BinaryIO, Dict, List, Optional, Tuple, Union, Any
 from urllib.parse import urlparse
 from zipfile import ZipFile, is_zipfile
 
@@ -27,9 +28,13 @@ from torch.nn import functional as F
 
 import re
 from num2words import num2words
+from transformers import AutoTokenizer
 from words2num import w2n as word2num
 
 import spacy
+
+from rouge import Rouge
+from collections import Counter
 
 __version__ = "4.0.0"
 _torch_version = importlib_metadata.version("torch")
@@ -608,3 +613,71 @@ def tag_pos(sentence: str):
         w_pos.append(token.pos_)
 
     return w_tokens, w_pos
+
+
+
+def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str) -> list[Any]:
+    """
+    Find the two most important tokens from the given tokenized sentences using ROUGE metrics.
+
+    This function calculates the importance of tokens based on their ROUGE scores and frequency.
+    It considers tokens with length greater than 3 and returns the two most important ones.
+
+    Args:
+        sentence1_tokenized (List[str]): The first tokenized sentence.
+        sentence2_tokenized (List[str]): The second tokenized sentence.
+
+    Returns:
+        Tuple[str, str]: A tuple containing the two most important tokens.
+
+    Raises:
+        ValueError: If there are fewer than two valid tokens (length > 3) in the input.
+    """
+    # convert and clean the tokenized sentences
+    sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
+    sentence2_tokenized = ast.literal_eval(sentence2_tokenized)
+
+    # Combine both sentences
+    all_tokens = sentence1_tokenized + sentence2_tokenized
+
+
+    # Filter tokens with character length > 3
+    valid_tokens = [token for token in all_tokens if len(token) > 3]
+
+    if len(valid_tokens) < 2:
+        raise ValueError("Insufficient number of valid tokens (length > 3) in the input sentences.")
+
+    # Count occurrences of each valid token
+    token_counts = Counter(valid_tokens)
+
+    # Calculate ROUGE scores for each token
+    rouge = Rouge()
+    reference = " ".join(all_tokens)
+    token_scores = {}
+
+    for token in set(valid_tokens):
+        hypothesis = token
+        scores = rouge.get_scores(hypothesis, reference)
+
+        # Use ROUGE-L F1-score as the primary metric
+        token_scores[token] = scores[0]['rouge-l']['f']
+
+    # Combine ROUGE scores with inverse frequency for final importance score
+    token_importance = {
+        token: (score / token_counts[token])
+        for token, score in token_scores.items()
+    }
+
+    # Sort tokens by importance score (descending) and return top 2
+    important_tokens = sorted(token_importance.items(), key=lambda x: x[1], reverse=True)
+    return list(token for token, _ in important_tokens[:2])
+
+
+
+'''def mask_important_tokens(tokens: list, important_tokens: list) -> str:
+    """
+    Mask the important tokens in the sentence.
+    """
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    masked_tokens = [tokenizer.mask_token if token in important_tokens else token for token in tokens]
+    return tokenizer.convert_tokens_to_string(masked_tokens)'''
