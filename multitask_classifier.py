@@ -207,7 +207,7 @@ class MultitaskBERT(nn.Module):
 
         similarity_logit: torch.Tensor = self.similarity_prediction(embedding)
 
-        return similarity_logit
+        return torch.sigmoid(similarity_logit) * 5
 
 
 def save_model(model, optimizer, args, config, filepath):
@@ -384,9 +384,10 @@ def train_multitask(args):
                 b_labels = b_labels.to(device).float()  # Convert labels to Float
 
                 optimizer.zero_grad()
-                logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
-                normalized_logits = torch.sigmoid(logits) * 5
+
+                normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
+                
                 loss.backward()
                 optimizer.step()
 
