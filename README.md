@@ -179,8 +179,7 @@ strategies were tested:
 * Attention-based pooling
 
 This experimentation aimed to identify whether these approaches could provide a more comprehensive 
-representation, thereby improving the model's performance in sentiment analysis by better encapsulating 
-the overall meaning of the input text.
+representation, thereby improving the model's performance.
 
 ## 2. Methodology
 
@@ -213,19 +212,23 @@ Different pooling strategies were explored to determine the most effective metho
 
 1. **CLS Token Pooling:**
 The final hidden state of the CLS token, $\mathbf{h}_{\text{CLS}}$, is used as the aggregate representation:
+
 $$
 \mathbf{p} = \mathbf{h}_{\text{CLS}}
 $$
 
 2. **Average Pooling:**
 The hidden states of all tokens are averaged to produce the sentence representation:
+
 $$
 \mathbf{p} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
 $$
+
 where $n$ is the number of tokens in the sequence.
 
 3. **Max Pooling:**
 The maximum value across all token hidden states is selected for each dimension:
+
 $$
 \mathbf{p}_j = \max_{i} \mathbf{h}_{ij}
 $$
@@ -233,14 +236,14 @@ where $\mathbf{h}_{ij}$ is the hidden state of token $i$ in dimension $j$.
 
 4. **Attention-Based Pooling:**
 Attention scores from the Global Context Layer are used to compute a weighted sum of the hidden states:
+
 $$
 \mathbf{p} = \sum_{i=1}^{n} \alpha_i \mathbf{h}_i
 $$
+
 where $\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ and $\mathbf{C}$ is the global context vector.
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
-
-Additional arguments were introduced to the training script to toggle between different options and combinations, as outlined in the arguments section.
 
 ---
 
