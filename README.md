@@ -272,7 +272,7 @@ The grid search was executed on the HPC cluster (as described in the setup secti
 use the provided [bash scripts](sst_grid_search_experiments/experiment_scripts). These scripts correspond to various setups, including options with or 
 without the extra layer and with or without regularization.
 
-- **Result Storage:** Results for each grid search run were [saved](sst_grid_search_experiments/grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
+- **Result Storage:** Results for each grid search run were [saved](sst_grid_search_experiments/sst_experiments_grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
 
 - **Manual Tuning:** Configuration options within the grid search [Python script](grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
 
