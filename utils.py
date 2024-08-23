@@ -386,3 +386,7 @@ class PoolingStrategy(Enum):
     AVERAGE = "average"
     MAX = "max"
     ATTENTION = "attention"
+
+class OptimizerType(Enum):
+    ADAMW = "adamw"
+    SOPHIA = "sophia"

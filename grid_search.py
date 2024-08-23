@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
 
-from multitask_classifier import get_args, seed_everything, train_multitask, test_model
+from multitask_classifier import *
+
 import itertools
 import json
 from tqdm import tqdm
@@ -10,7 +11,7 @@ from tqdm import tqdm
 import traceback
 import os
 
-from utils import PoolingStrategy
+from utils import PoolingStrategy, OptimizerType
 
 
 def create_run_id() -> str:
@@ -42,7 +43,8 @@ def run_experiment(
         learning_rate: float,
         hidden_dropout_prob: float,
         batch_size: int,
-        epochs: int
+        epochs: int,
+        optimizer_type: OptimizerType
 ) -> Dict[str, Any]:
     """
     Run a single experiment with the given parameters.
@@ -54,6 +56,7 @@ def run_experiment(
         hidden_dropout_prob (float): The hidden dropout probability.
         batch_size (int): The batch size for training.
         epochs (int): The number of epochs for training.
+        optimizer_type (OptimizerType): The type of optimizer to use.
 
     Returns:
         Dict[str, Any]: A dictionary containing the results of the experiment.
@@ -64,16 +67,18 @@ def run_experiment(
     args.hidden_dropout_prob = hidden_dropout_prob
     args.batch_size = batch_size
     args.epochs = epochs
+    args.optimizer_type = optimizer_type
 
     context_layer = args.context_layer
     regularize_context = args.regularize_context
-    pooling_strategy_str = pooling_strategy.value
+    pooling_strategy_name = pooling_strategy.value
+    optimizer_name = optimizer_type.value
 
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""
     regularize_context_str = "-regularize_context" if context_layer else ""
     args.filepath = (
-        f"models/{run_id}/experiment-{pooling_strategy_str}-{learning_rate}-{hidden_dropout_prob}-{batch_size}-{epochs}"
+        f"../models/{run_id}/experiment-{pooling_strategy_name}-{learning_rate}-{hidden_dropout_prob}-{batch_size}-{epochs}-{optimizer_name}"
         f"{extra_context_layer_str}{regularize_context_str}.pt")
 
     # Ensure the directory for this run's models exists
@@ -94,11 +99,12 @@ def run_experiment(
         return {
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
-            "pooling_strategy": pooling_strategy_str,
+            "pooling_strategy": pooling_strategy_name,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
             "epochs": epochs,
+            "optimizer": optimizer_name,
             "sst_accuracy": sst_accuracy,
             "quora_accuracy": quora_accuracy,
             "sts_correlation": sts_corr,
@@ -110,11 +116,12 @@ def run_experiment(
         print(f"\nError in experiment with parameters:")
         print(f"  extra_context_layer: {context_layer}")
         print(f"  regularize_context: {regularize_context}")
-        print(f"  pooling_strategy: {pooling_strategy_str}")
+        print(f"  pooling_strategy: {pooling_strategy_name}")
         print(f"  learning_rate: {learning_rate}")
         print(f"  hidden_dropout_prob: {hidden_dropout_prob}")
         print(f"  batch_size: {batch_size}")
         print(f"  epochs: {epochs}")
+        print(f"  optimizer_type: {optimizer_type}")
         print(f"\nError: {str(e)}")
         print("\nFull stack trace:")
         traceback.print_exc()
@@ -125,11 +132,12 @@ def run_experiment(
         return {
             "extra_context_layer": context_layer,
             "regularize_context": regularize_context,
-            "pooling_strategy": pooling_strategy_str,
+            "pooling_strategy": pooling_strategy_name,
             "learning_rate": learning_rate,
             "hidden_dropout_prob": hidden_dropout_prob,
             "batch_size": batch_size,
             "epochs": epochs,
+            "optimizer": optimizer_name,
             "status": "failed",
             "error": str(e),
             "traceback": traceback.format_exc()
@@ -145,16 +153,18 @@ def grid_search() -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
         and the best result (if any successful experiments were run).
     """
     run_id = create_run_id()
-    results_dir = f"results/{run_id}"
+    results_dir = f"grid_search_results/{run_id}"
     ensure_directory(results_dir)
 
-    pooling_strategies = [PoolingStrategy.CLS, PoolingStrategy.AVERAGE, PoolingStrategy.MAX, PoolingStrategy.ATTENTION]
+    pooling_strategies = list(PoolingStrategy)
     learning_rates = [1e-5, 5e-5]
     hidden_dropout_probs = [0.3, 0.5]
     batch_sizes = [16, 32, 64]
     epochs = [5, 10]
+    optimizers = list(OptimizerType)
 
-    all_combinations = list(itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes, epochs))
+    all_combinations = list(
+        itertools.product(pooling_strategies, learning_rates, hidden_dropout_probs, batch_sizes, epochs, optimizers))
 
     results = []
     best_result = None

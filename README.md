@@ -58,7 +58,7 @@ bash setup_gwdg.sh
 ---
 
 ## Training
-### local: 
+### Local: 
 
 To train the model, activate the environment and run:
 
@@ -66,11 +66,31 @@ To train the model, activate the environment and run:
 python -u multitask_classifier.py --use_gpu
 ```
 
-Important parameters and their descriptions can be seen by running:
+There are a lot of parameters that can be set. The most important ones are:
+
+| Parameter               | Description                                                                           |
+|-------------------------|---------------------------------------------------------------------------------------|
+| `--task`                | Choose between `"sst"`, `"sts"`, `"qqp"`, `"multitask"` to train for different tasks. |
+| `--seed`                | Random seed for reproducibility.                                                      |
+| `--epochs`              | Number of epochs to train the model.                                                  |
+| `--option`              | Determines if BERT parameters are frozen (`pretrain`) or updated (`finetune`).        |
+| `--use_gpu`             | Whether to use the GPU for training.                                                  |
+| `--subset_size`         | Number of examples to load from each dataset for testing.                             |
+| `--context_layer`       | Include context layer if this flag is set.                                            |
+| `--regularize_context`  | Use regularized context layer variant if this flag is set.                            |
+| `--pooling`             | Choose the pooling strategy: `"cls"`, `"average"`, `"max"`, or `"attention"`.         |
+| `--optimizer`           | Optimizer to use.                                                                     |
+| `--batch_size`          | Batch size for training, recommended 64 for 12GB GPU.                                 |
+| `--hidden_dropout_prob` | Dropout probability for hidden layers.                                                |
+| `--lr`                  | Learning rate, defaults to `1e-3` for `pretrain`, `1e-5` for `finetune`.              |
+| `--local_files_only`    | Force the use of local files only (do not download from remote repositories).         |
+
+All parameters and their descriptions can be seen by running:
 
 ```sh
 python multitask_classifier.py --help
 ```
+
 ### HPC:
 to submit the job to a node in the GWDG HPC cluster, run:
 settings can be configured according to the requirements in the `run_train.sh` file.
@@ -85,11 +105,9 @@ The model is evaluated after each epoch on the validation set. Results are print
 
 ---
 
-## Methodology
+## Phase I
 
 We implemented the base BERT and BART for the first phase of the project.
-
-#TODO hints: In this section, describe the process and methods used in the project. Briefly explain the ideas implemented to improve the model. Make sure to indicate how existing ideas were used and extended.
 
 ### BERT
 
@@ -127,8 +145,6 @@ BART has 2 tasks:
 
 BART version: BART Large.
 
----
-
 ## Experiments
 
 ### Learning all tasks vs. Learning one task:
@@ -140,17 +156,240 @@ BART version: BART Large.
 
 ---
 
+# Phase II
+
+## Improvements upon Base Models
+
+## 1. Proposals
+
+### 1.1 Contextual Global Attention (CGA)
+As part of the improvements for the sentiment analysis task of the project, Contextual Global Attention 
+(CGA) was introduced to enhance BERT's performance on the sentiment analysis task and in the pooling of the 
+encoded output embeddings. This alternate mechanism aims to enhance BERT's ability to capture long-range 
+dependencies by  integrating global context into its self-attention mechanism.
+
+### 1.2 Pooling Strategies
+While the **CLS** token is traditionally used as the aggregate representation in BERT's output, it may 
+not fully capture the semantic content of an entire sequence. To address this, the following pooling 
+strategies were tested:
+
+* CLS token pooling
+* Average pooling
+* Max pooling
+* Attention-based pooling
+
+This experimentation aimed to identify whether these approaches could provide a more comprehensive 
+representation, thereby improving the model's performance in sentiment analysis by better encapsulating 
+the overall meaning of the input text.
+
+## 2. Methodology
+
+### BERT
+
+### **2.1 Contextual Global Attention (CGA) Layer**
+
+This layer computes a global context vector by averaging token embeddings and refining it through a feed-forward network. The refined context vector is incorporated into BERT’s self-attention mechanism via a custom **Contextual Global Attention (CGA)** mechanism, implemented in the `context_bert.py` file. 
+
+The CGA mechanism introduces additional weight matrices and gating parameters that modulate the influence of the global context on token-level representations. A regularized variant of CGA, implemented as the `GlobalContextLayerRegularized` class, incorporates layer normalization and dropout to enhance model generalization and stability during training.
+
+$$
+\begin{bmatrix}
+\hat{\mathbf{Q}} \\
+\hat{\mathbf{K}}
+\end{bmatrix} = (1 - \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix}) \begin{bmatrix} \mathbf{Q} \\ \mathbf{K} \end{bmatrix} + \begin{bmatrix} \lambda_Q \\ \lambda_K \end{bmatrix} \mathbf{C} \begin{bmatrix} \mathbf{U}_Q \\ \mathbf{U}_K \end{bmatrix}
+$$
+
+It was decided to use the average of the hidden states across the entire input sequence as choice of context representation. This is called **"global context"**:
+
+$$
+\mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
+$$
+
+For further details on the workings of the CGA, refer to the original paper and the implementation in the code.
+
+### **2.2 Pooling Strategies**
+
+Different pooling strategies were explored to determine the most effective method for summarizing the information captured by BERT. These strategies included:
+
+1. **CLS Token Pooling:**
+The final hidden state of the CLS token, $\mathbf{h}_{\text{CLS}}$, is used as the aggregate representation:
+$$
+\mathbf{p} = \mathbf{h}_{\text{CLS}}
+$$
+
+2. **Average Pooling:**
+The hidden states of all tokens are averaged to produce the sentence representation:
+$$
+\mathbf{p} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{h}_i
+$$
+where $n$ is the number of tokens in the sequence.
+
+3. **Max Pooling:**
+The maximum value across all token hidden states is selected for each dimension:
+$$
+\mathbf{p}_j = \max_{i} \mathbf{h}_{ij}
+$$
+where $\mathbf{h}_{ij}$ is the hidden state of token $i$ in dimension $j$.
+
+4. **Attention-Based Pooling:**
+Attention scores from the Global Context Layer are used to compute a weighted sum of the hidden states:
+$$
+\mathbf{p} = \sum_{i=1}^{n} \alpha_i \mathbf{h}_i
+$$
+where $\alpha_i = \text{softmax} \left( \sum_{j=1}^{m} \text{ATT}(\mathbf{h}_i, \mathbf{C})_{ij} \right)$ and $\mathbf{C}$ is the global context vector.
+
+These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
+
+Additional arguments were introduced to the training script to toggle between different options and combinations, as outlined in the arguments section.
+
+---
+
+## **3. Experiments**
+
+### **3.1 Grid Search for Hyperparameter Optimization**
+
+A comprehensive grid search was conducted to identify the optimal hyperparameters for the sentiment 
+analysis task, particularly focusing on the integration of the newly introduced Contextual Global Attention. 
+The search encompassed various combinations of pooling strategies, learning rates, dropout probabilities, 
+batch sizes, epochs, and optimizers, resulting in 192 unique configurations. When combined with the four 
+variations in the Contextual Global Attention (see bash scripts below), this amounts to a total of 
+768 different configurations.
+
+**Grid Search Configuration:**
+
+- **Pooling Strategies:** `CLS Token`, `Average`, `Max`, `Attention`
+- **Learning Rates:** `1e-5`, `5e-5`
+- **Hidden Dropout Probabilities:** `0.3`, `0.5`
+- **Batch Sizes:** `16`, `32`, `64`
+- **Epochs:** `5`, `10`
+- **Optimizers:** `AdamW`, `SophiaG`
+
+**Execution Overview:**
+
+The grid search was executed on the HPC cluster (as described in the setup section above), with the following key points:
+
+- **Bash Scripts:** To initiate the grid search for different configurations of the CGA Layer, 
+use the provided [bash scripts](sst_grid_search_experiments/experiment_scripts). These scripts correspond to various setups, including options with or 
+without the extra layer and with or without regularization.
+
+- **Result Storage:** Results for each grid search run were [saved](sst_grid_search_experiments/sst_experiments_grid_search_results) in JSON format, for analysis of the performance metrics for each configuration.
+
+- **Manual Tuning:** Configuration options within the grid search [Python script](grid_search.py) can be manually adjusted to tweak the parameters being tested (lines 160-165).
+
+- **Submission Script:** An executable script was also provided to manage the submission of all grid search jobs on the HPC cluster at once.
+
+  ```sh
+  submit_grid_search_jobs.sh
+  ```
+
+We recommend running these scripts from the project's home directory.
+
+---
+
+## **4. Results**
+
+### 4.1 Grid Search, CGA and Attention-based Pooling
+
+#### **4.1.1 Data Overview**
+
+A total of 768 experiments were conducted, all of which successfully completed. The experiments tested various configurations, including pooling strategies, learning rates, dropout probabilities, batch sizes, epochs, and optimizers.
+
+#### **4.1.2 Overall Best SST Accuracy Performance**
+
+The highest SST accuracy achieved was **0.530233** with the following configuration:
+- **Pooling Strategy:** `CLS`
+- **Extra Context Layer:** `False`
+- **Regularize Context:** `True`
+- **Learning Rate:** `1e-5`
+- **Hidden Dropout Probability:** `0.3`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Epochs:** `5`
+
+This configuration can be replicated by running the following script:
+
+```sh
+best_sst_performance.sh
+```
+
+However, due to random variation in training and evaluation, the exact accuracy value may not be equal, but within
+the same order of magnitude.
+
+#### **4.1.3 Overall Effect of CGA Layer on SST Performance**
+
+The Global Context Layer showed the following impact on SST accuracy:
+
+| CGA Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
+|-----------|---------------------|--------------------|
+| False     | 0.430               | 0.530              |
+| True      | 0.331               | 0.523              |
+| Baseline  | N/A                 | 0.522              |
+
+The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
+selection optimized through the grid search.
+
+| **Stanford Sentiment Treebank (SST)**   | **Dev accuracy** |
+|-----------------------------------------|------------------|
+| Baseline                                | 0.522            | 
+| Contextual Global Attention (CGA)       | 0.523            |
+| CGA-based Attention-pooling             | 0.522            |
+| Using Grid Search Best Results (no CGA) | 0.530            |
+
+The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer generally outperformed the one with it, with most
+results being concentrated on the ~0.500 mark vs. ~0.300 for the models with the extra CGA layer. However, under certain hyperparameter
+selection, accuracy in the same orders of magnitude can be reached.
+
+#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
+
+A deeper insight into the effects of regularized and non-regularized CGA layers on SST performance across all experiments
+reveals:
+- Regularization increases STT accuracy when extra CGA layer is present.
+- Attention-based pooling using a CGA layer doesn't improve SST accuracy on average, even when regularized.
+
+Additionally, the best SST performance under different conditions was as follows:
+
+- **With Extra Context Layer:** 0.523 (CLS, Regularize Context: True, AdamW)
+- **With Attention Pooling:** 0.522 (Attention, Regularize Context: True, AdamW)
+- **With Both:** 0.505 (Regularize Context: True, AdamW)
+
+![alt text](sst_grid_search_experiments/analyses_visualizations/sst_performance_comparison.png)
+
+#### **4.1.4 Effectiveness of Pooling Strategies**
+
+
+Pooling strategies were evaluated, with the best SST accuracy results being achieved with the standard CLS-token-based 
+pooling strategy:
+
+| Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
+|------------------|---------------------|--------------------|
+| CLS (default)    | 0.429               | 0.530              |
+| Attention        | 0.427               | 0.522              |
+| Average          | 0.424               | 0.512              |
+| Max              | 0.421               | 0.510              |
+
+For an illustrative comparison, refer to the corresponding [box plot](sst_grid_search_experiments/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
+
+#### **Metrics worth exploring further:**
+- Model stability
+- Training time
+
+#### **Further Details:**
+For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
+locally.
+
+---
+
 ## Results
 
 ### BART
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-| | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
-|----------|---------------|--------------|
-| Baseline | 0.833 | 44.053 |
-| Improvement 1 | ... | ... |
-| Improvement 2 | ... | ... |
+|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
+|---------------|-------------------------------------|---------------------------------------|
+| Baseline      | 0.833                               | 44.053                                |
+| Improvement 1 | ...                                 | ...                                   |
+| Improvement 2 | ...                                 | ...                                   |
 
 ### BERT
 
@@ -159,38 +398,20 @@ For BERT model, fine-tuning was done 2 times. For Multitask the model learned al
 The results for the dev dataset.
 
 | **Multitask** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|----------|---------------|--------------|--------------|
-| Baseline | 0.515 | 0.877 | 0.849 |
-| Improvement 1 | ... | ... | ... |
-| Improvement 2 | ... | ... | ... |
-| ... | ... | ... | ... |
-
+|---------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline      | 0.515                              | 0.877                          | 0.849                                 |
+| Improvement 1 | ...                                | ...                            | ...                                   |
+| Improvement 2 | ...                                | ...                            | ...                                   |
+| ...           | ...                                | ...                            | ...                                   |
 
 Here Paraphrase Detection was trained for 1 epoch:
 
 | **Independent** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|----------|---------------|--------------|--------------|
-| Baseline | 0.534 | 0.860 | 0.863 |
-| Improvement 1 | ... | ... | ... |
-| Improvement 2 | ... | ... | ... |
-| ... | ... | ... | ... |
-
-
-#TODO: Discuss your results, observations, correlations, etc.
-
----
-
-## Hyperparameter Optimization
-
-#TODO 
-
-Briefly describe how you optimized your hyperparameters. If you focused strongly on hyperparameter optimization, include it in the Experiment section.
-
-## Visualizations
-
-#TODO
-
-Add relevant graphs showing metrics like accuracy, validation loss, etc., during training. Compare different training processes of your improvements in these graphs.
+|-----------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline        | 0.534                              | 0.860                          | 0.863                                 |
+| Improvement 1   | ...                                | ...                            | ...                                   |
+| Improvement 2   | ...                                | ...                            | ...                                   |
+| ...             | ...                                | ...                            | ...                                   |
 
 ---
 
@@ -244,6 +465,7 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762): Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin
 - [Paraphrase Types for Generation and Detection](https://aclanthology.org/2023.emnlp-main.746.pdf): Jan Philip Wahle, Bela Gipp, Terry Ruas, University of Göttingen, Germany {wahle,gipp,ruas}@uni-goettingen.de
 - [SemEval-2016 Task 1: Semantic Textual Similarity, Monolingual and Cross-Lingual Evaluation](https://www.researchgate.net/publication/305334510_SemEval-2016_Task_1_Semantic_Textual_Similarity_Monolingual_and_Cross-Lingual_Evaluation): Eneko Agirre, Carmen Banea, Daniel Cer, Mona Diab
+- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
 
 #TODO: (Phase 2) List all references (repositories, papers, etc.) used for your project.
 
