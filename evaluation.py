@@ -311,6 +311,8 @@ def test_model_multitask(args, model, device):
         model,
         device,
         task,
+        args.context_layer,
+        args.pooling_strategy,
     )
 
     (
@@ -327,6 +329,8 @@ def test_model_multitask(args, model, device):
         model,
         device,
         task,
+        args.context_layer,
+        args.pooling_strategy,
     )
 
     if task == "sst" or task == "multitask":
