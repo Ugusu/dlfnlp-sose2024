@@ -186,7 +186,9 @@ class MultitaskBERT(nn.Module):
                            input_ids_1: torch.Tensor,
                            attention_mask_1: torch.Tensor,
                            input_ids_2: torch.Tensor,
-                           attention_mask_2: torch.Tensor
+                           attention_mask_2: torch.Tensor,
+                           add_extra_layer: bool = False,
+                           pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                            ) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit for predicting whether they are paraphrases.
@@ -213,10 +215,16 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask)
-        embedding = self.dropout(embedding)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=all_input_ids,
+            attention_mask=all_attention_mask,
+            add_extra_layer=add_extra_layer,
+            pooling_strategy=pooling_strategy
+        )
 
-        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
+        pooled_output = self.dropout(pooled_output)
+
+        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(pooled_output)
 
         return is_paraphrase_logit
 
@@ -224,8 +232,9 @@ class MultitaskBERT(nn.Module):
                            input_ids_1: torch.Tensor,
                            attention_mask_1: torch.Tensor,
                            input_ids_2: torch.Tensor,
-                           attention_mask_2:
-                           torch.Tensor
+                           attention_mask_2: torch.Tensor,
+                           add_extra_layer: bool = False,
+                           pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                            ) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
@@ -246,10 +255,16 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask)
-        embedding = self.dropout(embedding)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=all_input_ids,
+            attention_mask=all_attention_mask,
+            add_extra_layer=add_extra_layer,
+            pooling_strategy=pooling_strategy
+        )
 
-        similarity_logit: torch.Tensor = self.similarity_prediction(embedding)
+        pooled_output = self.dropout(pooled_output)
+
+        similarity_logit: torch.Tensor = self.similarity_prediction(pooled_output)
 
         return similarity_logit
 
@@ -485,6 +500,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
@@ -496,6 +513,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
