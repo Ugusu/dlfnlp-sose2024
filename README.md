@@ -226,14 +226,12 @@ $$
 
 where $n$ is the number of tokens in the sequence.
 
-3. **Max Pooling:**
+3, **Max Pooling:**
 The maximum value across all token hidden states is selected for each dimension:
 
 $$
 \mathbf{p}_j = \max_{i} \mathbf{h}_{ij}
 $$
-
-where $\mathbf{h}_{ij}$ is the hidden state of token $i$ in dimension $j$.
 
 4. **Attention-Based Pooling:**
 Attention scores from the Global Context Layer are used to compute a weighted sum of the hidden states:
