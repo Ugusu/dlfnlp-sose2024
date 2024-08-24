@@ -387,11 +387,11 @@ locally.
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
-|---------------|-------------------------------------|---------------------------------------|
-| Baseline      | 0.833                               | 44.053                                |
-| Improvement 1 | ...                                 | ...                                   |
-| Improvement 2 | ...                                 | ...                                   |
+|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
+|---------------|-------------------------------------|--------------------------------------------------|
+| Baseline      | 0.833                               | -                                                |
+| Improvement 1 | ...                                 | 22.765                                              |
+| Improvement 2 | ...                                 | ...                                              |
 
 ### BERT
 
@@ -433,8 +433,14 @@ Explain the contribution of each group member:
 - Phase 1:
   - Implemented the BART model for `paraphrase generation` and detection.
   - Implemented the `AdamW optimizer`.
-- Phase 2: ...
-
+- Phase 2: 
+  - Implemented the `SophiaG optimizer` based on original repo. link: https://github.com/Liuhong99/Sophia
+  - Implemented the Parse-Instructed Prefix for Syntactically Controlled Paraphrase Generation [Wan et al., 2023] (PIP) paper.
+  - Hyperparameter search and tracking with about 100 experiments.
+  - Trying methods from LLama 3 like rotary positional encoding and SwiGLU activation function.
+  - Using gradual unfreezing and discriminative learning rates for training.
+  - trying genetic algorithm for multi-objective optimization of hyperparameters optimizing for both best penalized_BLEU and loss.
+- 
 **Pablo Jahnen:**
 - Phase 1:
   - Implemented the `attention` function in the `BertSelfAttention` class.
