@@ -255,7 +255,7 @@ analysis task, particularly focusing on the integration of the newly introduced 
 The search encompassed various combinations of pooling strategies, learning rates, dropout probabilities, 
 batch sizes, epochs, and optimizers, resulting in 192 unique configurations. When combined with the four 
 variations in the Contextual Global Attention (see bash scripts below), this amounts to a total of 
-768 different configurations.
+768 different configurations. It was executed in finetuning mode.
 
 **Grid Search Configuration:**
 
@@ -321,25 +321,26 @@ the same order of magnitude.
 
 The Global Context Layer showed the following impact on SST accuracy:
 
-| CGA Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
-|-----------|---------------------|--------------------|
-| False     | 0.430               | 0.530              |
-| True      | 0.331               | 0.523              |
-| Baseline  | N/A                 | 0.522              |
+| CGA Layer w/ optimized Hyperparameters | SST Accuracy |
+|----------------------------------------|--------------|
+| False                                  | 0.530        |
+| True                                   | 0.520        |
+| Baseline                               | 0.522        |
+
 
 The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
-selection optimized through the grid search.
+selection optimized through the grid search. Similarly the higher accuracy with CGA-based Attention-pooling can be attributed
+to optimal hyperparameters, rather than the pooling mechanism itself.
 
 | **Stanford Sentiment Treebank (SST)**   | **Dev accuracy** |
 |-----------------------------------------|------------------|
 | Baseline                                | 0.522            | 
-| Contextual Global Attention (CGA)       | 0.523            |
-| CGA-based Attention-pooling             | 0.522            |
+| Contextual Global Attention (CGA)       | 0.520            |
+| CGA-based Attention-pooling             | 0.530            |
 | Using Grid Search Best Results (no CGA) | 0.530            |
 
-The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer generally outperformed the one with it, with most
-results being concentrated on the ~0.500 mark vs. ~0.300 for the models with the extra CGA layer. However, under certain hyperparameter
-selection, accuracy in the same orders of magnitude can be reached.
+The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer slightly outperformed the one with it, with most
+results being concentrated on the ~0.500 mark for both types of models. 
 
 #### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
 
@@ -359,15 +360,15 @@ Additionally, the best SST performance under different conditions was as follows
 #### **4.1.4 Effectiveness of Pooling Strategies**
 
 
-Pooling strategies were evaluated, with the best SST accuracy results being achieved with the standard CLS-token-based 
-pooling strategy:
+Pooling strategies were evaluated. All pooling strategies show equal performance, showcasing no effect on accuracy based on it. 
+It is still better than the baseline of 0.522, but this can be attributed to optimal hyperparameter selection as well:
 
 | Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
 |------------------|---------------------|--------------------|
-| CLS (default)    | 0.429               | 0.530              |
-| Attention        | 0.427               | 0.522              |
-| Average          | 0.424               | 0.512              |
-| Max              | 0.421               | 0.510              |
+| CLS (default)    | 0.428               | 0.530              |
+| Attention        | 0.428               | 0.530              |
+| Average          | 0.428               | 0.530              |
+| Max              | 0.428               | 0.530              |
 
 For an illustrative comparison, refer to the corresponding [box plot](sst_grid_search_experiments/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
 
@@ -387,11 +388,11 @@ locally.
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation (BLEU)** |
-|---------------|-------------------------------------|---------------------------------------|
-| Baseline      | 0.833                               | 44.053                                |
-| Improvement 1 | ...                                 | ...                                   |
-| Improvement 2 | ...                                 | ...                                   |
+|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
+|---------------|-------------------------------------|--------------------------------------------------|
+| Baseline      | 0.833                               | -                                                |
+| Improvement 1 | ...                                 | 22.765                                              |
+| Improvement 2 | ...                                 | ...                                              |
 
 ### BERT
 
@@ -433,8 +434,14 @@ Explain the contribution of each group member:
 - Phase 1:
   - Implemented the BART model for `paraphrase generation` and detection.
   - Implemented the `AdamW optimizer`.
-- Phase 2: ...
-
+- Phase 2: 
+  - Implemented the `SophiaG optimizer` based on original repo. link: https://github.com/Liuhong99/Sophia
+  - Implemented the Parse-Instructed Prefix for Syntactically Controlled Paraphrase Generation [Wan et al., 2023] (PIP) paper.
+  - Hyperparameter search and tracking with about 100 experiments.
+  - Trying methods from LLama 3 like rotary positional encoding and SwiGLU activation function.
+  - Using gradual unfreezing and discriminative learning rates for training.
+  - trying genetic algorithm for multi-objective optimization of hyperparameters optimizing for both best penalized_BLEU and loss.
+- 
 **Pablo Jahnen:**
 - Phase 1:
   - Implemented the `attention` function in the `BertSelfAttention` class.
@@ -475,4 +482,5 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 ## Acknowledgement
 
 The project description, partial implementation, and scripts were adapted from the final project for the Stanford [CS 224N class](https://web.stanford.edu/class/cs224n/). The BERT implementation was adapted from the "minbert" assignment at Carnegie Mellon University's [CS11-711 Advanced NLP](http://phontron.com/class/anlp2021/index.html). Parts of the code are from the [`transformers`](https://github.com/huggingface/transformers) library. Scripts and code were modified by [Jan Philip Wahle](https://jpwahle.com/) and [Terry Ruas](https://terryruas.com/).
+
 
