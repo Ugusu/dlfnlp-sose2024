@@ -255,7 +255,7 @@ analysis task, particularly focusing on the integration of the newly introduced 
 The search encompassed various combinations of pooling strategies, learning rates, dropout probabilities, 
 batch sizes, epochs, and optimizers, resulting in 192 unique configurations. When combined with the four 
 variations in the Contextual Global Attention (see bash scripts below), this amounts to a total of 
-768 different configurations.
+768 different configurations. It was executed in finetuning mode.
 
 **Grid Search Configuration:**
 
