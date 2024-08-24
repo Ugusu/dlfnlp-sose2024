@@ -23,9 +23,6 @@ from utils import tag_pos, get_important_tokens
 import multiprocessing
 from functools import partial
 
-import nltk
-nltk.download('punkt')
-
 from nltk.tokenize import word_tokenize
 
 TQDM_DISABLE = False
@@ -43,13 +40,13 @@ config_dict = {
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 100,
+    "batch_size": 10,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
     "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
-    "subset": 1,
+    "subset": 0.1,
     "val_dataset": "etpc-paraphrase-dev.csv",
     "test_dataset": "etpc-paraphrase-generation-test-student.csv",
     "penalized_bleu_epochs": [],
