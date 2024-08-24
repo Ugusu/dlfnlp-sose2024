@@ -321,11 +321,12 @@ the same order of magnitude.
 
 The Global Context Layer showed the following impact on SST accuracy:
 
-| CGA Layer | SST Accuracy (Mean) | SST Accuracy (Max) |
-|-----------|---------------------|--------------------|
-| False     | 0.430               | 0.530              |
-| True      | 0.331               | 0.523              |
-| Baseline  | N/A                 | 0.522              |
+| CGA Layer | SST Accuracy |
+|-----------|--------------|
+| False     | 0.530        |
+| True      | 0.523        |
+| Baseline  | 0.522        |
+
 
 The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
 selection optimized through the grid search.
