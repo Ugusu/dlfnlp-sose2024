@@ -6,14 +6,12 @@ import random
 import numpy as np
 import pandas as pd
 import torch
-from markdown_it.rules_block import reference
 
 from sacrebleu.metrics import BLEU
 from torch import nn
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader, TensorDataset
-from torch.xpu import device_of
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
 from torch.optim.lr_scheduler import StepLR
@@ -28,7 +26,6 @@ from functools import partial
 import nltk
 nltk.download('punkt')
 
-from nltk.translate.bleu_score import sentence_bleu
 from nltk.tokenize import word_tokenize
 
 TQDM_DISABLE = False
