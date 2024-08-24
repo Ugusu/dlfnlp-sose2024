@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=grid-search-multitask
+#SBATCH --job-name=grid-search-sst
 #SBATCH -t 30:00:00                  # estimated time # TODO: adapt to your needs
 #SBATCH -p grete                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G A100:1                    # take 1 GPU, see https://docs.hpc.gwdg.de/compute_partitions/gpu_partitions/index.html for more options
