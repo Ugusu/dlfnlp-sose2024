@@ -451,7 +451,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device).float()  # Convert labels to Float
 
                 optimizer.zero_grad()
-                normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
+                normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
                 loss.backward()
                 optimizer.step()
@@ -480,7 +480,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
+                logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
                 loss.backward()
