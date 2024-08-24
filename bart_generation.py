@@ -23,8 +23,6 @@ from utils import tag_pos, get_important_tokens
 import multiprocessing
 from functools import partial
 
-from nltk.tokenize import word_tokenize
-
 TQDM_DISABLE = False
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -46,7 +44,7 @@ config_dict = {
     "num_layers_to_freeze": 12,
     "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
-    "subset": 0.1,
+    "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
     "test_dataset": "etpc-paraphrase-generation-test-student.csv",
     "penalized_bleu_epochs": [],
@@ -509,7 +507,7 @@ class PrefixModel(nn.Module):
 
 
 # adopting Reinforcement Learning for Paraphrase Generation
-def compute_reward(generated, reference, input_sentence):
+def compute_reward(generated, reference, input_sentence, tokenizer):
     """
     Compute reward for generated paraphrase based on BLEU score and diversity.
     """
@@ -517,11 +515,11 @@ def compute_reward(generated, reference, input_sentence):
     bleu = BLEU()
 
     try:
-        generated_tokens = word_tokenize(generated)
+        generated_tokens = tokenizer.tokenize(generated, add_special_tokens=False)
     except:
         generated_tokens = []
-    reference_tokens = word_tokenize(reference)
-    input_tokens = word_tokenize(input_sentence)
+    reference_tokens = tokenizer.tokenize(reference, add_special_tokens=False)
+    input_tokens = tokenizer.tokenize(input_sentence, add_special_tokens=False)
 
     # Calculate BLEU score
     bleu_score_reference = bleu.corpus_score(reference_tokens, generated_tokens).score
@@ -693,7 +691,7 @@ def train_model(model: BartForConditionalGeneration,
             generated_paraphrases = decode_output(generated_ids, tokenizer)
             reference_paraphrases = decode_output(labels, tokenizer)
             input_sentences = decode_output(input_ids, tokenizer)
-            rewards = [compute_reward(gen, ref, inp) for gen, ref, inp in zip(generated_paraphrases, reference_paraphrases, input_sentences)]
+            rewards = [compute_reward(gen, ref, inp, tokenizer) for gen, ref, inp in zip(generated_paraphrases, reference_paraphrases, input_sentences)]
 
             # Policy gradient update
             # If the model returns a tuple or custom object, extract the relevant tensor
