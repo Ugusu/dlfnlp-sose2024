@@ -693,9 +693,10 @@ def get_args():
     return args
 
 
+
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt" # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
     test_model(args)
