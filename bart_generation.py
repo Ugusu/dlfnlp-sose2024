@@ -6,11 +6,14 @@ import random
 import numpy as np
 import pandas as pd
 import torch
+from markdown_it.rules_block import reference
 
 from sacrebleu.metrics import BLEU
 from torch import nn
+import torch.nn.functional as F
 
 from torch.utils.data import DataLoader, TensorDataset
+from torch.xpu import device_of
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
 from torch.optim.lr_scheduler import StepLR
@@ -22,6 +25,12 @@ from utils import tag_pos, get_important_tokens
 import multiprocessing
 from functools import partial
 
+import nltk
+nltk.download('punkt')
+
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.tokenize import word_tokenize
+
 TQDM_DISABLE = False
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -30,17 +39,18 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 6,
+    "epochs": 10,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
     "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 10,
+    "batch_size": 100,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
+    "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
@@ -243,6 +253,37 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     return data_loader
 
 
+class OutputStrippingLayer(torch.nn.Module):
+    """
+    A custom layer that strips unnecessary tokens from the generated output.
+    This layer can be placed after the decoder in the BART model.
+    """
+
+    def __init__(self, tokenizer):
+        super(OutputStrippingLayer, self).__init__()
+        self.tokenizer = tokenizer
+
+    def forward(self, generated_ids):
+        # Convert IDs to tokens
+        tokens = [self.tokenizer.decode(g, skip_special_tokens=True).strip() for g in generated_ids]
+
+        # Strip specific patterns if necessary (e.g., POS tags)
+        # This is a placeholder: you might want to customize this
+        stripped_tokens = [self.strip_output(t) for t in tokens]
+
+        # Convert tokens back to IDs
+        stripped_ids = [self.tokenizer.encode(t, return_tensors="pt")[0] for t in stripped_tokens]
+
+        return stripped_ids
+
+    def strip_output(self, sentence):
+        # Placeholder for stripping logic, e.g., remove certain POS tags or patterns
+        # Customize this function based on your use case
+        # Example: strip extra commas or specific tokens
+        stripped_sentence = sentence.replace(" ,", ",")  # Example of simple stripping
+        return stripped_sentence
+
+
 def modified_BART_model(num_layers_to_freeze: int = 8):
     """
     Modifies a BARTForConditionalGeneration model for paraphrasing by freezing some encoder layers.
@@ -256,6 +297,7 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
     """
     #config = BartConfig.from_pretrained("facebook/bart-large", local_files_only=True)
     model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
 
     # Freeze the specified number of encoder layers
     for i in range(num_layers_to_freeze):
@@ -265,6 +307,10 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
     for i in range(num_layers_to_freeze):
         for param in model.model.decoder.layers[i].parameters():
             param.requires_grad = False
+
+    # Add a custom layer for stripping the output
+    stripping_layer = OutputStrippingLayer(tokenizer)
+    model.stripping_layer = stripping_layer
 
     # Calculate the number of trainable layers
     num_trainable = 0
@@ -281,7 +327,11 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
 
     print("Number of trainable encoder-decoder layers:", num_trainable, '-', num_trainable_d)
 
+    # log information
+    config_dict["other_details"].join("Modified BART model for paraphrasing by adding a custom layer for stripping the output")
+
     return model
+
 
 def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2, max_layers: int = 8):
     """
@@ -463,9 +513,96 @@ class PrefixModel(nn.Module):
         return outputs
 
 
+
+# adopting Reinforcement Learning for Paraphrase Generation
+def compute_reward(generated, reference, input_sentence):
+    """
+    Compute reward for generated paraphrase based on BLEU score and diversity.
+    """
+
+    bleu = BLEU()
+
+    try:
+        generated_tokens = word_tokenize(generated)
+    except:
+        generated_tokens = []
+    reference_tokens = word_tokenize(reference)
+    input_tokens = word_tokenize(input_sentence)
+
+    # Calculate BLEU score
+    bleu_score_reference = bleu.corpus_score(reference_tokens, generated_tokens).score
+    # Penalize BLEU score if its to close to the input
+    bleu_score_inputs = 100 - bleu.corpus_score(input_tokens, generated_tokens).score
+
+    # Penalize BLEU and rescale it to 0-100
+    # If you perfectly predict all the targets, you should get a penalized BLEU score of around 52
+    reward = bleu_score_reference * bleu_score_inputs / 52
+
+    #bleu_score = sentence_bleu(reference_tokens, generated_tokens)
+    #diversity_score = 1 - sentence_bleu(input_tokens, generated_tokens)
+
+    #reward = bleu_score * diversity_score
+
+    # Penalize reward based on the difference in length
+    length_difference = abs(len(generated_tokens) - len(reference_tokens))
+    length_penalty = 2 * length_difference
+
+    # Apply length penalty
+    reward -= length_penalty
+
+    return reward
+
+
+def decode_output(outputs, tokenizer):
+    """
+    Decode the output of the model.
+    """
+    generated_paraphrases = []
+    paraphrases = [
+        tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+        for g in outputs
+    ]
+    generated_paraphrases.extend(paraphrases)
+
+    return generated_paraphrases
+
+
+def loss_value_rl(outputs, labels, rewards, device):
+    """
+    Calculate the reinforcement learning loss.
+
+    Args:
+    outputs (torch.Tensor): The output logits from the model, shape (batch_size, seq_len, vocab_size)
+    labels (torch.Tensor): The ground truth labels, shape (batch_size, seq_len)
+    rewards (list): List of float rewards, one for each sentence in the batch
+
+    Returns:
+    torch.Tensor: The calculated RL loss
+    """
+    # Ensure rewards is a tensor and reshape it
+    rewards = torch.tensor(rewards, device=device).view(-1, 1, 1)
+
+    # Normalize rewards to have mean 1 and standard deviation 0.1 (or adjust as needed)
+    rewards = rewards / (rewards.mean() + 1e-10)
+
+    # Calculate log probabilities
+    log_probs = F.log_softmax(outputs, dim=-1)
+
+    # Gather the log probs of the actual tokens
+    gathered_log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1))
+
+    # Mask out padding tokens
+    mask = (labels != 0).float().unsqueeze(-1)  # Assuming 0 is the pad token
+
+    # Calculate the loss using the mean to prevent large negative values
+    rl_loss = -torch.sum(rewards * gathered_log_probs * mask) / (torch.sum(mask) + 1e-10)
+
+    return rl_loss
+
+
 def train_model(model: BartForConditionalGeneration,
                 train_loader: DataLoader,
-                val_loader: DataLoader,
+                val_data: pd.DataFrame,
                 device: torch.device,
                 tokenizer: AutoTokenizer,
                 epochs: int = 5,
@@ -476,6 +613,7 @@ def train_model(model: BartForConditionalGeneration,
                 gradual_unfreeze: bool = False,
                 scheduler_step_size: int = 1,
                 scheduler_gamma: float = 0.2,
+                rl_weight: float = 0.5,
                 output_dir: str = "models/bart_finetuned_model"
                 ) -> BartForConditionalGeneration:
     """
@@ -524,13 +662,14 @@ def train_model(model: BartForConditionalGeneration,
         vocab_size = tokenizer.vocab_size
         return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
 
+
     best_penalized_bleu = 0
     best_loss = float("inf")
     penalized_bleu_list = []
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
 
-        if gradual_unfreeze and epoch > 1: # using no trainable layers for the first two epochs to train the first PrefixModel with pretrained BART
+        if gradual_unfreeze and epoch > 0: # using no trainable layers for the first epoch to train the first PrefixModel with pretrained BART
             # more epochs > fewer layers to unfreeze
             if epochs <= num_layers:
                 num_layers_to_unfreeze = num_layers//epochs
@@ -540,6 +679,7 @@ def train_model(model: BartForConditionalGeneration,
                 num_trainable_layers += num_layers_to_unfreeze
             model = gradual_unfreezing(model, num_layers_to_unfreeze= num_trainable_layers)
 
+        total_loss = 0
         # Train the model
         for batch in tqdm(train_loader, desc="Training"):
             input_ids, attention_mask, labels = batch
@@ -547,23 +687,48 @@ def train_model(model: BartForConditionalGeneration,
             attention_mask = attention_mask.to(device)
             labels = labels.to(device)
 
+            # Supervised learning step
             optimizer.zero_grad()
-
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            loss = loss_value(outputs, labels)
-            #loss = outputs.loss
+            sl_loss = loss_value(outputs, labels)
+            #sl_loss = outputs.loss
+
+            # Reinforcement learning step
+            with torch.no_grad():
+                generated_ids = model.generate(input_ids=input_ids, attention_mask=attention_mask, max_length=50, num_beams=5, early_stopping=True)
+            generated_paraphrases = decode_output(generated_ids, tokenizer)
+            reference_paraphrases = decode_output(labels, tokenizer)
+            input_sentences = decode_output(input_ids, tokenizer)
+            rewards = [compute_reward(gen, ref, inp) for gen, ref, inp in zip(generated_paraphrases, reference_paraphrases, input_sentences)]
+
+            # Policy gradient update
+            # If the model returns a tuple or custom object, extract the relevant tensor
+            if isinstance(outputs, tuple):
+                rl_outputs = outputs[0]  # Assume the first element is the logits
+            elif hasattr(outputs, 'logits'):
+                rl_outputs = outputs.logits
+
+            rl_loss = loss_value_rl(rl_outputs, labels, rewards, device)
+
+            loss = (1 - rl_weight) * sl_loss + rl_weight * rl_loss
+
             loss.backward()
             optimizer.step()
+
+            total_loss += loss.item()
+            print(f"batch loss: {loss}")
+
+        total_loss /= len(train_loader)
 
         if use_scheduler:
             print(f"scheduler step, learning rate: {optimizer.param_groups[0]['lr']}")
             scheduler.step()
 
-        print(f"Loss: {loss.item()}")
+        print(f"Loss: {total_loss}")
 
         try:
             # Evaluate the model with penalized BLEU score
-            penalized_bleu = evaluate_model(model, val_loader, device, tokenizer)
+            penalized_bleu = evaluate_model(model, val_data, device, tokenizer)
         except:
             print("Failed to evaluate model. Probably the output is None.")
             penalized_bleu = 0
@@ -574,20 +739,20 @@ def train_model(model: BartForConditionalGeneration,
         #    model.save_pretrained(output_dir)
         #    print(f"Model with score {best_penalized_bleu} saved.")
 
-        #if loss < best_loss:
-        #    best_loss = loss
+        #if total_loss < best_loss:
+        #    best_loss = total_loss
         #    # Save the best model
         #    model.save_pretrained(output_dir)
         #    print(f"Model with loss {best_loss} saved.")
 
         # choose the best model with both highest penalized BLEU score with a tolerance and lowest loss - Multi-objective optimization
-        tolerance = 0.5
-        if penalized_bleu >= best_penalized_bleu - tolerance and loss <= best_loss:
+        tolerance = 0.9
+        if penalized_bleu >= best_penalized_bleu - tolerance and total_loss <= best_loss:
             best_penalized_bleu = penalized_bleu
-            best_loss = loss
+            best_loss = total_loss
             # Save the best model
             model.save_pretrained(output_dir)
-            print(f"Model with score {best_penalized_bleu} saved.")
+            print(f"Model with score {best_penalized_bleu} and loss {best_loss} saved.")
 
         # log information
         # for each epoch, add penalized BLEU score like epoch 1: 0.5, epoch 2: 0.6, etc.
@@ -601,9 +766,11 @@ def train_model(model: BartForConditionalGeneration,
     # log information
     config_dict["penalized_bleu_epochs"] = penalized_bleu_list
     config_dict["optimizer"] = optimizer_name
-    config_dict['other_details'].join("saving the best model with the highest penalized BLEU score and lowest loss together")
+    config_dict['other_details'].join("saving the best model with the highest penalized BLEU score and lowest loss together \n"
+                                      "using reinforcement learning with a weight of 0.8 for the RL loss")
 
     return model
+
 
 
 def test_model(test_data: DataLoader,
@@ -813,7 +980,9 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
                         use_scheduler=config_dict["use_scheduler"],
                         gradual_unfreeze=config_dict["gradual_unfreezing"],
                         scheduler_step_size=config_dict["scheduler_step_size"],
-                        scheduler_gamma=config_dict["scheduler_gamma"])
+                        scheduler_gamma=config_dict["scheduler_gamma"],
+                        rl_weight=config_dict["rl_weight"],
+                        )
 
     print("Training finished.")
 
