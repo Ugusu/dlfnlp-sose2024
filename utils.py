@@ -3,6 +3,7 @@ import copy
 import fnmatch
 import json
 import os
+import random
 import shutil
 import sys
 import tarfile
@@ -634,7 +635,7 @@ def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str, all
         ValueError: If there are fewer than two valid tokens (length > 3) in sentence2.
     """
     # Convert and clean the tokenized sentences
-    #sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
+    sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
     sentence2_tokenized = ast.literal_eval(sentence2_tokenized)
 
     # Combine both sentences for reference, but only consider sentence2 for valid tokens
@@ -666,7 +667,23 @@ def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str, all
 
     # Sort tokens by importance score (descending) and return top 2
     important_tokens = sorted(token_importance.items(), key=lambda x: x[1], reverse=True)
-    return [token for token, _ in important_tokens[:3]]
+    important_tokens = [token for token, _ in important_tokens[:2]]
+
+    excluded_tokens = set(sentence1_tokenized + important_tokens)
+    #print("Excluded tokens: ", excluded_tokens)
+    handpicked_token = [token for token in valid_tokens if token not in excluded_tokens]
+    if len(handpicked_token) > 1:
+        # take two random tokens
+        handpicked_token = random.sample(handpicked_token, 2)
+        important_tokens.extend(handpicked_token)
+        #print("Handpicked token: ", handpicked_token)
+    elif len(handpicked_token) > 0:
+        handpicked_token = random.choice(handpicked_token)
+        important_tokens.append(handpicked_token)
+    else:
+        pass
+
+    return important_tokens
 
 
 

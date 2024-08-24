@@ -2,49 +2,42 @@ import argparse
 import ast
 import os
 import random
-from typing import Tuple
-
-#from cgitb import reset
 
 import numpy as np
 import pandas as pd
 import torch
-from jedi.inference.gradual.typing import Tuple
+
 from sacrebleu.metrics import BLEU
 from torch import nn
 
-from torch.utils.data import DataLoader, TensorDataset, Dataset
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from transformers import AutoTokenizer, BartForConditionalGeneration, BartConfig, BartModel
+from transformers import AutoTokenizer, BartForConditionalGeneration
 from torch.optim.lr_scheduler import StepLR
 
 from optimizer import AdamW, SophiaG
-#from utils import SwiGLU, GELU, SwiGLUFeedForward, RMSNorm, RotaryPositionalEmbedding, apply_rotary_pos_emb
-#from typing import Optional, Tuple
 
-#from split_train_dev import dev_dataset
-from utils import nums2word_word2nums, tag_pos, get_important_tokens
+from utils import tag_pos, get_important_tokens
 
-#import joblib
-#import concurrent.futures
 import multiprocessing
 from functools import partial
 
 TQDM_DISABLE = False
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # define the local path to the data
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 3,
+    "epochs": 6,
     "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
     "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 100,
+    "batch_size": 10,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
@@ -96,8 +89,11 @@ def process_row(row: pd.DataFrame, tokenizer_sep_token: str, tokenizer_mask_toke
         important_tokens = get_important_tokens(row['sentence1_tokenized'], row['sentence2_tokenized'], all_sentence1_tokens)
         least_freq_tokens = ' '.join(important_tokens)
 
-        # Format input sentence
-        formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token} {least_freq_tokens}"
+        # Format input sentence for half of the training data using a coin flip
+        if random.random() > 0.5:
+            formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str} {tokenizer_sep_token} {least_freq_tokens}"
+        else:
+            formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str}"
 
     else:
         formatted_sentence1 = f"{masked_sentence} {tokenizer_sep_token} {sentence1_tags_str}"
@@ -195,7 +191,7 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     #with joblib.Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
     #    sentences, target_sentences = zip(*parallel(joblib.delayed(process_row)(row, tokenizer.sep_token, tokenizer.mask_token, 'sentence2' not in dataset) for _, row in dataset.iterrows()))
 
-    # Initialize tokenizer outside of the multiprocessing to avoid issues
+    # Initialize tokenizer outside the multiprocessing to avoid issues
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     sep_token = tokenizer.sep_token
     mask_token = tokenizer.mask_token
@@ -240,130 +236,13 @@ def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int
     config_dict["target_format"] = "{sentence2}"
     config_dict["other_details"] = ("masked a random verb, adjective, noun, and conjunction \n"
                                     "rotated the sentence parts if there is , in between"
-                                    "Adding the least frequent tokens between the two sentences to the training data")
+                                    "Adding the least frequent tokens between the two sentences to half of the training data"
+                                    "This is to make sure the model learns to generate the most important tokens, and also learn"
+                                    "that htis type of input may be None, as it is for the validation and test")
 
     return data_loader
 
-'''
-def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,
-                   tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
-    """
-     Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
-     Args:
-     dataset (pd.DataFrame): The dataset to transform.
-     max_length (int): Maximum token length. Defaults to 256.
-     batch_size (int): Size of data batches. Defaults to 16.
-     tokenizer_name (str): Name of the tokenizer to use. Defaults to 'facebook/bart-large'.
-     Returns:
-     DataLoader: DataLoader containing the tokenized data.
-     """
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    #scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
-    is_test = False
-    if 'sentence2' not in dataset:
-        is_test = True
-
-    sentences = []
-    target_sentences = []
-    for _, row in dataset.iterrows():
-
-        # TODO choose the most important tokens to mask using ROUGE score
-        sentence1 = row['sentence1'] # input sentence
-        sentence2 = row['sentence2'] if not is_test else None # target sentence
-
-        # TODO converting numbers to words, this is to make sure the model does not hallucinate numbers
-        #sentence1 = nums2word_word2nums(sentence1, input_type='digits', num_tag=False)
-
-        # TODO tag the POS of the sentence
-        sentence1_tokens, sentence1_tags = tag_pos(sentence1)
-        ## must be removed ##
-        # join the tokens and tags with "/"
-        #sentence1 = [f"{token}/{tag}" for token, tag in zip(sentence1_tokens, sentence1_tags)]
-        #taggged_sentence = ' '.join(sentence1)
-        ## must be removed ##
-
-        # TODO get the most important tokens
-        #sentence1_tokens = row['sentence1_tokenized']
-        #tokens = tokenizer.tokenize(sentence1)
-        #important_tokens = get_important_tokens(sentence1, sentence2, scorer, tokens)
-
-        # TODO mask the most important tokens
-        #masked_sentence = mask_important_tokens(tokens, important_tokens, tokenizer)
-
-        # TODO maks random verbs/adjectives/nouns/conjunctions
-        # mask a random verb
-        verb_tokens = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if
-                       tag == 'VERB']  # assumes there exists a tag for verbs
-        if len(verb_tokens) > 0:
-            # take a  verb randomly and mask
-            verb_token = random.choice(verb_tokens)
-            masked_sentence = sentence1.replace(verb_token, tokenizer.mask_token)
-        else:
-            masked_sentence = sentence1
-
-        # convert conjugations to comma (conjugations has tag SCONJ)
-        SCONJs = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if tag == 'SCONJ']
-        if len(SCONJs) > 0:
-            masked_sentence = masked_sentence.replace(SCONJs[0], ',')
-
-        # rotate the sentence parts if there is , in the between
-        if ',' in masked_sentence:
-            masked_sentence = masked_sentence.split(',')
-            masked_sentence = masked_sentence[::-1]
-            masked_sentence = ','.join(masked_sentence)
-
-        # mask a random adjective
-        adj_tokens = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if
-                      tag == 'ADJ']
-        if len(adj_tokens) > 0:
-            adj_token = random.choice(adj_tokens)
-            masked_sentence = masked_sentence.replace(adj_token, tokenizer.mask_token)
-        else:
-            masked_sentence = masked_sentence
-
-        # mask a random noun
-        noun_tokens = [token for token, tag in zip(sentence1_tokens, sentence1_tags) if
-                       tag == 'NOUN']
-        if len(noun_tokens) > 0:
-            noun_token = random.choice(noun_tokens)
-            masked_sentence = masked_sentence.replace(noun_token, tokenizer.mask_token)
-
-
-        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
-        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
-        #formatted_sentence = f"{masked_sentence} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
-        #print("input: ", formatted_sentence)
-
-        sentences.append(formatted_sentence)
-
-        if not is_test:
-            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
-            formatted_sentence2 = f"{sentence2}"
-            #print("target: ", formatted_sentence2)
-            target_sentences.append(formatted_sentence2)
-
-
-    # Tokenize the sentences
-    inputs = tokenizer(sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
-
-    if not is_test:
-        labels = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
-        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask, labels.input_ids)
-    else:
-        dataset = TensorDataset(inputs.input_ids, inputs.attention_mask)
-
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-
-    # log information
-    config_dict["input_format"] = "{masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}"
-    config_dict["target_format"] = "{sentence2}"
-    config_dict["other_details"] = "masked a random verb, adjective, noun, and conjunction"
-
-
-    return data_loader
-'''
 def modified_BART_model(num_layers_to_freeze: int = 8):
     """
     Modifies a BARTForConditionalGeneration model for paraphrasing by freezing some encoder layers.
@@ -404,7 +283,7 @@ def modified_BART_model(num_layers_to_freeze: int = 8):
 
     return model
 
-def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
+def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2, max_layers: int = 8):
     """
     Gradually unfreezes the encoder layers of a BART model.
 
@@ -413,18 +292,11 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
     num_layers_to_unfreeze (int): Number of encoder layers to unfreeze (default: 2)
     does not work with PreFixModel
     """
+
     if isinstance(model, PrefixModel):
-        model.gradual_unfreezing(num_layers_to_unfreeze)
+        model.gradual_unfreezing(num_layers_to_unfreeze, max_layers)
+
     else:
-        # Unfreeze the specified number of last layers in encoder and decoder
-        for i in range(num_layers_to_unfreeze):
-            for param in model.model.encoder.layers[-i].parameters():
-                param.requires_grad = True
-
-        for i in range(num_layers_to_unfreeze):
-            for param in model.model.decoder.layers[-i].parameters():
-                param.requires_grad = True
-
         # Calculate the number of trainable layers
         num_trainable = 0
         for layer in model.model.encoder.layers:
@@ -438,7 +310,21 @@ def gradual_unfreezing(model, num_layers_to_unfreeze: int = 2):
             if trainable_params > 0:
                 num_trainable_d += 1
 
-        print("Number of trainable encoder layers:", num_trainable, '-', num_trainable_d)
+        if num_trainable == max_layers:
+            print(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+            config_dict["other_details"].join(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+            return model
+
+        # Unfreeze the specified number of last layers in encoder and decoder
+        for i in range(num_layers_to_unfreeze):
+            for param in model.model.encoder.layers[-i].parameters():
+                param.requires_grad = True
+
+        for i in range(num_layers_to_unfreeze):
+            for param in model.model.decoder.layers[-i].parameters():
+                param.requires_grad = True
+
+        print("Number of trainable encoder-decoder layers:", num_trainable + num_layers_to_unfreeze, '-', num_trainable_d + num_layers_to_unfreeze)
 
     return model
 
@@ -473,13 +359,31 @@ class PrefixModel(nn.Module):
             prefix = self.prefix.expand(batch_size, -1, -1)
             return self.prefix_mlp(prefix)
 
-    def gradual_unfreezing(self, num_layers_to_unfreeze: int = 2):
+    def gradual_unfreezing(self, num_layers_to_unfreeze: int = 2, max_layers: int = 8):
         """
         Gradually unfreezes the encoder and decoder layers of the base model.
 
         Args:
         num_layers_to_unfreeze (int): Number of encoder and decoder layers to unfreeze (default: 2)
         """
+        # Calculate the number of trainable layers
+        num_trainable = 0
+        for layer in self.base_model.model.encoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable += 1
+
+        num_trainable_d = 0
+        for layer in self.base_model.model.decoder.layers:
+            trainable_params = sum([1 for param in layer.parameters() if param.requires_grad])
+            if trainable_params > 0:
+                num_trainable_d += 1
+
+        if num_trainable == max_layers:
+            print(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+            config_dict["other_details"].join(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+            return
+
         # Unfreeze the specified number of last layers in encoder and decoder
         for i in range(num_layers_to_unfreeze):
             for param in self.base_model.model.encoder.layers[-i].parameters():
@@ -558,53 +462,6 @@ class PrefixModel(nn.Module):
 
         return outputs
 
-'''def transform_data(dataset: pd.DataFrame, max_length: int = 256, batch_size: int = 1,  tokenizer_name: str = 'facebook/bart-large', shuffle: bool = False) -> DataLoader:
-    """
-    Transform the dataset for model input. Tokenizes and formats data, returning a DataLoader.
-    Args:
-    dataset (pd.DataFrame): The dataset to transform.
-    max_length (int): Maximum token length. Defaults to 256.
-    batch_size (int): Size of data batches. Defaults to 16.
-    tokenizer_name (str): Name of the tokenizer to use. Defaults to 'facebook/bart-large'.
-    Returns:
-    DataLoader: DataLoader containing the tokenized data.
-    """
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-
-    is_test = False
-    if 'sentence2' not in dataset:
-        is_test = True
-
-    sentences = []
-    target_sentences = []
-    for _, row in dataset.iterrows():
-        sentence1 = row['sentence1']
-        sentence2 = row['sentence2'] if not is_test else None
-
-        sentence1_segment = ' '.join(map(str, eval(row['sentence1_segment_location'])))
-        paraphrase_types = ' '.join(map(str, eval(row['paraphrase_types'])))
-        formatted_sentence = f"{sentence1} {tokenizer.sep_token} {sentence1_segment} {tokenizer.sep_token} {paraphrase_types}"
-        print("input: ", formatted_sentence)
-
-        sentences.append(formatted_sentence)
-
-        if not is_test:
-            sentence2_segment = ' '.join(map(str, eval(row['sentence2_segment_location'])))
-            formatted_sentence2 = f"{sentence2}"
-            print("target: ", formatted_sentence2)
-            target_sentences.append(formatted_sentence2)
-
-
-
-    encodings = tokenizer(sentences, target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
-    target_encodings = tokenizer(target_sentences, max_length=max_length, padding=True, truncation=True, return_tensors="pt")
-    dataset = TensorDataset(encodings['input_ids'], encodings['attention_mask'], target_encodings['input_ids'])
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-
-    return data_loader
-'''
-
-
 
 def train_model(model: BartForConditionalGeneration,
                 train_loader: DataLoader,
@@ -673,7 +530,7 @@ def train_model(model: BartForConditionalGeneration,
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
 
-        if gradual_unfreeze:
+        if gradual_unfreeze and epoch > 1: # using no trainable layers for the first two epochs to train the first PrefixModel with pretrained BART
             # more epochs > fewer layers to unfreeze
             if epochs <= num_layers:
                 num_layers_to_unfreeze = num_layers//epochs
@@ -717,11 +574,20 @@ def train_model(model: BartForConditionalGeneration,
         #    model.save_pretrained(output_dir)
         #    print(f"Model with score {best_penalized_bleu} saved.")
 
-        if loss < best_loss:
+        #if loss < best_loss:
+        #    best_loss = loss
+        #    # Save the best model
+        #    model.save_pretrained(output_dir)
+        #    print(f"Model with loss {best_loss} saved.")
+
+        # choose the best model with both highest penalized BLEU score with a tolerance and lowest loss - Multi-objective optimization
+        tolerance = 0.5
+        if penalized_bleu >= best_penalized_bleu - tolerance and loss <= best_loss:
+            best_penalized_bleu = penalized_bleu
             best_loss = loss
             # Save the best model
             model.save_pretrained(output_dir)
-            print(f"Model with loss {best_loss} saved.")
+            print(f"Model with score {best_penalized_bleu} saved.")
 
         # log information
         # for each epoch, add penalized BLEU score like epoch 1: 0.5, epoch 2: 0.6, etc.
@@ -735,82 +601,9 @@ def train_model(model: BartForConditionalGeneration,
     # log information
     config_dict["penalized_bleu_epochs"] = penalized_bleu_list
     config_dict["optimizer"] = optimizer_name
+    config_dict['other_details'].join("saving the best model with the highest penalized BLEU score and lowest loss together")
 
     return model
-
-'''
-
-def train_model(model: BartForConditionalGeneration,
-                train_loader: DataLoader,
-                val_dataset: Dataset,
-                device: torch.device,
-                tokenizer: AutoTokenizer,
-                num_trials: int = 10,
-                output_dir: str = "models/bart_finetuned_model"
-                ) -> BartForConditionalGeneration:
-    """
-    Train the BART model using random hyperparameter search.
-    """
-
-    def train_with_params(epochs, learning_rate, step_size, gamma):
-        model.train()
-        optimizer = SophiaG(model.parameters(), lr=learning_rate)
-        scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
-        loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-
-        for epoch in range(epochs):
-            for batch in train_loader:
-                input_ids, attention_mask, labels = [x.to(device) for x in batch]
-                optimizer.zero_grad()
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-                loss = loss_fc(outputs.logits.view(-1, tokenizer.vocab_size), labels.view(-1))
-                loss.backward()
-                optimizer.step()
-            scheduler.step()
-
-            try:
-                penalized_bleu = evaluate_model(model, val_dataset, device, tokenizer)
-            except:
-                penalized_bleu = 0
-
-        return penalized_bleu
-
-    best_score = float("-inf")
-    best_params = None
-
-    for trial in range(num_trials):
-        # Random hyperparameter sampling
-        epochs = 3
-        learning_rate = random.uniform(1e-6, 1e-3)
-        step_size = random.randint(1, 2)
-        gamma = random.uniform(0.1, 0.9)
-
-        print(f"Trial {trial + 1}/{num_trials}")
-        print(f"Epochs: {epochs}, Learning rate: {learning_rate:.6f}, Step size: {step_size}, Gamma: {gamma:.3f}")
-
-        # Train and evaluate with these hyperparameters
-        score = train_with_params(epochs, learning_rate, step_size, gamma)
-
-        print(f"Penalized BLEU Score: {score}")
-
-        if score > best_score:
-            best_score = score
-            best_params = (epochs, learning_rate, step_size, gamma)
-
-        print(f"Best score so far: {best_score}")
-        print()
-
-    print("Best hyperparameters found:")
-    print(f"Epochs: {best_params[0]}")
-    print(f"Learning rate: {best_params[1]:.6f}")
-    print(f"Step size: {best_params[2]}")
-    print(f"Gamma: {best_params[3]:.3f}")
-
-    # Train the final model with the best hyperparameters
-    final_model = train_with_params(*best_params)
-
-    return final_model
-'''
 
 
 def test_model(test_data: DataLoader,
@@ -1037,120 +830,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
 
     return bleu_score
 
-'''def test_pipeline():
 
-    # load the model saved
-    model = BartForConditionalGeneration.from_pretrained("models/bart_finetuned_model")
-    model.eval()
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
-
-    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
-    test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
-    dev_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-dev.csv", sep="\t")
-    test_loader = transform_data(test_dataset, shuffle=False, tokenizer_name=config_dict["tokenizer"], max_length=config_dict["max_length"], batch_size=config_dict["batch_size"])
-
-    bleu_score = evaluate_model(model, dev_dataset, device, tokenizer)
-    print(f"The penalized BLEU-score of the model is: {bleu_score:.3f}")
-
-    test_ids = test_dataset["id"]
-    test_results = test_model(test_loader, test_ids, device, model, tokenizer)
-    test_results.to_csv(
-        "predictions/bart/etpc-paraphrase-generation-test-output.csv", index=False, sep="\t"
-    )
-
-    collect_logs(config_dict)
-
-    return'''
-
-'''
-## Optimization using genetic algorithm
-# TODO using genetic algorithm to optimize the model with the best hyperparameters and objective best penalized BLEU score
-# Mutation function
-def mutate(config):
-    """
-    Randomly mutate a configuration parameter.
-    """
-    mutated_config = config.copy()
-
-    # Randomly choose a parameter to mutate
-    key = random.choice(list(mutated_config.keys()))
-
-    if key == "learning_rate":
-        mutated_config[key] = 10 ** random.uniform(-5, -2)
-    elif key == "optimizer":
-        mutated_config[key] = random.choice(["SophiaG", "AdamW"])
-    elif key == "use_scheduler":
-        mutated_config[key] = random.choice([True, False])
-    elif key == "scheduler_step_size":
-        mutated_config[key] = random.randint(1, 2)
-    elif key == "scheduler_gamma":
-        mutated_config[key] = random.uniform(0.1, 1.0)
-    elif key == "batch_size":
-        mutated_config[key] = random.randint(1, 10)
-    elif key == "max_length":
-        mutated_config[key] = random.randint(128, 512)
-    elif key == "num_layers_to_freeze":
-        mutated_config[key] = random.randint(0, 12)
-    elif key == "prefix":
-        mutated_config[key] = random.choice([True, False])
-    elif key == "prefix_length":
-        mutated_config[key] = random.randint(1, 20)
-    elif key == "prefix_method":
-        mutated_config[key] = random.choice(["indirect", "direct"])
-
-    return mutated_config
-'''
-'''
-# Crossover function
-def crossover(parent1, parent2):
-    """
-    Perform crossover between two parent configurations.
-    """
-    child = {}
-    for key in parent1.keys():
-        child[key] = random.choice([parent1[key], parent2[key]])
-    return child
-'''
-"""
-# Genetic Algorithm
-def genetic_algorithm(config_dict, population_size=10, generations=5, args=None):
-    # Initialize population
-    population = [mutate(config_dict) for _ in range(population_size)]
-
-    for generation in range(generations):
-        print(f"Generation {generation + 1}/{generations}")
-
-        # Evaluate fitness of each individual
-        fitness_scores = [(individual, finetune_paraphrase_generation(args, individual)) for individual in population]
-
-        # Sort population by fitness (descending)
-        fitness_scores.sort(key=lambda x: x[1], reverse=True)
-
-        # Select the top half of the population as parents
-        parents = [ind for ind, fit in fitness_scores[:population_size // 2]]
-
-        # Create a new population through crossover and mutation
-        new_population = parents.copy()
-        while len(new_population) < population_size:
-            parent1, parent2 = random.sample(parents, 2)
-            child = crossover(parent1, parent2)
-            child = mutate(child)
-            new_population.append(child)
-
-        population = new_population
-        best_individual, best_fitness = fitness_scores[0]
-
-        print(f"Generation {generation + 1} | Best Fitness: {best_fitness:.4f} | Best Config: {best_individual}")
-
-
-    # run the best configuration to generate the paraphrases
-    finetune_paraphrase_generation(args, best_individual)
-
-    # save the best configuration
-    collect_logs(best_individual, output_dir="logs/genetic_algorithm")
-
-    return
-"""
 
 if __name__ == "__main__":
     args = get_args()
