@@ -522,9 +522,16 @@ def compute_reward(generated, reference, input_sentence, tokenizer):
     input_tokens = tokenizer.tokenize(input_sentence, add_special_tokens=False)
 
     # Calculate BLEU score
-    bleu_score_reference = bleu.corpus_score(reference_tokens, generated_tokens).score
-    # Penalize BLEU score if its to close to the input
-    bleu_score_inputs = 100 - bleu.corpus_score(input_tokens, generated_tokens).score
+    try:
+        bleu_score_reference = bleu.corpus_score(reference_tokens, generated_tokens).score
+    except:
+        bleu_score_reference = 0.001
+
+    try:
+        # Penalize BLEU score if its to close to the input
+        bleu_score_inputs = 100 - bleu.corpus_score(input_tokens, generated_tokens).score
+    except:
+        bleu_score_inputs = 0.001
 
     # Penalize BLEU and rescale it to 0-100
     # If you perfectly predict all the targets, you should get a penalized BLEU score of around 52
