@@ -1,5 +1,5 @@
 {
-  "run_id": "20240821_152410_bddc680d",
+  "run_id": "20240824_000325_476a0007",
   "all_results": [
     {
       "extra_context_layer": true,
@@ -10,10 +10,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -25,10 +25,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -40,10 +40,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -55,10 +55,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -70,10 +70,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -85,10 +85,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -100,10 +100,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.48498942917547566,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.48498942917547566,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -115,10 +115,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.48498942917547566,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.48498942917547566,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -130,10 +130,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -145,10 +145,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.49767441860465117,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49767441860465117,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -160,10 +160,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5040169133192389,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5040169133192389,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -175,10 +175,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5040169133192389,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5040169133192389,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -190,10 +190,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4731501057082452,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4731501057082452,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -205,10 +205,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4731501057082452,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4731501057082452,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -220,10 +220,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4731501057082452,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4731501057082452,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -235,10 +235,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4731501057082452,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4731501057082452,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -250,10 +250,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5162790697674419,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5162790697674419,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -265,10 +265,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5162790697674419,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5162790697674419,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -280,10 +280,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5162790697674419,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5162790697674419,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -295,10 +295,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5162790697674419,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5162790697674419,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -310,10 +310,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5226215644820296,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5226215644820296,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -325,10 +325,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5226215644820296,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5226215644820296,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -340,10 +340,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5226215644820296,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5226215644820296,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -355,10 +355,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5226215644820296,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5226215644820296,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -370,10 +370,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -385,10 +385,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -430,10 +430,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -445,21 +445,6 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
-      "quora_accuracy": null,
-      "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
-      "status": "success"
-    },
-    {
-      "extra_context_layer": true,
-      "regularize_context": true,
-      "pooling_strategy": "cls",
-      "learning_rate": 5e-05,
-      "hidden_dropout_prob": 0.3,
-      "batch_size": 32,
-      "epochs": 10,
-      "optimizer": "adamw",
       "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
@@ -474,6 +459,21 @@
       "hidden_dropout_prob": 0.3,
       "batch_size": 32,
       "epochs": 10,
+      "optimizer": "adamw",
+      "sst_accuracy": 0.2731501057082452,
+      "quora_accuracy": null,
+      "sts_correlation": null,
+      "average_performance": 0.2731501057082452,
+      "status": "success"
+    },
+    {
+      "extra_context_layer": true,
+      "regularize_context": true,
+      "pooling_strategy": "cls",
+      "learning_rate": 5e-05,
+      "hidden_dropout_prob": 0.3,
+      "batch_size": 32,
+      "epochs": 10,
       "optimizer": "sophia",
       "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
@@ -490,10 +490,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.31797040169133195,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31797040169133195,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -505,10 +505,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.31797040169133195,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31797040169133195,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -520,10 +520,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.31797040169133195,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31797040169133195,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -535,10 +535,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.31797040169133195,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31797040169133195,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -549,36 +549,6 @@
       "hidden_dropout_prob": 0.5,
       "batch_size": 16,
       "epochs": 5,
-      "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
-      "quora_accuracy": null,
-      "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
-      "status": "success"
-    },
-    {
-      "extra_context_layer": true,
-      "regularize_context": true,
-      "pooling_strategy": "cls",
-      "learning_rate": 5e-05,
-      "hidden_dropout_prob": 0.5,
-      "batch_size": 16,
-      "epochs": 5,
-      "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
-      "quora_accuracy": null,
-      "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
-      "status": "success"
-    },
-    {
-      "extra_context_layer": true,
-      "regularize_context": true,
-      "pooling_strategy": "cls",
-      "learning_rate": 5e-05,
-      "hidden_dropout_prob": 0.5,
-      "batch_size": 16,
-      "epochs": 10,
       "optimizer": "adamw",
       "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
@@ -593,6 +563,36 @@
       "learning_rate": 5e-05,
       "hidden_dropout_prob": 0.5,
       "batch_size": 16,
+      "epochs": 5,
+      "optimizer": "sophia",
+      "sst_accuracy": 0.2731501057082452,
+      "quora_accuracy": null,
+      "sts_correlation": null,
+      "average_performance": 0.2731501057082452,
+      "status": "success"
+    },
+    {
+      "extra_context_layer": true,
+      "regularize_context": true,
+      "pooling_strategy": "cls",
+      "learning_rate": 5e-05,
+      "hidden_dropout_prob": 0.5,
+      "batch_size": 16,
+      "epochs": 10,
+      "optimizer": "adamw",
+      "sst_accuracy": 0.2731501057082452,
+      "quora_accuracy": null,
+      "sts_correlation": null,
+      "average_performance": 0.2731501057082452,
+      "status": "success"
+    },
+    {
+      "extra_context_layer": true,
+      "regularize_context": true,
+      "pooling_strategy": "cls",
+      "learning_rate": 5e-05,
+      "hidden_dropout_prob": 0.5,
+      "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
       "sst_accuracy": 0.2731501057082452,
@@ -610,10 +610,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2849894291754757,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2849894291754757,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -625,10 +625,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2849894291754757,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2849894291754757,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -640,10 +640,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2849894291754757,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2849894291754757,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -655,10 +655,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2849894291754757,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2849894291754757,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -670,10 +670,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4156448202959831,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4156448202959831,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -685,10 +685,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4156448202959831,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4156448202959831,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -700,10 +700,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4156448202959831,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4156448202959831,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -715,10 +715,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4156448202959831,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4156448202959831,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -730,10 +730,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47610993657505285,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47610993657505285,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -745,10 +745,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47610993657505285,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47610993657505285,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -760,10 +760,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47610993657505285,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47610993657505285,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -775,10 +775,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47610993657505285,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47610993657505285,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -790,10 +790,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4693446088794926,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4693446088794926,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -805,10 +805,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4693446088794926,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4693446088794926,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -820,10 +820,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4693446088794926,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4693446088794926,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -835,10 +835,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4693446088794926,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4693446088794926,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -850,10 +850,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -865,10 +865,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -880,10 +880,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -895,10 +895,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4773784355179704,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4773784355179704,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -910,10 +910,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.45454545454545453,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.45454545454545453,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -925,10 +925,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.45454545454545453,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.45454545454545453,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -940,10 +940,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.45454545454545453,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.45454545454545453,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -955,10 +955,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.45454545454545453,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.45454545454545453,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -970,10 +970,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4748414376321353,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4748414376321353,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -985,10 +985,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4748414376321353,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4748414376321353,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1000,10 +1000,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.48414376321353064,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.48414376321353064,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1015,10 +1015,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.48414376321353064,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.48414376321353064,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1030,10 +1030,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.46680761099365753,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46680761099365753,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1045,10 +1045,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.46680761099365753,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46680761099365753,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1060,10 +1060,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4909090909090909,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4909090909090909,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1075,10 +1075,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4909090909090909,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4909090909090909,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1210,10 +1210,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.40084566596194504,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.40084566596194504,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1225,10 +1225,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.40084566596194504,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.40084566596194504,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1240,10 +1240,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.40084566596194504,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.40084566596194504,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1255,10 +1255,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.40084566596194504,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.40084566596194504,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1330,10 +1330,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.32642706131078225,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32642706131078225,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -1345,10 +1345,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.32642706131078225,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32642706131078225,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -1360,10 +1360,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.32642706131078225,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32642706131078225,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -1375,10 +1375,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.32642706131078225,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32642706131078225,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -1390,10 +1390,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.32727272727272727,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32727272727272727,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -1405,10 +1405,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.32727272727272727,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32727272727272727,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -1420,10 +1420,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.32727272727272727,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32727272727272727,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -1435,10 +1435,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.32727272727272727,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.32727272727272727,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -1450,10 +1450,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5023255813953489,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5023255813953489,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -1465,10 +1465,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5023255813953489,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5023255813953489,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -1480,10 +1480,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5023255813953489,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5023255813953489,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -1495,10 +1495,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5023255813953489,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5023255813953489,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -1510,10 +1510,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -1525,10 +1525,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -1540,10 +1540,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -1555,10 +1555,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -1570,10 +1570,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4816067653276956,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4816067653276956,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -1585,10 +1585,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4816067653276956,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4816067653276956,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -1600,10 +1600,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4828752642706131,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4828752642706131,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -1615,10 +1615,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4828752642706131,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4828752642706131,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -1630,10 +1630,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47568710359408034,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47568710359408034,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -1645,10 +1645,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47568710359408034,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47568710359408034,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -1660,10 +1660,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47568710359408034,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47568710359408034,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -1675,10 +1675,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47568710359408034,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47568710359408034,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -1690,10 +1690,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4959830866807611,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4959830866807611,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1705,10 +1705,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4959830866807611,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4959830866807611,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1720,10 +1720,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4959830866807611,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4959830866807611,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1735,10 +1735,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4959830866807611,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4959830866807611,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -1750,10 +1750,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47822410147991545,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47822410147991545,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1765,10 +1765,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47822410147991545,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47822410147991545,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1780,10 +1780,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.49471458773784355,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49471458773784355,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1795,10 +1795,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.49471458773784355,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.49471458773784355,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -1810,10 +1810,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1825,10 +1825,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1840,10 +1840,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1855,10 +1855,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1870,10 +1870,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.37251585623678646,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.37251585623678646,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1885,10 +1885,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.37251585623678646,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.37251585623678646,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1900,10 +1900,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.37251585623678646,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.37251585623678646,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1915,10 +1915,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.37251585623678646,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.37251585623678646,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -1930,10 +1930,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.3784355179704017,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3784355179704017,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1945,10 +1945,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.3784355179704017,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3784355179704017,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1960,10 +1960,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.3784355179704017,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3784355179704017,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -1975,10 +1975,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.3784355179704017,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3784355179704017,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -2050,10 +2050,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2989429175475687,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2989429175475687,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2065,10 +2065,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2989429175475687,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2989429175475687,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2080,10 +2080,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2989429175475687,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2989429175475687,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2095,10 +2095,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2989429175475687,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2989429175475687,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2110,10 +2110,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.41902748414376323,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.41902748414376323,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2125,10 +2125,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.41902748414376323,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.41902748414376323,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2140,10 +2140,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.41902748414376323,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.41902748414376323,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2155,10 +2155,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.41902748414376323,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.41902748414376323,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2170,10 +2170,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.42959830866807613,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.42959830866807613,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -2185,10 +2185,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.42959830866807613,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.42959830866807613,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -2200,10 +2200,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.42959830866807613,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.42959830866807613,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -2215,10 +2215,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.42959830866807613,
+      "sst_accuracy": 0.5002114164904863,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.42959830866807613,
+      "average_performance": 0.5002114164904863,
       "status": "success"
     },
     {
@@ -2230,10 +2230,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4528541226215645,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4528541226215645,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -2245,10 +2245,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4528541226215645,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4528541226215645,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -2260,10 +2260,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.453276955602537,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.453276955602537,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -2275,10 +2275,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.453276955602537,
+      "sst_accuracy": 0.4993657505285412,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.453276955602537,
+      "average_performance": 0.4993657505285412,
       "status": "success"
     },
     {
@@ -2290,10 +2290,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4558139534883721,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4558139534883721,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -2305,10 +2305,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4558139534883721,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4558139534883721,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -2320,10 +2320,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5048625792811839,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5048625792811839,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -2335,10 +2335,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5048625792811839,
+      "sst_accuracy": 0.5200845665961945,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5048625792811839,
+      "average_performance": 0.5200845665961945,
       "status": "success"
     },
     {
@@ -2350,10 +2350,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.46765327695560255,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46765327695560255,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -2365,10 +2365,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.46765327695560255,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46765327695560255,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -2380,10 +2380,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.46765327695560255,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46765327695560255,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -2395,10 +2395,10 @@
       "batch_size": 16,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.46765327695560255,
+      "sst_accuracy": 0.4989429175475687,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.46765327695560255,
+      "average_performance": 0.4989429175475687,
       "status": "success"
     },
     {
@@ -2410,10 +2410,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4710359408033827,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4710359408033827,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -2425,10 +2425,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4710359408033827,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4710359408033827,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -2440,10 +2440,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.47357293868921774,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47357293868921774,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -2455,10 +2455,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.47357293868921774,
+      "sst_accuracy": 0.5099365750528542,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.47357293868921774,
+      "average_performance": 0.5099365750528542,
       "status": "success"
     },
     {
@@ -2470,10 +2470,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.4820295983086681,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4820295983086681,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -2485,10 +2485,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.4820295983086681,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.4820295983086681,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -2500,10 +2500,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -2515,10 +2515,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.5006342494714587,
+      "sst_accuracy": 0.5171247357293869,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.5006342494714587,
+      "average_performance": 0.5171247357293869,
       "status": "success"
     },
     {
@@ -2590,10 +2590,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.31543340380549684,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31543340380549684,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2605,10 +2605,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.31543340380549684,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31543340380549684,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2620,10 +2620,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.31543340380549684,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31543340380549684,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2635,10 +2635,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.31543340380549684,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.31543340380549684,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2650,10 +2650,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.39915433403805495,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39915433403805495,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -2665,10 +2665,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.39915433403805495,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39915433403805495,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -2680,10 +2680,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.39915433403805495,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39915433403805495,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -2695,10 +2695,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.39915433403805495,
+      "sst_accuracy": 0.4329809725158562,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39915433403805495,
+      "average_performance": 0.4329809725158562,
       "status": "success"
     },
     {
@@ -2710,10 +2710,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2725,10 +2725,10 @@
       "batch_size": 16,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.2566596194503171,
+      "sst_accuracy": 0.2731501057082452,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.2566596194503171,
+      "average_performance": 0.2731501057082452,
       "status": "success"
     },
     {
@@ -2770,10 +2770,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.3315010570824524,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3315010570824524,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2785,10 +2785,10 @@
       "batch_size": 32,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.3315010570824524,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3315010570824524,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2800,10 +2800,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.3315010570824524,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3315010570824524,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2815,10 +2815,10 @@
       "batch_size": 32,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.3315010570824524,
+      "sst_accuracy": 0.37378435517970404,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.3315010570824524,
+      "average_performance": 0.37378435517970404,
       "status": "success"
     },
     {
@@ -2830,10 +2830,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "adamw",
-      "sst_accuracy": 0.39281183932346725,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39281183932346725,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2845,10 +2845,10 @@
       "batch_size": 64,
       "epochs": 5,
       "optimizer": "sophia",
-      "sst_accuracy": 0.39281183932346725,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39281183932346725,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2860,10 +2860,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "adamw",
-      "sst_accuracy": 0.39281183932346725,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39281183932346725,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     },
     {
@@ -2875,10 +2875,10 @@
       "batch_size": 64,
       "epochs": 10,
       "optimizer": "sophia",
-      "sst_accuracy": 0.39281183932346725,
+      "sst_accuracy": 0.4448202959830867,
       "quora_accuracy": null,
       "sts_correlation": null,
-      "average_performance": 0.39281183932346725,
+      "average_performance": 0.4448202959830867,
       "status": "success"
     }
   ],
@@ -2887,14 +2887,14 @@
     "regularize_context": true,
     "pooling_strategy": "cls",
     "learning_rate": 1e-05,
-    "hidden_dropout_prob": 0.5,
+    "hidden_dropout_prob": 0.3,
     "batch_size": 64,
     "epochs": 5,
     "optimizer": "adamw",
-    "sst_accuracy": 0.5226215644820296,
+    "sst_accuracy": 0.5200845665961945,
     "quora_accuracy": null,
     "sts_correlation": null,
-    "average_performance": 0.5226215644820296,
+    "average_performance": 0.5200845665961945,
     "status": "success"
   }
 }
