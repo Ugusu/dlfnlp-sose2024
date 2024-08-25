@@ -31,16 +31,16 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 6,
-    "learning_rate": 3e-5,
+    "epochs": 3,
+    "learning_rate": 1e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
-    "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
-    "use_scheduler": True,
+    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "use_scheduler": False,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 96,
+    "batch_size": 64,
     "max_length": 256,
-    "gradual_unfreezing": True,
+    "gradual_unfreezing": False,
     "num_layers_to_freeze": 12,
     "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
