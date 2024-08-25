@@ -5,6 +5,7 @@ import numpy
 import torch
 from torch import nn
 from torch.optim import Optimizer
+import torch.nn.functional as F
 
 
 class AdamW(Optimizer):
