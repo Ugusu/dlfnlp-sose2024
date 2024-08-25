@@ -279,7 +279,7 @@ class SMART:
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
             loss = outputs.norm()
             perturb_grad = torch.autograd.grad(loss, perturbation, retain_graph=False, create_graph=False)[0]
-            perturbation = perturbation + self.alpha * perturbation_grad.sign()
+            perturbation = perturbation + self.alpha * perturb_grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
             perturbation.detach_()
             self.model.zero_grad()
