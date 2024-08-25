@@ -77,7 +77,7 @@ class MultitaskBERT(nn.Module):
 
         self.sentiment_classifier = nn.Linear(
             in_features=BERT_HIDDEN_SIZE,  # Mapping the 768-dimension output embedding to...
-            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes,
+            out_features=N_SENTIMENT_CLASSES  # 5 possible sentiment classes
         )
 
         self.paraphrase_classifier = nn.Linear(

@@ -58,11 +58,11 @@ def is_remote_url(url_or_filename):
 
 
 def http_get(
-        url: str,
-        temp_file: BinaryIO,
-        proxies=None,
-        resume_size=0,
-        headers: Optional[Dict[str, str]] = None,
+    url: str,
+    temp_file: BinaryIO,
+    proxies=None,
+    resume_size=0,
+    headers: Optional[Dict[str, str]] = None,
 ):
     headers = copy.deepcopy(headers)
     if resume_size > 0:
@@ -101,11 +101,11 @@ def url_to_filename(url: str, etag: Optional[str] = None) -> str:
 
 
 def hf_bucket_url(
-        model_id: str,
-        filename: str,
-        subfolder: Optional[str] = None,
-        revision: Optional[str] = None,
-        mirror=None,
+    model_id: str,
+    filename: str,
+    subfolder: Optional[str] = None,
+    revision: Optional[str] = None,
+    mirror=None,
 ) -> str:
     if subfolder is not None:
         filename = f"{subfolder}/{filename}"
@@ -135,15 +135,15 @@ def http_user_agent(user_agent: Union[Dict, str, None] = None) -> str:
 
 
 def get_from_cache(
-        url: str,
-        cache_dir=None,
-        force_download=False,
-        proxies=None,
-        etag_timeout=10,
-        resume_download=False,
-        user_agent: Union[Dict, str, None] = None,
-        use_auth_token: Union[bool, str, None] = None,
-        local_files_only=False,
+    url: str,
+    cache_dir=None,
+    force_download=False,
+    proxies=None,
+    etag_timeout=10,
+    resume_download=False,
+    user_agent: Union[Dict, str, None] = None,
+    use_auth_token: Union[bool, str, None] = None,
+    local_files_only=False,
 ) -> Optional[str]:
     if cache_dir is None:
         cache_dir = TRANSFORMERS_CACHE
@@ -276,16 +276,16 @@ def get_from_cache(
 
 
 def cached_path(
-        url_or_filename,
-        cache_dir=None,
-        force_download=False,
-        proxies=None,
-        resume_download=False,
-        user_agent: Union[Dict, str, None] = None,
-        extract_compressed_file=False,
-        force_extract=False,
-        use_auth_token: Union[bool, str, None] = None,
-        local_files_only=False,
+    url_or_filename,
+    cache_dir=None,
+    force_download=False,
+    proxies=None,
+    resume_download=False,
+    user_agent: Union[Dict, str, None] = None,
+    extract_compressed_file=False,
+    force_extract=False,
+    use_auth_token: Union[bool, str, None] = None,
+    local_files_only=False,
 ) -> Optional[str]:
     if cache_dir is None:
         cache_dir = TRANSFORMERS_CACHE
@@ -327,9 +327,9 @@ def cached_path(
         output_path_extracted = os.path.join(output_dir, output_extract_dir_name)
 
         if (
-                os.path.isdir(output_path_extracted)
-                and os.listdir(output_path_extracted)
-                and not force_extract
+            os.path.isdir(output_path_extracted)
+            and os.listdir(output_path_extracted)
+            and not force_extract
         ):
             return output_path_extracted
 
