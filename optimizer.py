@@ -234,17 +234,19 @@ class SophiaG(Optimizer):
 class SAM(Optimizer):
     def __init__(self, params, base_optimizer, rho=0.05, **kwargs):
         assert rho >= 0, "SAM requires non-negative rho."
-        defaults = dict(rho=rho, **kwargs)
-        super(SAM, self).__init__(params, defaults)
-        self.base_optimizer = base_optimizer(params, **kwargs)
+        self.defaults = dict(rho=rho, **kwargs)
+        super(SAM, self).__init__(params, self.defaults)
+        self.base_optimizer = base_optimizer(self.param_groups, **kwargs)
+        self.rho = rho
 
     @torch.no_grad()
     def first_step(self, zero_grad=False):
         grad_norm = self._grad_norm()
         for group in self.param_groups:
-            scale = group["rho"] / (grad_norm + 1e-12)
+            scale = self.rho / (grad_norm + 1e-12)
             for p in group["params"]:
                 if p.grad is None: continue
+                if p not in self.state: self.state[p] = {}
                 self.state[p]["old_p"] = p.data.clone()
                 p.add_(p.grad, alpha=scale)
         if zero_grad: self.zero_grad()
@@ -256,7 +258,7 @@ class SAM(Optimizer):
                 if p.grad is None: continue
                 p.data = self.state[p]["old_p"]
                 
-            self.base_optimizer.step()
+        self.base_optimizer.step()
         if zero_grad: self.zero_grad()
 
     def _grad_norm(self):
@@ -275,3 +277,4 @@ class SAM(Optimizer):
 
     def zero_grad(self):
         self.base_optimizer.zero_grad()
+
