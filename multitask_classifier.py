@@ -18,7 +18,7 @@ from datasets import (
     load_multitask_data,
 )
 from evaluation import model_eval_multitask, test_model_multitask
-from optimizer import AdamW
+from optimizer import AdamW, SophiaG, SAM
 
 TQDM_DISABLE = False
 
@@ -335,7 +335,10 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr)
+    # optimizer = AdamW(model.parameters(), lr=lr)
+    optimizer = SophiaG(model.parameters(), lr=lr)
+    main_optimizer = SophiaG
+    smart_optimizer = SAM(model.parameters(), main_optimizer, lr=lr)
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -419,12 +422,27 @@ def train_multitask(args):
                 b_mask_2 = b_mask_2.to(device)
                 b_labels = b_labels.to(device)
 
-                optimizer.zero_grad()
+                smart_optimizer.zero_grad()
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
                 loss.backward()
-                optimizer.step()
+                smart_optimizer.first_step(zero_grad=True)
+
+                noisy_inputs = add_noise(
+                    model,
+                    {"input_ids_1": b_ids_1, "attention_mask_1": b_mask_1, "input_ids_2": b_ids_2, "attention_mask_2": b_mask_2}
+                )
+                logits = model.predict_paraphrase(
+                    noisy_inputs["input_ids_1"],
+                    noisy_inputs["attention_mask_1"],
+                    noisy_inputs["input_ids_2"],
+                    noisy_inputs["attention_mask_2"]
+                )
+                loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
+                loss.backward()
+
+                smart_optimizer.second_step(zero_grad=True)
 
                 train_loss += loss.item()
                 num_batches += 1
@@ -482,6 +500,55 @@ def test_model(args):
         print(f"Loaded model to test from {args.filepath}")
 
         return test_model_multitask(args, model, device)
+
+
+def add_noise(model, inputs, task, epsilon=1e-5):
+    for key in inputs:
+        inputs[key].requires_grad = True
+
+    if task == "sst":
+        outputs = model.predict_sentiment(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"]
+        )
+        loss = F.cross_entropy(outputs, inputs["labels"])
+
+    elif task == "qqp":
+        outputs = model.predict_paraphrase(
+            input_ids_1=inputs["input_ids_1"],
+            attention_mask_1=inputs["attention_mask_1"],
+            input_ids_2=inputs["input_ids_2"],
+            attention_mask_2=inputs["attention_mask_2"]
+        )
+        bce_with_logits_loss = nn.BCEWithLogitsLoss()
+        loss = bce_with_logits_loss(outputs.squeeze(), inputs["labels"].float())
+
+    elif task == "sts":
+        outputs = model.predict_similarity(
+            input_ids_1=inputs["input_ids_1"],
+            attention_mask_1=inputs["attention_mask_1"],
+            input_ids_2=inputs["input_ids_2"],
+            attention_mask_2=inputs["attention_mask_2"]
+        )
+        normalized_logits = torch.sigmoid(outputs) * 5
+        loss = F.mse_loss(normalized_logits, inputs["labels"].view(-1, 1))
+
+    else:
+        raise ValueError(f"Unsupported task type: {task}")
+
+    loss.backward()
+    
+    noise = epsilon * inputs["input_ids_1"].grad.sign() if "input_ids_1" in inputs else epsilon * inputs["input_ids"].grad.sign()
+    
+    noisy_inputs = {
+        key: inputs[key] + noise if inputs[key].dtype == torch.float and key.startswith("input_ids") else inputs[key]
+        for key in inputs
+    }
+
+    for key in noisy_inputs:
+        noisy_inputs[key].requires_grad = False
+
+    return noisy_inputs
 
 
 def get_args():
