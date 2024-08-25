@@ -232,3 +232,55 @@ class SophiaG(Optimizer):
                 p.addcmul_(exp_avg.sign(), ratio, value=step_size_neg)
 
         return loss
+
+
+class SMART:
+    """
+    Smoothness-Inducing Adversarial Regularization implementation.
+    """
+    def __init__(
+        self, 
+        model: torch.nn.Module, 
+        epsilon=1e-5: float, 
+        alpha=0.02: float, 
+        steps=1: int
+    ):
+        """
+        Initializes the SMART Regularizer with specified parameters.
+        
+        Args:
+            model (torch.nn.Module): The model being trained.
+            epsilon (float): Norm constraint for the perturbation.
+            alpha (float): Step size for adversarial perturbation.
+            steps (int): Number of steps for generating perturbations.
+        """
+        
+        self.model = model
+        self.epsilon = epsilon
+        self.alpha = alpha
+        self.steps = steps
+    
+    def perturb(self, input_embeddings, attention_mask):
+        """
+        Applies adversarial perturbation to the input embeddings.
+        
+        Args:
+            input_embeddings (torch.Tensor): The input embeddings.
+            attention_mask (torch.Tensor): The attention mask for the embeddings.
+        
+        Returns:
+            perturbed_embeddings (torch.Tensor): The embeddings with adversarial perturbation.
+        """
+        perturbation = torch.randn_like(input_embeddings, requires_grad=True)
+        
+        for _ in range(self.steps):
+            perturbation.requires_grad_()
+            perturbed_embeddings = input_embeddings + perturbation
+            outputs = self.model(perturbed_embeddings, attention_mask, return_pooler_output=False)
+            loss = outputs.norm()
+            loss.backward()
+            perturbation = perturbation + self.alpha * perturbation.grad.sign()
+            perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
+            self.model.zero_grad()
+
+        return input_embeddings + perturbation
