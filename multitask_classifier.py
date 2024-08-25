@@ -440,13 +440,15 @@ def train_multitask(args):
                     perturbed_logits = model.bert.pooler_dense(perturbed_outputs[:, 0])
                     perturbed_logits = model.bert.pooler_af(perturbed_logits)
                     
+                    detached_logits = logits.detach()
+
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
                     smart_loss = kl_loss(
-                        F.log_softmax(perturbed_logits.detach(), dim=-1),
-                        F.softmax(logits.detach(), dim=-1)
+                        F.log_softmax(perturbed_logits, dim=-1),
+                        F.softmax(detached_logits, dim=-1)
                     ) + kl_loss(
-                        F.log_softmax(logits.detach(), dim=-1),
+                        F.log_softmax(detached_logits, dim=-1),
                         F.softmax(perturbed_logits.detach(), dim=-1)
                     )
 
