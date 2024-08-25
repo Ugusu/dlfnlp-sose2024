@@ -54,7 +54,7 @@ class EarlyStopping:
         self.matthew_score = -1
 
     def early_stop(self, val_matthew_score):
-        if val_matthew_score < self.matthew_score:
+        if val_matthew_score > self.matthew_score:
             self.matthew_score = val_matthew_score
             self.counter = 0
         else:
@@ -408,8 +408,8 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
         optimizer = AdamW(model.parameters(), lr=args.lr)
     warmup_epochs = 3
     cosine_epochs = args.epochs - warmup_epochs
-    warmup_scheduler = LinearLR(optimizer=optimizer, total_iters=cosine_epochs)
-    cosine_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=cosine_epochs, eta_min=0)
+    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=args.lr / 1e-3, total_iters=cosine_epochs)
+    cosine_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=cosine_epochs, eta_min=1e-7)
     scheduler = SequentialLR(optimizer=optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
                              milestones=[warmup_epochs])
 
