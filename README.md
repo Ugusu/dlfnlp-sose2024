@@ -441,6 +441,21 @@ Examples:
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
 
+### 4.3 BERT for Paraphrase Type Detection
+
+#### **4.3.1 Effectiveness of Pooling Strategies**
+ Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+ 
+| Pooling Strategy                                     | STS Corr (Max)     |
+|------------------------------------------------------|--------------------|
+| CLS, combined, logit (default)                       | 0.864              |
+| Average, combined, logit                             | 0.867              |
+| Average, independent, logit                          | 0.406              |
+| Average, independent, cosine similarity              | 0.406              |
+
+
+Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+
 ---
 
 ## Results Summary
