@@ -379,9 +379,70 @@ For an illustrative comparison, refer to the corresponding [box plot](sst_grid_s
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
 
+### 4.2 BART for Paraphrase Generation
+
+#### **4.2.1 Data Overview**
+
+The BART model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned for 3-10 epochs with a batch size of 1-100 and evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
+The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
+
+#### **4.2.2 Best Model Performance**
+
+The best model performance was achieved with the following configuration:
+- **Epochs:** 10
+- **Batch Size:** 10
+- **optimizer:** SophiaG
+- **scheduler gamma:** 0.675
+- **scheduler step size:** 1
+- **gradual unfreezing:** 8 layers
+- **rl_weight:** 0.85
+- **prefix length:** 10
+- **prefix method:** "indirrect"
+
+This configuration can be replicated by running the following script:
+    
+    
+    python bart_generation.py --use_gpu
+    
+
+#### **4.2.3 PIP Prefix Method**
+
+The Parse-Instructed Prefix (PIP) method was implemented to improve the quality of the generated paraphrases. The PIP method uses a parse tree to guide the generation of syntactically controlled paraphrases. The method was tested with different prefix lengths and methods to determine the optimal configuration for the BART model.
+In simple words, the PIP method uses a prefix to guide the model in generating paraphrases that adhere to the syntactic structure of the input sentence.
+
+#### **4.2.4 Reinforcement Learning for Paraphrase Generation**
+
+Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward, which is the penalized BLEU score in this case.
+
+
+### 4.2.5 Results ### 
+
+The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
+
+##### note: ##### 
+I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sence to a human as a good paraphrase. Therefore the penalized_bleu score may not be the best optomization target for the model. So I used a combination of loss and penalized_bleu score as the reward for the RL training.
+
+Examples:
+- Input: `Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.`
+- Target:  `Some 34.7 million shares have been tendered, Oracle said in a statement.`
+
+- Generated: `Oracle Corp (ORCL.N) said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered
+  - Penalized BLEU: 30.4961
+  - Loss: 1.1998
+
+- Generated: `BRIEF-Moody's assigns a negative rating to Credit Suisse's portfolio of 32.75 million PeopleSoft shares that had been tendered. Through Thursday, PROPN VERB NUM NUM PROPN N`
+  - Penalized BLEU: 33.1861
+  - Loss: 4.2829
+
+- Generated: `Oracle said 34.75 million PeopleSoft customers had been added to its database as of Thursday morning.`
+  - Penalized BLEU: 33.4867
+  - Loss: 0.7631
+
+These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
+
 ---
 
-## Results
+## Results Summary
 
 ### BART
 
@@ -391,7 +452,7 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 |---------------|-------------------------------------|--------------------------------------------------|
 | Baseline      | 0.833                               | -                                                |
 | Improvement 1 | ...                                 | 22.765                                              |
-| Improvement 2 | ...                                 | ...                                              |
+| Improvement 2 | ...                                 | 24.211                                             |
 
 ### BERT
 
@@ -440,6 +501,7 @@ Explain the contribution of each group member:
   - Trying methods from LLama 3 like rotary positional encoding and SwiGLU activation function.
   - Using gradual unfreezing and discriminative learning rates for training.
   - trying genetic algorithm for multi-objective optimization of hyperparameters optimizing for both best penalized_BLEU and loss.
+  - Implemented Reinforcement Learning for paraphrase generation. araphrase Generation with Deep Reinforcement Learning [Li, Jiang, Shang et al., 2018]
 - 
 **Pablo Jahnen:**
 - Phase 1:
@@ -477,6 +539,12 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
 
 #TODO: (Phase 2) List all references (repositories, papers, etc.) used for your project.
+- [SophiaG Optimizer](https://arxiv.org/abs/2305.14342): Liu et al., 2023
+- [Parse-Instructed Prefix for Syntactically Controlled Paraphrase Generation](https://aclanthology.org/2023.findings-acl.659/): Wan et al., 2023
+- [Rotary Positional Encoding](https://arxiv.org/abs/2104.09864v5): Su et al., 2021
+- [SwiGLU Activation Function]()https://arxiv.org/abs/2002.05202v1: Noam Shazeer, 2020
+- [Paraphrase Generation with Deep Reinforcement Learning](https://aclanthology.org/D18-1421/): Li, Jiang, Shang et al., 2018
+- [Gradual Unfreezing and Discriminative Learning Rates](https://arxiv.org/pdf/1801.06146): Howard and Ruder, 2018
 
 ## Acknowledgement
 
