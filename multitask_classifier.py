@@ -18,7 +18,7 @@ from datasets import (
     load_multitask_data,
 )
 from evaluation import model_eval_multitask, test_model_multitask
-from optimizer import AdamW, SophiaG, SAM
+from optimizer import AdamW, SophiaG
 
 TQDM_DISABLE = False
 
@@ -169,13 +169,7 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask, return_pooler_output=False)
-
-        cls_token = embedding[:, 0, :]
-        average_tokens = embedding[:, 1:, :].mean(dim=1)
-
-        embedding = cls_token + average_tokens
-
+        embedding = self.forward(all_input_ids, all_attention_mask)
         embedding = self.dropout(embedding)
 
         is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
@@ -335,10 +329,7 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    # optimizer = AdamW(model.parameters(), lr=lr)
     optimizer = SophiaG(model.parameters(), lr=lr)
-    main_optimizer = SophiaG
-    smart_optimizer = SAM(model.parameters(), main_optimizer, lr=lr)
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -422,28 +413,12 @@ def train_multitask(args):
                 b_mask_2 = b_mask_2.to(device)
                 b_labels = b_labels.to(device)
 
-                smart_optimizer.zero_grad()
+                optimizer.zero_grad()
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
                 loss.backward()
-                smart_optimizer.first_step(zero_grad=True)
-
-                noisy_inputs = add_noise(
-                    model,
-                    {"input_ids_1": b_ids_1, "attention_mask_1": b_mask_1, "input_ids_2": b_ids_2, "attention_mask_2": b_mask_2, "labels": b_labels},
-                    task='qqp'
-                )
-                logits = model.predict_paraphrase(
-                    noisy_inputs["input_ids_1"],
-                    noisy_inputs["attention_mask_1"],
-                    noisy_inputs["input_ids_2"],
-                    noisy_inputs["attention_mask_2"]
-                )
-                loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
-                loss.backward()
-
-                smart_optimizer.second_step(zero_grad=True)
+                optimizer.step()
 
                 train_loss += loss.item()
                 num_batches += 1
@@ -502,69 +477,6 @@ def test_model(args):
 
         return test_model_multitask(args, model, device)
 
-
-def add_noise(model, inputs, task, epsilon=1e-5):
-    for key in inputs:
-        if inputs[key].dtype.is_floating_point:
-            inputs[key].requires_grad = True
-
-    if task == "sst":
-        outputs = model.predict_sentiment(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"]
-        )
-        loss = F.cross_entropy(outputs, inputs["labels"])
-
-    elif task == "qqp":
-        outputs = model.predict_paraphrase(
-            input_ids_1=inputs["input_ids_1"],
-            attention_mask_1=inputs["attention_mask_1"],
-            input_ids_2=inputs["input_ids_2"],
-            attention_mask_2=inputs["attention_mask_2"]
-        )
-        bce_with_logits_loss = nn.BCEWithLogitsLoss()
-        loss = bce_with_logits_loss(outputs.squeeze(), inputs["labels"].float())
-
-    elif task == "sts":
-        outputs = model.predict_similarity(
-            input_ids_1=inputs["input_ids_1"],
-            attention_mask_1=inputs["attention_mask_1"],
-            input_ids_2=inputs["input_ids_2"],
-            attention_mask_2=inputs["attention_mask_2"]
-        )
-        normalized_logits = torch.sigmoid(outputs) * 5
-        loss = F.mse_loss(normalized_logits, inputs["labels"].view(-1, 1))
-
-    else:
-        raise ValueError(f"Unsupported task type: {task}")
-
-    loss.backward()
-
-    noise = None
-    gradient_present = False
-    if "input_ids_1" in inputs and inputs["input_ids_1"].grad is not None:
-        gradient_present = True
-        noise = epsilon * inputs["input_ids_1"].grad.sign()
-    elif "input_ids" in inputs and inputs["input_ids"].grad is not None:
-        gradient_present = True
-        noise = epsilon * inputs["input_ids"].grad.sign()
-    
-    if not gradient_present:
-        print("Debug Info: ")
-        for key in inputs:
-            print(f"{key}: requires_grad={inputs[key].requires_grad}, dtype={inputs[key].dtype}, grad={inputs[key].grad}")
-
-        raise RuntimeError("Gradients are None, ensure that tensors require gradients and backward has been called.")
-
-    noisy_inputs = {
-        key: inputs[key] + noise if inputs[key].dtype.is_floating_point and key.startswith("input_ids") else inputs[key]
-        for key in inputs
-    }
-
-    for key in noisy_inputs:
-        noisy_inputs[key].requires_grad = False
-
-    return noisy_inputs
 
 def get_args():
     parser = argparse.ArgumentParser()
