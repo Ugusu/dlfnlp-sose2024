@@ -43,7 +43,6 @@ class SMART:
         
         for _ in range(self.steps):
             perturbed_embeddings = input_embeddings + perturbation
-            perturbed_embeddings.requires_grad_(True)
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
             loss = outputs.norm()
             print("Before zero", perturbation.grad)
