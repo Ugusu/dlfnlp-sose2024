@@ -505,7 +505,8 @@ def test_model(args):
 
 def add_noise(model, inputs, task, epsilon=1e-5):
     for key in inputs:
-        inputs[key].requires_grad = True
+        if inputs[key].dtype.is_floating_point:
+            inputs[key].requires_grad = True
 
     if task == "sst":
         outputs = model.predict_sentiment(
@@ -542,7 +543,7 @@ def add_noise(model, inputs, task, epsilon=1e-5):
     noise = epsilon * inputs["input_ids_1"].grad.sign() if "input_ids_1" in inputs else epsilon * inputs["input_ids"].grad.sign()
     
     noisy_inputs = {
-        key: inputs[key] + noise if inputs[key].dtype == torch.float and key.startswith("input_ids") else inputs[key]
+        key: inputs[key] + noise if inputs[key].dtype.is_floating_point and key.startswith("input_ids") else inputs[key]
         for key in inputs
     }
 
