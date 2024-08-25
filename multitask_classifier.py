@@ -428,8 +428,6 @@ def train_multitask(args):
 
                 # Add SMART regularization
                 if smart_regularizer:
-                    # detached_logits = logits.detach()
-
                     embeddings_1 = model.bert.embed(b_ids_1)
                     embeddings_2 = model.bert.embed(b_ids_2)
                     perturb_embeddings_1 = smart_regularizer.perturb(embeddings_1, b_mask_1)

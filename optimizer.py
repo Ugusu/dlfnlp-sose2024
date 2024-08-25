@@ -274,14 +274,13 @@ class SMART:
         perturbation = torch.randn_like(input_embeddings, requires_grad=True)
         
         for _ in range(self.steps):
+            perturbation.requires_grad_()
             perturbed_embeddings = input_embeddings + perturbation
-            perturbed_embeddings.requires_grad_(True)
-            outputs = self.model.encode(perturbed_embeddings, attention_mask)
+            outputs = self.model(perturbed_embeddings, attention_mask, return_pooler_output=False)
             loss = outputs.norm()
-            perturb_grad = torch.autograd.grad(loss, perturbation, retain_graph=False, create_graph=False)[0]
-            perturbation = perturbation + self.alpha * perturb_grad.sign()
+            loss.backward(retain_graph=True)
+            perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
-            perturbation.detach_()
             self.model.zero_grad()
 
         return input_embeddings + perturbation
