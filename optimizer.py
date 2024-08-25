@@ -256,8 +256,8 @@ class SAM(Optimizer):
             for p in group["params"]:
                 if p.grad is None: continue
                 p.data = self.state[p]["old_p"]
-                p.add_(p.grad, alpha=-self.rho)
-        self.base_optimizer.step()
+                
+            self.base_optimizer.step()
         if zero_grad: self.zero_grad()
 
     def _grad_norm(self):
@@ -270,3 +270,9 @@ class SAM(Optimizer):
             ])
         )
         return norm
+
+    def step(self, closure=None):
+        pass
+
+    def zero_grad(self):
+        self.base_optimizer.zero_grad()
