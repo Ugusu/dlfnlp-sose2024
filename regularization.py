@@ -43,12 +43,25 @@ class SMART:
         
         for _ in range(self.steps):
             perturbed_embeddings = input_embeddings + perturbation
+            
             perturbed_embeddings.requires_grad_(True)
+            perturbed_embeddings.retain_grad()
+            
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
+            
             loss = outputs.norm()
+            
+            if perturbation.grad is not None:
+                perturbation.grad.zero_()
+
             loss.backward(retain_graph=True)
+
+            if perturbation.grad is None:
+                print("DEBUG: Grad is none")
+
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
+
             self.model.zero_grad()
 
         return input_embeddings + perturbation
