@@ -42,11 +42,7 @@ class SMART:
         perturbation = torch.randn_like(input_embeddings, requires_grad=True)
         
         for _ in range(self.steps):
-            perturbed_embeddings = input_embeddings + perturbation
-            
-            perturbed_embeddings.requires_grad_(True)
-            perturbed_embeddings.retain_grad()
-            
+            perturbed_embeddings = input_embeddings + perturbation    
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
             
             loss = outputs.norm()
