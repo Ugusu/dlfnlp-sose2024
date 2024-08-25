@@ -8,7 +8,8 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
-from optimizer import AdamW
+from optimizer import SophiaG, AdamW
+from sklearn.metrics import matthews_corrcoef
 
 TQDM_DISABLE = False
 
@@ -123,7 +124,7 @@ def train_model(model: nn.Module,
     """
     # Loss Function and Optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    optimizer = SophiaG(model.parameters(), lr=learning_rate)
 
     # Set best validation loss threshold
     best_val_loss = float("inf")
@@ -291,6 +292,7 @@ def evaluate_model(model: nn.Module,
 
     # Compute the accuracy for each label
     accuracies = []
+    matthews_coefficients = []
     for label_idx in range(true_labels_np.shape[1]):
         correct_predictions = np.sum(
             true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx]
@@ -299,10 +301,14 @@ def evaluate_model(model: nn.Module,
         label_accuracy = correct_predictions / total_predictions
         accuracies.append(label_accuracy)
 
+        matth_coef = matthews_corrcoef(true_labels_np[:, label_idx], predicted_labels_np[:, label_idx])
+        matthews_coefficients.append(matth_coef)
+
     # Calculate the average accuracy over all labels
     accuracy = np.mean(accuracies)
+    matthews_coefficient = np.mean(matthews_coefficients)
     model.train()
-    return accuracy
+    return accuracy, matthews_coefficient
 
 
 def seed_everything(seed: int = 11711) -> None:
@@ -366,8 +372,9 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     print("Training finished.")
 
-    accuracy = evaluate_model(model, val_data, device)
+    accuracy, matthews_corr = evaluate_model(model, val_data, device)
     print(f"The accuracy of the model is: {accuracy:.3f}")
+    print(f"Matthews Correlation Coefficient of the model is: {matthews_corr:.3f}")
 
     test_ids = test_dataset["id"]
     test_results = test_model(model, test_data, test_ids, device)
