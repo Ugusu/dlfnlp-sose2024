@@ -425,7 +425,7 @@ def train_multitask(args):
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
-                loss.backward(retain_graph=True)
+                # loss.backward(retain_graph=True)
                 # loss.backward()
 
                 # Add SMART regularization
@@ -452,7 +452,12 @@ def train_multitask(args):
                         F.softmax(perturbed_logits.detach(), dim=-1)
                     )
 
-                    smart_loss.backward()
+                    # smart_loss.backward()
+
+                    total_loss = loss + smart_loss
+                    total_loss.backward()
+                else:
+                    loss.backward()
 
                 optimizer.step()
 
