@@ -2,6 +2,7 @@ import argparse
 import random
 
 import numpy as np
+import optimizer
 import pandas as pd
 import torch
 from torch import nn
@@ -122,6 +123,7 @@ def train_model(model: nn.Module,
                 val_data: DataLoader,
                 device: torch.device,
                 scheduler: torch.optim.lr_scheduler,
+                optimizer: optimizer.Optimizer,
                 epochs: int = 3,
                 output_dir: str = "output.pt"
                 ) -> nn.Module:
@@ -136,6 +138,7 @@ def train_model(model: nn.Module,
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
         scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
+        optimizer (optimizer.Optimizer) Optimizer to be used
 
     Returns:
         nn.Module: Trained model.
@@ -410,7 +413,8 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
     scheduler = SequentialLR(optimizer=optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
                              milestones=[warmup_epochs])
 
-    model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler)
+    model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
+                        optimizer=optimizer)
 
     print("Training finished.")
 
