@@ -425,7 +425,8 @@ def train_multitask(args):
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
-                loss.backward(retain_graph=True)
+                # loss.backward(retain_graph=True)
+                loss.backward()
 
                 # Add SMART regularization
                 if smart_regularizer:
@@ -442,10 +443,10 @@ def train_multitask(args):
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
                     smart_loss = kl_loss(
-                        F.log_softmax(perturbed_logits, dim=-1),
+                        F.log_softmax(perturbed_logits.detach(), dim=-1),
                         F.softmax(logits.detach(), dim=-1)
                     ) + kl_loss(
-                        F.log_softmax(logits, dim=-1),
+                        F.log_softmax(logits.detach(), dim=-1),
                         F.softmax(perturbed_logits.detach(), dim=-1)
                     )
 
