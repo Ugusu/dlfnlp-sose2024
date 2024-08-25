@@ -428,7 +428,7 @@ def train_multitask(args):
 
                 # Add SMART regularization
                 if smart_regularizer:
-                    detached_logits = logits.detach()
+                    # detached_logits = logits.detach()
 
                     embeddings_1 = model.bert.embed(b_ids_1)
                     embeddings_2 = model.bert.embed(b_ids_2)
@@ -445,11 +445,11 @@ def train_multitask(args):
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
                     smart_loss = kl_loss(
-                        F.log_softmax(perturbed_logits.detach(), dim=-1),
-                        F.softmax(detached_logits, dim=-1)
+                        F.log_softmax(perturbed_logits, dim=-1),
+                        F.softmax(logits, dim=-1)
                     ) + kl_loss(
-                        F.log_softmax(detached_logits, dim=-1),
-                        F.softmax(perturbed_logits.detach(), dim=-1)
+                        F.log_softmax(logits, dim=-1),
+                        F.softmax(perturbed_logits, dim=-1)
                     )
 
                     combined_loss = loss + smart_loss
