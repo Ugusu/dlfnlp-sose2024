@@ -10,7 +10,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
 from optimizer import SophiaG, AdamW
 from sklearn.metrics import matthews_corrcoef
-
+from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
 TQDM_DISABLE = False
 
 
@@ -43,6 +43,23 @@ class BartWithClassifier(nn.Module):
         logits = self.classifier(cls_output)
         probabilities = self.sigmoid(logits)
         return probabilities
+
+
+class EarlyStopping:
+    def __init__(self, patience=3):
+        self.patience = patience
+        self.counter = 0
+        self.matthew_score = -1
+
+    def early_stop(self, val_matthew_score):
+        if val_matthew_score < self.matthew_score:
+            self.matthew_score = val_matthew_score
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
 
 
 def transform_data(dataset: pd.DataFrame,
@@ -106,7 +123,8 @@ def train_model(model: nn.Module,
                 learning_rate: float = 1e-5,
                 epochs: int = 3,
                 output_dir: str = "output.pt",
-                optimizer: str = "SophiaG"
+                optimizer: str = "AdamW",
+                scheduler: torch.optim.lr_scheduler
                 ) -> nn.Module:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
@@ -120,6 +138,7 @@ def train_model(model: nn.Module,
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
         optimizer (str): Name of optimizer.
+        scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
 
     Returns:
         nn.Module: Trained model.
@@ -132,7 +151,10 @@ def train_model(model: nn.Module,
         optimizer = AdamW(model.parameters(), lr=learning_rate)
 
     # Set best validation loss threshold
-    best_val_loss = float("inf")
+    best_matthews = float("-inf")
+
+    # Initialize early stopping
+    early_stopper = EarlyStopping(patience=3)
 
     # Loop over epochs
     for epoch in range(epochs):
@@ -159,6 +181,7 @@ def train_model(model: nn.Module,
             loss = loss_fn(outputs, b_labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             train_loss += loss.item()
             num_batches += 1
@@ -167,9 +190,10 @@ def train_model(model: nn.Module,
         train_loss = train_loss / num_batches
 
         # Calculate training accuracy
-        train_accuracy = evaluate_model(model=model, test_data=train_data, device=device)
+        train_accuracy, train_matthews = evaluate_model(model=model, test_data=train_data, device=device)
         print(f"Train Accuracy: {train_accuracy}")
         print(f"Train loss: {train_loss}")
+        print(f"Train Matthews Correlation Coefficient : {train_matthews}")
 
         val_loss = 0
         model.eval()
@@ -191,17 +215,22 @@ def train_model(model: nn.Module,
                 val_loss += loss.item()
 
         # Calculate Validation loss and accuracy
-        val_accuracy = evaluate_model(model=model, test_data=val_data, device=device)
+        val_accuracy, val_matthews = evaluate_model(model=model, test_data=val_data, device=device)
         val_loss = val_loss / len(val_data)
         print(f"Validation loss: {val_loss}")
         print(f"Validation accuracy: {val_accuracy}")
+        print(f"Validation Matthews Correlation Coefficient : {val_matthews}")
 
-        # Update for best Validation loss
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        # Update for best Matthews Correlation Coefficient
+        if val_matthews < best_matthews:
+            best_matthews = val_loss
 
             # Save the model
             torch.save(model, output_dir)
+
+        # Stop early if no improvement
+        if early_stopper.early_stop(val_matthews):
+            break
 
     return model
 
@@ -375,8 +404,16 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
+    # implement CosineAnnealing Scheduler with warmup
+    warmup_epochs = 3
+    total_epochs = args.epochs
+    cosine_epochs = args.epoch - warmup_epochs
+    warmup_scheduler = LinearLR(optimizer=args.optimizer, T_max=cosine_epochs, eta_min = 0)
+    cosine_scheduler = CosineAnnealingLR(optimizer=args.optimizer, T_max=cosine_epochs, eta_min=0)
+    scheduler = SequentialLR(optimizer=args.optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs])
+
     model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs
-                        , optimizer=args.optimizer)
+                        , optimizer=args.optimizer, scheduler=scheduler)
 
     print("Training finished.")
 
