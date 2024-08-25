@@ -62,7 +62,7 @@ def run_experiment(
         Dict[str, Any]: A dictionary containing the results of the experiment.
     """
     args = get_args()
-    args.pooling = pooling_strategy
+    args.pooling_strategy = pooling_strategy
     args.lr = learning_rate
     args.hidden_dropout_prob = hidden_dropout_prob
     args.batch_size = batch_size
@@ -71,8 +71,8 @@ def run_experiment(
 
     context_layer = args.context_layer
     regularize_context = args.regularize_context
-    pooling_strategy_name = pooling_strategy.value
-    optimizer_name = optimizer_type.value
+    pooling_strategy_name = args.pooling_strategy.value
+    optimizer_name = args.optimizer_type.value
 
     # Use run_id in the filepath
     extra_context_layer_str = "-context_layer" if context_layer else ""

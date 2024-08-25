@@ -389,10 +389,10 @@ def train_multitask(args):
 
     lr = args.lr
 
-    match args.optimizer:
-        case "adamw":
+    match args.optimizer_type:
+        case OptimizerType.ADAMW:
             optimizer = AdamW(model.parameters(), lr=lr)
-        case "sophia":
+        case OptimizerType.SOPHIA:
             optimizer = SophiaG(model.parameters(), lr=lr)
         case _:
             raise ValueError(f"Unsupported optimizer type: {args.optimizer_type}")
@@ -588,16 +588,20 @@ def get_args():
 
     # Pooling strategy
     parser.add_argument(
-        "--pooling",
-        type=str,
+        "--pooling_strategy",  # Renamed from "pooling"
+        type=PoolingStrategy,  # Directly convert to enum
         help='Choose the pooling strategy: "cls", "average", "max", or "attention".',
-        choices=[strategy.value for strategy in PoolingStrategy],
-        default="cls",
+        choices=list(PoolingStrategy),
+        default=PoolingStrategy.CLS,
     )
 
     # Update optimizer argument
-    parser.add_argument("--optimizer", type=str, default="sophia", choices=[opt.value for opt in OptimizerType],
-                        help="Optimizer to use")
+    parser.add_argument("--optimizer_type",  # Renamed from "optimizer"
+                        type=OptimizerType,  # Directly convert to enum
+                        default=OptimizerType.SOPHIA,
+                        choices=list(OptimizerType),
+                        help="Optimizer to use"
+    )
 
     args, _ = parser.parse_known_args()
 
@@ -684,10 +688,6 @@ def get_args():
     parser.add_argument("--local_files_only", action="store_true")
 
     args = parser.parse_args()
-
-    # Convert arguments to enums when necessary
-    args.pooling_strategy = PoolingStrategy(args.pooling)
-    args.optimizer_type = OptimizerType(args.optimizer)
 
     return args
 
