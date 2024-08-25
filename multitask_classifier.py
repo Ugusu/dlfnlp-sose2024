@@ -450,7 +450,7 @@ def train_multitask(args):
 
                     loss += smart_loss
 
-                loss.backward(retrain_graph=True)
+                loss.backward(retain_graph=True)
                 optimizer.step()
 
                 train_loss += loss.item()
