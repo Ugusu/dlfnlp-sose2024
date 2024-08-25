@@ -539,9 +539,16 @@ def add_noise(model, inputs, task, epsilon=1e-5):
         raise ValueError(f"Unsupported task type: {task}")
 
     loss.backward()
+
+    noise = None
+    if "input_ids_1" in inputs and inputs["input_ids_1"].grad is not None:
+        noise = epsilon * inputs["input_ids_1"].grad.sign()
+    elif "input_ids" in inputs and inputs["input_ids"].grad is not None:
+        noise = epsilon * inputs["input_ids"].grad.sign()
     
-    noise = epsilon * inputs["input_ids_1"].grad.sign() if "input_ids_1" in inputs else epsilon * inputs["input_ids"].grad.sign()
-    
+    if noise is None:
+        raise RuntimeError("Gradients are None, ensure that tensors require gradients and backward has been called.")
+
     noisy_inputs = {
         key: inputs[key] + noise if inputs[key].dtype.is_floating_point and key.startswith("input_ids") else inputs[key]
         for key in inputs
@@ -551,7 +558,6 @@ def add_noise(model, inputs, task, epsilon=1e-5):
         noisy_inputs[key].requires_grad = False
 
     return noisy_inputs
-
 
 def get_args():
     parser = argparse.ArgumentParser()
