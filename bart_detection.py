@@ -11,6 +11,7 @@ from transformers import AutoTokenizer, BartModel
 from optimizer import SophiaG, AdamW
 from sklearn.metrics import matthews_corrcoef
 from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
+
 TQDM_DISABLE = False
 
 
@@ -406,11 +407,11 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     # implement CosineAnnealing Scheduler with warmup
     warmup_epochs = 3
-    total_epochs = args.epochs
-    cosine_epochs = args.epoch - warmup_epochs
-    warmup_scheduler = LinearLR(optimizer=args.optimizer, T_max=cosine_epochs, eta_min = 0)
+    cosine_epochs = args.epochs - warmup_epochs
+    warmup_scheduler = LinearLR(optimizer=args.optimizer, total_iters=cosine_epochs)
     cosine_scheduler = CosineAnnealingLR(optimizer=args.optimizer, T_max=cosine_epochs, eta_min=0)
-    scheduler = SequentialLR(optimizer=args.optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs])
+    scheduler = SequentialLR(optimizer=args.optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
+                             milestones=[warmup_epochs])
 
     model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs
                         , optimizer=args.optimizer, scheduler=scheduler)
