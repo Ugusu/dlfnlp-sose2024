@@ -9,7 +9,6 @@ import torch
 
 from sacrebleu.metrics import BLEU
 from torch import nn
-import torch.nn.functional as F
 
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
@@ -38,7 +37,7 @@ config_dict = {
     "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 96,
+    "batch_size": 64,
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
