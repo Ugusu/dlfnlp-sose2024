@@ -22,7 +22,7 @@ class SMART:
             alpha (float): Step size for adversarial perturbation.
             steps (int): Number of steps for generating perturbations.
         """
-        print(f"Initialized SMART with epsilon={epsilon}, alpha={alpha}, steps={steps}")
+        
         self.model = model
         self.epsilon = epsilon
         self.alpha = alpha
@@ -40,24 +40,21 @@ class SMART:
             perturbed_embeddings (torch.Tensor): The embeddings with adversarial perturbation.
         """
         perturbation = torch.randn_like(input_embeddings, requires_grad=True)
-        print("perturbation: ", perturbation)
         
         for step in range(self.steps):
             perturbed_embeddings = input_embeddings + perturbation
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
             loss = outputs.norm()
-            print("Before zero", perturbation.grad)
+            
             if perturbation.grad is not None:
                 perturbation.grad.zero_()
-                print("After zero", perturbation.grad)
+
             loss.backward(retain_graph=True)
-            print("After backward", perturbation.grad)
+
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon).detach()
             perturbation.requires_grad_(True)
             self.model.zero_grad()
-
-            print(f"Step {step} - After update, perturbation: {perturbation}")
 
         return input_embeddings + perturbation
     
