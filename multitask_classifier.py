@@ -431,7 +431,7 @@ def train_multitask(args):
 
                 noisy_inputs = add_noise(
                     model,
-                    {"input_ids_1": b_ids_1, "attention_mask_1": b_mask_1, "input_ids_2": b_ids_2, "attention_mask_2": b_mask_2},
+                    {"input_ids_1": b_ids_1, "attention_mask_1": b_mask_1, "input_ids_2": b_ids_2, "attention_mask_2": b_mask_2, "labels": b_labels},
                     task='qqp'
                 )
                 logits = model.predict_paraphrase(
