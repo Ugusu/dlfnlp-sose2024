@@ -463,10 +463,10 @@ The results for the dev dataset.
 
 | **Multitask**                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
 |------------------------------|------------------------------------|--------------------------------|---------------------------------------|
-| Baseline                     | 0.515                              | 0.877                          | 0.849                                 |
-| Extra CGA Layer              | ...                                | ...                            | ...                                   |
-| CGA-based Attention-Pooling  | ...                                | ...                            | ...                                   |
-| Optimal Hyperparameters Only | ...                                | ...                            | ...                                   |
+| Baseline                     | 0.522                              | 0.877                          | 0.849                                 |
+| Extra CGA Layer              | 0.263                              | 0.865                          | 0.770                                 |
+| CGA-based Attention-Pooling  | 0.276                              | 0.867                          | 0.698                                 |
+| Optimal Hyperparameters Only | (waiting for results)              | (waiting for results)          | (waiting for results)                 |
 | Improvement 4                | ...                                | ...                            | ...                                   |
 | Improvement 5                | ...                                | ...                            | ...                                   |
 | Improvement 6                | ...                                | ...                            | ...                                   |
@@ -477,9 +477,9 @@ Here Paraphrase Detection was trained for 1 epoch:
 | **Independent**                                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
 |------------------------------------------------|------------------------------------|--------------------------------|---------------------------------------|
 | Baseline                                       | 0.534                              | 0.860                          | 0.863                                 |
-| Extra CGA Layer                                | 0.520                              | ...                            | ...                                   |
-| CGA-based Attention-Pooling                    | 0.530                              | ...                            | ...                                   |
-| Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | ...                            | ...                                   |
+| Extra CGA Layer                                | 0.520                              | 0.876                          | 0.851                                 |
+| CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
+| Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
 | Improvement 4                                  | ...                                | ...                            | ...                                   |
 | Improvement 5                                  | ...                                | ...                            | ...                                   |
 | Improvement 6                                  | ...                                | ...                            | ...                                   |
