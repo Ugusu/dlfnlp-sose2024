@@ -120,11 +120,11 @@ def train_model(model: nn.Module,
                 train_data: DataLoader,
                 val_data: DataLoader,
                 device: torch.device,
+                scheduler: torch.optim.lr_scheduler,
                 learning_rate: float = 1e-5,
                 epochs: int = 3,
                 output_dir: str = "output.pt",
-                optimizer: str = "AdamW",
-                scheduler: torch.optim.lr_scheduler
+                optimizer: str = "AdamW"
                 ) -> nn.Module:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
