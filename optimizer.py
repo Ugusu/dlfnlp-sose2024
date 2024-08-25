@@ -260,7 +260,7 @@ class SMART:
         self.alpha = alpha
         self.steps = steps
     
-    def perturb(self, input_embeddings, attention_mask):
+    def perturb(self, input_embeddings: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         """
         Applies adversarial perturbation to the input embeddings.
         
@@ -285,11 +285,11 @@ class SMART:
 
         return input_embeddings + perturbation
     
-    def forward(logits, input_ids, attention_masks, classifier=True):
-        if isinstance(input_ids, torch.Tensor):
+    def forward(self, logits: torch.Tensor, input_ids: list[torch.Tensor], attention_masks: list[torch.Tensor], classifier: bool=True) -> torch.Tensor:
+        if not isinstance(input_ids, list):
             input_ids = [input_ids]
         
-        if isinstance(attention_masks, torch.Tensor):
+        if not isinstance(attention_masks, list):
             attention_masks = [attention_masks]
 
         concatenated_embeddings = None
