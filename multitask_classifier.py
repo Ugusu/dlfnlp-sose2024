@@ -434,16 +434,18 @@ def train_multitask(args):
                     perturb_embeddings_2 = smart_regularizer.perturb(embeddings_2, b_mask_2)
                     perturb_embeddings = torch.cat((perturb_embeddings_1, perturb_embeddings_2[:, 1:, :]), dim=1)
                     attention_mask = torch.cat((b_mask_1, b_mask_2[:, 1:]), dim=1)
-                    outputs = model.bert.encode(perturb_embeddings, attention_mask)
+                    perturbed_outputs = model.bert.encode(perturb_embeddings, attention_mask)
+                    perturbed_logits = model.pooler_dense(perturbed_outputs[:, 0])
+                    perturbed_logits = model.pooler_af(perturbed_logits)
                     
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
                     smart_loss = kl_loss(
-                        F.log_softmax(perturbed_outputs, dim=-1),
+                        F.log_softmax(perturbed_logits, dim=-1),
                         F.softmax(logits.detach(), dim=-1)
                     ) + kl_loss(
                         F.log_softmax(logits, dim=-1),
-                        F.softmax(perturbed_outputs.detach(), dim=-1)
+                        F.softmax(perturbed_logits.detach(), dim=-1)
                     )
 
                     loss += smart_loss
