@@ -104,3 +104,131 @@ class AdamW(Optimizer):
                     p.data.add_(p.data, alpha=-alpha * weight_decay)
 
         return loss
+
+
+class SophiaG(Optimizer):
+    """
+    SophiaG optimizer implementation. adapted from https://github.com/Liuhong99/Sophia/blob/main/sophia.py
+    """
+    def __init__(
+        self,
+        params: Iterable[torch.nn.parameter.Parameter],
+        lr: float = 1e-4,
+        betas: Tuple[float, float] = (0.965, 0.99),
+        rho: float = 0.04,
+        weight_decay: float = 1e-1,
+        maximize: bool = False,
+        capturable: bool = False,
+    ):
+        if lr < 0.0:
+            raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
+        if rho < 0.0:
+            raise ValueError("Invalid rho value: {} - should be >= 0.0".format(rho))
+        if weight_decay < 0.0:
+            raise ValueError("Invalid weight_decay value: {} - should be >= 0.0".format(weight_decay))
+
+        defaults = dict(
+            lr=lr,
+            betas=betas,
+            rho=rho,
+            weight_decay=weight_decay,
+            maximize=maximize,
+            capturable=capturable,
+        )
+        super().__init__(params, defaults)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        for group in self.param_groups:
+            group.setdefault('maximize', False)
+            group.setdefault('capturable', False)
+        state_values = list(self.state.values())
+        step_is_tensor = (len(state_values) != 0) and torch.is_tensor(state_values[0]['step'])
+        if not step_is_tensor:
+            for s in state_values:
+                s['step'] = torch.tensor(float(s['step']))
+
+    @torch.no_grad()
+    def update_hessian(self):
+        for group in self.param_groups:
+            beta1, beta2 = group['betas']
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                state = self.state[p]
+
+                # State initialization
+                if len(state) == 0:
+                    state['step'] = torch.zeros((1,), dtype=torch.float, device=p.device) \
+                        if self.defaults['capturable'] else torch.tensor(0.)
+                    state['exp_avg'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state['hessian'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                if 'hessian' not in state:
+                    state['hessian'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                state['hessian'].mul_(beta2).addcmul_(p.grad, p.grad, value=1 - beta2)
+
+    @torch.no_grad()
+    def step(self, closure: Callable = None, bs: int = 5120):
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                grad = p.grad
+                if grad.is_sparse:
+                    raise RuntimeError('SophiaG does not support sparse gradients')
+
+                state = self.state[p]
+
+                # State initialization
+                if len(state) == 0:
+                    state['step'] = torch.zeros((1,), dtype=torch.float, device=p.device) \
+                        if self.defaults['capturable'] else torch.tensor(0.)
+                    state['exp_avg'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state['hessian'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                if 'hessian' not in state:
+                    state['hessian'] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg, hessian = state['exp_avg'], state['hessian']
+                beta1, beta2 = group['betas']
+                rho = group['rho']
+                lr = group['lr']
+                weight_decay = group['weight_decay']
+                maximize = group['maximize']
+                capturable = group['capturable']
+
+                state['step'] += 1
+
+                if maximize:
+                    grad = -grad
+
+                # Decay the first and second moment running average coefficient
+                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+
+                # Perform stepweight decay
+                p.mul_(1 - lr * weight_decay)
+
+                if capturable:
+                    assert p.is_cuda and state['step'].is_cuda
+                    step_size = lr
+                    step_size_neg = step_size.neg()
+                    bs_tensor = torch.ones((1,), dtype=torch.float, device=p.device) * bs
+                else:
+                    step_size_neg = -lr
+                    bs_tensor = bs
+
+                ratio = (exp_avg.abs() / (rho * bs_tensor * hessian + 1e-15)).clamp(None, 1)
+                p.addcmul_(exp_avg.sign(), ratio, value=step_size_neg)
+
+        return loss
