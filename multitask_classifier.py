@@ -425,11 +425,14 @@ def train_multitask(args):
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
-                # loss.backward(retain_graph=True)
+                loss.backward(retain_graph=True)
                 # loss.backward()
 
                 # Add SMART regularization
                 if smart_regularizer:
+                    detached_logits = logits.detach()
+                    optimizer.zero_grad()
+
                     embeddings_1 = model.bert.embed(b_ids_1)
                     embeddings_2 = model.bert.embed(b_ids_2)
                     perturb_embeddings_1 = smart_regularizer.perturb(embeddings_1, b_mask_1)
@@ -439,8 +442,6 @@ def train_multitask(args):
                     perturbed_outputs = model.bert.encode(perturb_embeddings, attention_mask)
                     perturbed_logits = model.bert.pooler_dense(perturbed_outputs[:, 0])
                     perturbed_logits = model.bert.pooler_af(perturbed_logits)
-                    
-                    detached_logits = logits.detach()
 
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
@@ -452,12 +453,12 @@ def train_multitask(args):
                         F.softmax(perturbed_logits.detach(), dim=-1)
                     )
 
-                    # smart_loss.backward()
+                    smart_loss.backward()
 
-                    total_loss = loss + smart_loss
-                    total_loss.backward()
-                else:
-                    loss.backward()
+                    # total_loss = loss + smart_loss
+                    # total_loss.backward()
+                # else:
+                    # loss.backward()
 
                 optimizer.step()
 
