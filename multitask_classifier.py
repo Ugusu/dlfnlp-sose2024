@@ -435,8 +435,8 @@ def train_multitask(args):
                     perturb_embeddings = torch.cat((perturb_embeddings_1, perturb_embeddings_2[:, 1:, :]), dim=1)
                     attention_mask = torch.cat((b_mask_1, b_mask_2[:, 1:]), dim=1)
                     perturbed_outputs = model.bert.encode(perturb_embeddings, attention_mask)
-                    perturbed_logits = model.pooler_dense(perturbed_outputs[:, 0])
-                    perturbed_logits = model.pooler_af(perturbed_logits)
+                    perturbed_logits = model.bert.pooler_dense(perturbed_outputs[:, 0])
+                    perturbed_logits = model.bert.pooler_af(perturbed_logits)
                     
                     # Classification: KL-divergence
                     kl_loss = nn.KLDivLoss(reduction='batchmean')
