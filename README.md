@@ -330,14 +330,14 @@ The Global Context Layer showed the following impact on SST accuracy:
 
 The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
 selection optimized through the grid search. Similarly the higher accuracy with CGA-based Attention-pooling can be attributed
-to optimal hyperparameters, rather than the pooling mechanism itself.
+to optimal hyperparameters, rather than the pooling mechanism itself. The following table shows the results, all using the optimal hyperparameters found  via the grid search:
 
-| **Stanford Sentiment Treebank (SST)**   | **Dev accuracy** |
-|-----------------------------------------|------------------|
-| Baseline                                | 0.522            | 
-| Contextual Global Attention (CGA)       | 0.520            |
-| CGA-based Attention-pooling             | 0.530            |
-| Using Grid Search Best Results (no CGA) | 0.530            |
+| **Stanford Sentiment Treebank (SST)** | **Best Dev accuracy** |
+|---------------------------------------|-----------------------|
+| Baseline                              | 0.522                 | 
+| Contextual Global Attention (CGA)     | 0.520                 |
+| CGA-based Attention-pooling           | 0.530                 |
+| Optimal Hyperparameters Only          | 0.530                 |
 
 The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer slightly outperformed the one with it, with most
 results being concentrated on the ~0.500 mark for both types of models. 
@@ -390,15 +390,15 @@ The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset,
 #### **4.2.2 Best Model Performance**
 
 The best model performance was achieved with the following configuration:
-- **Epochs:** 10
-- **Batch Size:** 10
-- **optimizer:** SophiaG
-- **scheduler gamma:** 0.675
-- **scheduler step size:** 1
-- **gradual unfreezing:** 8 layers
-- **rl_weight:** 0.85
-- **prefix length:** 10
-- **prefix method:** "indirrect"
+- **Epochs:** `10`
+- **Batch Size:** `10`
+- **optimizer:** `SophiaG`
+- **scheduler gamma:** `0.675`
+- **scheduler step size:** `1`
+- **gradual unfreezing:** `8 layers`
+- **rl_weight:** `0.85`
+- **prefix length:** `10`
+- **prefix method:** `"indirect"`
 
 This configuration can be replicated by running the following script:
     
@@ -416,11 +416,11 @@ In simple words, the PIP method uses a prefix to guide the model in generating p
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward, which is the penalized BLEU score in this case.
 
 
-### 4.2.5 Results ### 
+#### 4.2.5 Results #### 
 
 The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
-##### note: ##### 
+##### Note: ##### 
 I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sence to a human as a good paraphrase. Therefore the penalized_bleu score may not be the best optomization target for the model. So I used a combination of loss and penalized_bleu score as the reward for the RL training.
 
 Examples:
@@ -452,8 +452,8 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 |               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
 | Baseline      | 0.833                               | -                                                |
-| Improvement 1 | ...                                 | 22.765                                              |
-| Improvement 2 | ...                                 | 24.211                                             |
+| Improvement 1 | ...                                 | 22.765                                           |
+| Improvement 2 | ...                                 | 24.211                                           |
 
 ### BERT
 
@@ -461,21 +461,29 @@ For BERT model, fine-tuning was done 2 times. For Multitask the model learned al
 
 The results for the dev dataset.
 
-| **Multitask** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|---------------|------------------------------------|--------------------------------|---------------------------------------|
-| Baseline      | 0.515                              | 0.877                          | 0.849                                 |
-| Improvement 1 | ...                                | ...                            | ...                                   |
-| Improvement 2 | ...                                | ...                            | ...                                   |
-| ...           | ...                                | ...                            | ...                                   |
+| **Multitask**                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
+|------------------------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline                     | 0.515                              | 0.877                          | 0.849                                 |
+| Extra CGA Layer              | ...                                | ...                            | ...                                   |
+| CGA-based Attention-Pooling  | ...                                | ...                            | ...                                   |
+| Optimal Hyperparameters Only | ...                                | ...                            | ...                                   |
+| Improvement 4                | ...                                | ...                            | ...                                   |
+| Improvement 5                | ...                                | ...                            | ...                                   |
+| Improvement 6                | ...                                | ...                            | ...                                   |
+
 
 Here Paraphrase Detection was trained for 1 epoch:
 
-| **Independent** | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|-----------------|------------------------------------|--------------------------------|---------------------------------------|
-| Baseline        | 0.534                              | 0.860                          | 0.863                                 |
-| Improvement 1   | ...                                | ...                            | ...                                   |
-| Improvement 2   | ...                                | ...                            | ...                                   |
-| ...             | ...                                | ...                            | ...                                   |
+| **Independent**                                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
+|------------------------------------------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline                                       | 0.534                              | 0.860                          | 0.863                                 |
+| Extra CGA Layer                                | 0.520                              | ...                            | ...                                   |
+| CGA-based Attention-Pooling                    | 0.530                              | ...                            | ...                                   |
+| Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | ...                            | ...                                   |
+| Improvement 4                                  | ...                                | ...                            | ...                                   |
+| Improvement 5                                  | ...                                | ...                            | ...                                   |
+| Improvement 6                                  | ...                                | ...                            | ...                                   |
+
 
 ---
 
