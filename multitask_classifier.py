@@ -332,7 +332,13 @@ def train_multitask(args):
     optimizer = SophiaG(model.parameters(), lr=lr)
     best_dev_acc = float("-inf")
 
-    smart_regularizer = SMART(model) if any(arg is None for arg in [args.epsilon, args.alpha, args.steps]) else SMART(model, args.epsilon, args.alpha, args.steps)
+    smart_regularizer = None
+    if args.smart:
+        smart_regularizer = (
+            SMART(model)
+            if any(arg is None for arg in [args.epsilon, args.alpha, args.steps])
+            else SMART(model, args.epsilon, args.alpha, args.steps)
+        )
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -418,19 +424,20 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
-                task_loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
+                loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
 
                 # Add SMART regularization
-                embeddings_1 = model.bert.embed(b_ids_1)
-                embeddings_2 = model.bert.embed(b_ids_2)
-                perturb_embeddings_1 = smart_regularizer.perturb(embeddings_1, b_mask_1)
-                perturb_embeddings_2 = smart_regularizer.perturb(embeddings_2, b_mask_2)
-                perturb_input_ids = torch.cat((perturb_embeddings_1, perturb_embeddings_2[:, 1:, :]), dim=1)
-                attention_mask = torch.cat((b_mask_1, b_mask_2[:, 1:]), dim=1)
-                perturb_logits = model.forward(perturb_input_ids, attention_mask)["pooler_output"]
-                smart_loss = nn.BCEWithLogitsLoss()(perturb_logits.squeeze(), b_labels.float())
+                if smart_regularizer:
+                    embeddings_1 = model.bert.embed(b_ids_1)
+                    embeddings_2 = model.bert.embed(b_ids_2)
+                    perturb_embeddings_1 = smart_regularizer.perturb(embeddings_1, b_mask_1)
+                    perturb_embeddings_2 = smart_regularizer.perturb(embeddings_2, b_mask_2)
+                    perturb_input_ids = torch.cat((perturb_embeddings_1, perturb_embeddings_2[:, 1:, :]), dim=1)
+                    attention_mask = torch.cat((b_mask_1, b_mask_2[:, 1:]), dim=1)
+                    perturb_logits = model.forward(perturb_input_ids, attention_mask)["pooler_output"]
+                    smart_loss = nn.BCEWithLogitsLoss()(perturb_logits.squeeze(), b_labels.float())
+                    loss = loss + smart_loss
 
-                loss = task_loss + smart_loss
                 loss.backward()
                 optimizer.step()
 
@@ -605,6 +612,7 @@ def get_args():
     parser.add_argument("--local_files_only", action="store_true")
 
     # Smoothness-Inducing Adversarial Regularization.
+    parser.add_argument("--smart_enabled", action="store_true")
     parser.add_argument("--epsilon", type=float, default=None)
     parser.add_argument("--alpha", type=float, default=None)
     parser.add_argument("--steps", type=int, default=None)
