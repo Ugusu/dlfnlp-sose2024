@@ -333,7 +333,7 @@ def train_multitask(args):
     best_dev_acc = float("-inf")
 
     smart_regularizer = None
-    if args.smart:
+    if args.smart_enabled:
         smart_regularizer = (
             SMART(model)
             if any(arg is None for arg in [args.epsilon, args.alpha, args.steps])
