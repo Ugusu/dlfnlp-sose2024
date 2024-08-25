@@ -22,7 +22,7 @@ class SMART:
             alpha (float): Step size for adversarial perturbation.
             steps (int): Number of steps for generating perturbations.
         """
-        
+        print(f"Initialized SMART with epsilon={epsilon}, alpha={alpha}, steps={steps}")
         self.model = model
         self.epsilon = epsilon
         self.alpha = alpha
@@ -47,6 +47,7 @@ class SMART:
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
             loss = outputs.norm()
             loss.backward(retain_graph=True)
+            print(perturbation.grad)
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
             self.model.zero_grad()

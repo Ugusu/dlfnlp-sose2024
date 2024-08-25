@@ -335,31 +335,15 @@ def train_multitask(args):
 
     smart_regularizer = None
     if args.smart_enabled:
-        # smart_regularizer_args = {}
-        # if args.epsilon is not None:
-        #     smart_regularizer_args['epsilon'] = args.epsilon
-        # if args.alpha is not None:
-        #     smart_regularizer_args['alpha'] = args.alpha
-        # if args.steps is not None:
-        #     smart_regularizer_args['steps'] = args.steps
+        smart_regularizer_args = {}
+        if args.epsilon is not None:
+            smart_regularizer_args['epsilon'] = args.epsilon
+        if args.alpha is not None:
+            smart_regularizer_args['alpha'] = args.alpha
+        if args.steps is not None:
+            smart_regularizer_args['steps'] = args.steps
 
-        # smart_regularizer = SMART(model.bert, **smart_regularizer_args)
-
-        smart_regularizer = (
-            SMART(model.bert)
-            if any(arg is None for arg in [args.epsilon, args.alpha, args.steps])
-            else SMART(model.bert, args.epsilon, args.alpha, args.steps)
-        )
-
-        # smart_regularizer = SMART(model.bert)
-    
-        # # Override defaults only for provided arguments
-        # if args.epsilon is not None:
-        #     smart_regularizer.epsilon = args.epsilon
-        # if args.alpha is not None:
-        #     smart_regularizer.alpha = args.alpha
-        # if args.steps is not None:
-        #     smart_regularizer.steps = args.steps
+        smart_regularizer = SMART(model.bert, **smart_regularizer_args)
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
