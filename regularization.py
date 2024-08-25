@@ -53,7 +53,8 @@ class SMART:
             loss.backward(retain_graph=True)
             print("After backward", perturbation.grad)
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
-            perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
+            perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon).detach()
+            perturbation.requires_grad_(True)
             self.model.zero_grad()
 
             print(f"Step {step} - After update, perturbation: {perturbation}")
