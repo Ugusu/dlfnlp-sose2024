@@ -1,14 +1,19 @@
+
 import argparse
 import random
+from typing import Tuple, Any
 
 import numpy as np
+import optimizer
 import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
-from optimizer import AdamW
+from optimizer import SophiaG, AdamW
+from sklearn.metrics import matthews_corrcoef
+from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
 
 TQDM_DISABLE = False
 
@@ -44,11 +49,55 @@ class BartWithClassifier(nn.Module):
         return probabilities
 
 
+class EarlyStopping:
+    def __init__(self, patience=3):
+        self.patience = patience
+        self.counter = 0
+        self.loss = float('inf')
+
+    def early_stop(self, val_loss) -> bool:
+        """
+        Early stopping function. Stops after 3 epochs of no improved Loss.
+        Args:
+            val_loss (float): Current Validation loss.
+        Returns:
+            bool: Returns True if early stopping is triggered, else False.
+        """
+        if val_loss < self.loss:
+            self.loss = val_loss
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+
+def get_weights(dataset: pd.DataFrame) -> np.array:
+    """
+    Makes weights for loss function
+    Args:
+        dataset (pd.DataFrame): Train dataset.
+    Returns:
+        np.array: Array of weights for each label.
+    """
+    binary_labels = []
+    for row in dataset['paraphrase_types']:
+        labels = np.zeros(7, dtype=float)
+        for i in range(1, 8):
+            if str(i) in row:
+                labels[i - 1] = 1
+        binary_labels.append(labels)
+    class_weights = sum(sum(binary_labels)) / (len(sum(binary_labels)) * sum(binary_labels))
+    return class_weights
+
+
 def transform_data(dataset: pd.DataFrame,
                    max_length: int = 256,
                    tokenizer_name: str = 'facebook/bart-large',
                    labels: bool = True,
-                   batch_size: int = 16
+                   batch_size: int = 16,
+                   train: bool = False
                    ) -> DataLoader:
     """
     Binarizes labels ( Currently, the labels are in the form of [2, 5, 6, 0, 0, 0, 0]. This means that
@@ -60,6 +109,7 @@ def transform_data(dataset: pd.DataFrame,
         tokenizer_name (str): Tokenizer to use.
         labels (bool): If using the test dataset, set to False as there are no labels to binarize.
         batch_size (int): Batch size.
+        train (bool): True if train dataset.
 
     Returns:
         DataLoader: Transformed DataLoader.
@@ -102,10 +152,12 @@ def train_model(model: nn.Module,
                 train_data: DataLoader,
                 val_data: DataLoader,
                 device: torch.device,
-                learning_rate: float = 1e-5,
+                scheduler: torch.optim.lr_scheduler,
+                optimizer: optimizer.Optimizer,
+                weights: np.array,
                 epochs: int = 3,
                 output_dir: str = "output.pt"
-                ) -> nn.Module:
+                ) -> tuple[nn.Module, float, float, int]:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
     training accuracy, training loss and validation loss for each epoch and returns the model
@@ -114,19 +166,29 @@ def train_model(model: nn.Module,
         train_data (DataLoader): Training data.
         val_data (DataLoader): Validation data.
         device (torch.device): Device to be used.
-        learning_rate (float): Learning rate.
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
+        weights (np.array): Weights for loss function.
+        scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
+        optimizer (optimizer.Optimizer) Optimizer to be used
 
     Returns:
         nn.Module: Trained model.
+        float: Best MCC
+        float: Accuracy at best MCC
+        int: Number of Epochs at bes MCC
     """
     # Loss Function and Optimizer
-    loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
+    loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
 
-    # Set best validation loss threshold
-    best_val_loss = float("inf")
+    # Set best mmc threshold
+    best_matthews = float("-inf")
+    best_accuracy = 0
+    best_epoch = 0
+
+    # Initialize early stopping
+    early_stopper = EarlyStopping(patience=3)
 
     # Loop over epochs
     for epoch in range(epochs):
@@ -152,18 +214,21 @@ def train_model(model: nn.Module,
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
             loss = loss_fn(outputs, b_labels)
             loss.backward()
+            # gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
             optimizer.step()
 
             train_loss += loss.item()
             num_batches += 1
-
+        scheduler.step()
         # Calculate Training loss
         train_loss = train_loss / num_batches
 
         # Calculate training accuracy
-        train_accuracy = evaluate_model(model=model, test_data=train_data, device=device)
+        train_accuracy, train_matthews = evaluate_model(model=model, test_data=train_data, device=device)
         print(f"Train Accuracy: {train_accuracy}")
         print(f"Train loss: {train_loss}")
+        print(f"Train Matthews Correlation Coefficient : {train_matthews}")
 
         val_loss = 0
         model.eval()
@@ -185,19 +250,26 @@ def train_model(model: nn.Module,
                 val_loss += loss.item()
 
         # Calculate Validation loss and accuracy
-        val_accuracy = evaluate_model(model=model, test_data=val_data, device=device)
+        val_accuracy, val_matthews = evaluate_model(model=model, test_data=val_data, device=device)
         val_loss = val_loss / len(val_data)
         print(f"Validation loss: {val_loss}")
         print(f"Validation accuracy: {val_accuracy}")
+        print(f"Validation Matthews Correlation Coefficient : {val_matthews}")
 
-        # Update for best Validation loss
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        # Update for best Matthews Correlation Coefficient
+        if val_matthews > best_matthews:
+            best_matthews = val_matthews
+            best_accuracy = val_accuracy
+            best_epoch = epoch + 1
 
             # Save the model
             torch.save(model, output_dir)
 
-    return model
+        # Stop early if no improvement on validation loss
+        if early_stopper.early_stop(val_loss):
+            break
+
+    return model, best_matthews, best_accuracy, best_epoch
 
 
 def test_model(model: nn.Module,
@@ -252,7 +324,7 @@ def test_model(model: nn.Module,
 def evaluate_model(model: nn.Module,
                    test_data: DataLoader,
                    device: torch.device
-                   ) -> float:
+                   ) -> tuple[float, float]:
     """
     This function measures the accuracy of our model's prediction on a given train/validation set
     We measure how many of the seven paraphrase types the model has predicted correctly for each data point.
@@ -291,6 +363,7 @@ def evaluate_model(model: nn.Module,
 
     # Compute the accuracy for each label
     accuracies = []
+    matthews_coefficients = []
     for label_idx in range(true_labels_np.shape[1]):
         correct_predictions = np.sum(
             true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx]
@@ -299,10 +372,15 @@ def evaluate_model(model: nn.Module,
         label_accuracy = correct_predictions / total_predictions
         accuracies.append(label_accuracy)
 
+        # compute Matthwes Correlation Coefficient for each paraphrase type
+        matth_coef = matthews_corrcoef(true_labels_np[:, label_idx], predicted_labels_np[:, label_idx])
+        matthews_coefficients.append(matth_coef)
+
     # Calculate the average accuracy over all labels
     accuracy = np.mean(accuracies)
+    matthews_coefficient = np.mean(matthews_coefficients)
     model.train()
-    return accuracy
+    return accuracy, matthews_coefficient
 
 
 def seed_everything(seed: int = 11711) -> None:
@@ -335,6 +413,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--optimizer", type=str, default='AdamW')
+    parser.add_argument('--weight_decay', type=float, default=0.1)
     args = parser.parse_args()
     return args
 
@@ -357,17 +437,28 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
                                 batch_size=args.batch_size)
     val_data = transform_data(dev_dataset, max_length=args.max_length,
                               batch_size=args.batch_size)
-    test_data = transform_data(test_dataset, labels=False,
+    test_data = transform_data(test_dataset, labels=False, train=True,
                                max_length=args.max_length, batch_size=args.batch_size)
+    class_weight_tensor = get_weights(train_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs)
+    # implement CosineAnnealing Scheduler with warmup
+    if args.optimizer == 'SophiaG':
+        optimizer = SophiaG(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    if args.optimizer == 'AdamW':
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05 * args.lr)
+
+    model, best_mcc, best_accuracy, num_epochs = train_model(model, train_data, val_data, device,
+                                                             epochs=args.epochs, scheduler=scheduler,
+                                                             optimizer=optimizer, weights=class_weight_tensor)
 
     print("Training finished.")
 
-    accuracy = evaluate_model(model, val_data, device)
-    print(f"The accuracy of the model is: {accuracy:.3f}")
+    print(f"The accuracy of the model is: {best_accuracy:.3f}")
+    print(f"Matthews Correlation Coefficient of the model is: {best_mcc:.3f}")
 
     test_ids = test_dataset["id"]
     test_results = test_model(model, test_data, test_ids, device)
