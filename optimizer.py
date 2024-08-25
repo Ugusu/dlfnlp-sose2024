@@ -241,9 +241,9 @@ class SMART:
     def __init__(
         self, 
         model: torch.nn.Module, 
-        epsilon=1e-5: float, 
-        alpha=0.02: float, 
-        steps=1: int
+        epsilon: float=1e-5, 
+        alpha: float=0.02, 
+        steps: int=1
     ):
         """
         Initializes the SMART Regularizer with specified parameters.
