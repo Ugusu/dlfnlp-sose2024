@@ -31,16 +31,16 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 data_path = os.path.join(os.getcwd(), 'data')
 
 config_dict = {
-    "epochs": 3,
-    "learning_rate": 1e-5,
+    "epochs": 6,
+    "learning_rate": 3e-5,
     "optimizer": "SophiaG", # SophiaG or AdamW
-    "optimizer_params": {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
-    "use_scheduler": False,
+    "optimizer_params": {"lr": 3e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1}, # for SophiaG optimizer_params = {"lr": 1e-5, "betas": (0.1, 0.001), "rho": 0.04, "weight_decay": 1e-1} # for AdamW {"lr": 1e-5, "betas": (0.1, 0.001), "eps": 1e-8, "weight_decay": 0.01}
+    "use_scheduler": True,
     "scheduler_step_size": 1,
     "scheduler_gamma": 0.675,
-    "batch_size": 64,
+    "batch_size": 96,
     "max_length": 256,
-    "gradual_unfreezing": False,
+    "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
     "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
@@ -566,39 +566,6 @@ def decode_output(outputs, tokenizer):
     return generated_paraphrases
 
 
-def loss_value_rl(outputs, labels, rewards, device):
-    """
-    Calculate the reinforcement learning loss.
-
-    Args:
-    outputs (torch.Tensor): The output logits from the model, shape (batch_size, seq_len, vocab_size)
-    labels (torch.Tensor): The ground truth labels, shape (batch_size, seq_len)
-    rewards (list): List of float rewards, one for each sentence in the batch
-
-    Returns:
-    torch.Tensor: The calculated RL loss
-    """
-    # Ensure rewards is a tensor and reshape it
-    rewards = torch.tensor(rewards, device=device).view(-1, 1, 1)
-
-    # Normalize rewards to have mean 1 and standard deviation 0.1 (or adjust as needed)
-    rewards = rewards / (rewards.mean() + 1e-10)
-
-    # Calculate log probabilities
-    log_probs = F.log_softmax(outputs, dim=-1)
-
-    # Gather the log probs of the actual tokens
-    gathered_log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1))
-
-    # Mask out padding tokens
-    mask = (labels != 0).float().unsqueeze(-1)  # Assuming 0 is the pad token
-
-    # Calculate the loss using the mean to prevent large negative values
-    rl_loss = -torch.sum(rewards * gathered_log_probs * mask) / (torch.sum(mask) + 1e-10)
-
-    return rl_loss
-
-
 def train_model(model: BartForConditionalGeneration,
                 train_loader: DataLoader,
                 val_data: pd.DataFrame,
@@ -657,9 +624,20 @@ def train_model(model: BartForConditionalGeneration,
 
     # configured loss function
     loss_fc = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-    def loss_value(outputs, labels):
+    def loss_value(outputs, labels, rewards=None):
         vocab_size = tokenizer.vocab_size
-        return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
+        if rewards is None:
+            return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
+        else:
+            rewards = torch.tensor(rewards, device=device)
+            for i in range(len(outputs)):
+                logit = outputs[i]
+                reward = rewards[i]
+                normalized_reward = reward / rewards.mean()
+                new_logit = logit * normalized_reward
+                outputs[i] = new_logit
+            rl_loss = loss_fc(outputs.view(-1, vocab_size), labels.view(-1))
+            return rl_loss
 
 
     best_penalized_bleu = 0
@@ -707,7 +685,7 @@ def train_model(model: BartForConditionalGeneration,
             elif hasattr(outputs, 'logits'):
                 rl_outputs = outputs.logits
 
-            rl_loss = loss_value_rl(rl_outputs, labels, rewards, device)
+            rl_loss = loss_value(rl_outputs, labels, rewards)
 
             loss = (1 - rl_weight) * sl_loss + rl_weight * rl_loss
 
@@ -715,7 +693,7 @@ def train_model(model: BartForConditionalGeneration,
             optimizer.step()
 
             total_loss += loss.item()
-            print(f"batch loss: {loss}")
+            #print(f"batch loss: {loss}")
 
         total_loss /= len(train_loader)
 
