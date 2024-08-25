@@ -105,7 +105,8 @@ def train_model(model: nn.Module,
                 device: torch.device,
                 learning_rate: float = 1e-5,
                 epochs: int = 3,
-                output_dir: str = "output.pt"
+                output_dir: str = "output.pt",
+                optimizer: str = "SophiaG"
                 ) -> nn.Module:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
@@ -118,13 +119,17 @@ def train_model(model: nn.Module,
         learning_rate (float): Learning rate.
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
+        optimizer (str): Name of optimizer.
 
     Returns:
         nn.Module: Trained model.
     """
     # Loss Function and Optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = SophiaG(model.parameters(), lr=learning_rate)
+    if optimizer == 'SophiaG':
+        optimizer = SophiaG(model.parameters(), lr=learning_rate)
+    if optimizer == 'AdamW':
+        optimizer = AdamW(model.parameters(), lr=learning_rate)
 
     # Set best validation loss threshold
     best_val_loss = float("inf")
@@ -301,6 +306,7 @@ def evaluate_model(model: nn.Module,
         label_accuracy = correct_predictions / total_predictions
         accuracies.append(label_accuracy)
 
+        # compute Matthwes Correlation Coefficient for each paraphrase type
         matth_coef = matthews_corrcoef(true_labels_np[:, label_idx], predicted_labels_np[:, label_idx])
         matthews_coefficients.append(matth_coef)
 
@@ -341,6 +347,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--optimizer", type=str, default='AdamW')
     args = parser.parse_args()
     return args
 
@@ -368,7 +375,8 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs)
+    model = train_model(model, train_data, val_data, device, learning_rate=args.lr, epochs=args.epochs
+                        , optimizer=args.optimizer)
 
     print("Training finished.")
 
