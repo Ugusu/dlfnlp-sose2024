@@ -270,20 +270,31 @@ class BertModel(BertPreTrainedModel):
 
         return hidden_states
 
+    def mean_pooling(self, token_embeddings, attention_mask):
+    
+        assert attention_mask.dim() == 2, f"Expected attention_mask of shape [batch_size, seq_len], but got {attention_mask.shape}"
+        
+        # Expand the attention mask to match the token embeddings' shape
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size())
+        
+        # Sum of the embeddings across the tokens
+        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+        
+        # Count the number of non-padded tokens
+        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        
+        # Mean pooling: average the sum of the embeddings
+        return sum_embeddings / sum_mask
+
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> dict:
-        """
-        input_ids: [batch_size, seq_len], seq_len is the max length of the batch
-        attention_mask: same size as input_ids, 1 represents non-padding tokens, 0 represents padding tokens
-        """
-        # get the embedding for each input token
+        
+        # Get the embeddings for each token
         embedding_output = self.embed(input_ids=input_ids)
 
-        # feed to a transformer (a stack of BertLayers)
+        # Encode the embeddings through BERT layers
         sequence_output = self.encode(embedding_output, attention_mask=attention_mask)
 
-        # get cls token hidden state
-        first_tk = sequence_output[:, 0]
-        first_tk = self.pooler_dense(first_tk)
-        first_tk = self.pooler_af(first_tk)
+        # Apply mean pooling to generate sentence embeddings
+        sentence_embeddings = self.mean_pooling(sequence_output, attention_mask)
 
-        return {"last_hidden_state": sequence_output, "pooler_output": first_tk}
+        return {"last_hidden_state": sequence_output, "pooler_output": sentence_embeddings}
