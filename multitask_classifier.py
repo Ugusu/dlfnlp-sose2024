@@ -541,12 +541,19 @@ def add_noise(model, inputs, task, epsilon=1e-5):
     loss.backward()
 
     noise = None
+    gradient_present = False
     if "input_ids_1" in inputs and inputs["input_ids_1"].grad is not None:
+        gradient_present = True
         noise = epsilon * inputs["input_ids_1"].grad.sign()
     elif "input_ids" in inputs and inputs["input_ids"].grad is not None:
+        gradient_present = True
         noise = epsilon * inputs["input_ids"].grad.sign()
     
-    if noise is None:
+    if not gradient_present:
+        print("Debug Info: ")
+        for key in inputs:
+            print(f"{key}: requires_grad={inputs[key].requires_grad}, dtype={inputs[key].dtype}, grad={inputs[key].grad}")
+
         raise RuntimeError("Gradients are None, ensure that tensors require gradients and backward has been called.")
 
     noisy_inputs = {
