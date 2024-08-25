@@ -42,37 +42,18 @@ class SMART:
         perturbation = torch.randn_like(input_embeddings, requires_grad=True)
         
         for _ in range(self.steps):
-            perturbed_embeddings = input_embeddings + perturbation    
+            perturbed_embeddings = input_embeddings + perturbation
+            perturbed_embeddings.requires_grad_(True)
             outputs = self.model.encode(perturbed_embeddings, attention_mask)
-            
             loss = outputs.norm()
-            
-            if perturbation.grad is not None:
-                perturbation.grad.zero_()
-
             loss.backward(retain_graph=True)
-
-            if perturbation.grad is None:
-                print("DEBUG: Grad is none")
-
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon)
-
             self.model.zero_grad()
 
         return input_embeddings + perturbation
     
     def forward(self, logits: torch.Tensor, input_ids: list[torch.Tensor], attention_masks: list[torch.Tensor], classifier: bool=True) -> torch.Tensor:
-        """
-        Args:
-            logits (torch.Tensor): logits output of the predictor.
-            input_ids (list(torch.Tensor)): list of tensors with IDs of the sequences.
-            attention_masks (list(torch.Tensor)): list of tensors with attention masks of the sequences.
-            classifier (bool): the task type. If classifier, KL-divergence loss will be used. Otherwise MSE loss.
-        
-        Returns:
-            torch.Tensor: the SMART loss.
-        """
         if not isinstance(input_ids, list):
             input_ids = [input_ids]
         
