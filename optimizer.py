@@ -284,3 +284,47 @@ class SMART:
             self.model.zero_grad()
 
         return input_embeddings + perturbation
+    
+    def forward(logits, input_ids, attention_masks, classifier=True):
+        if isinstance(input_ids, torch.Tensor):
+            input_ids = [input_ids]
+        
+        if isinstance(attention_masks, torch.Tensor):
+            attention_masks = [attention_masks]
+
+        concatenated_embeddings = None
+        concatenated_attention_masks = attention_masks[0]
+
+        for i in range(len(input_ids)):
+            embeddings = self.model.embed(input_ids[i])
+            embeddings = self.perturb(embeddings, attention_masks[i])
+            if concatenated_embeddings is None:
+                concatenated_embeddings = embeddings
+            else:
+                concatenated_embeddings = torch.cat((concatenated_embeddings, embeddings[:, 1:, :]), dim=1)
+                concatenated_attention_masks = torch.cat((concatenated_attention_masks, attention_masks[i][:, 1:]), dim=1)
+
+        with torch.no_grad():
+            perturbed_outputs = self.model.encode(concatenated_embeddings, concatenated_attention_masks)
+            perturbed_logits = self.model.pooler_dense(perturbed_outputs[:, 0])
+            perturbed_logits = self.model.pooler_af(perturbed_logits)
+        
+        if classifier:
+            # Classification: KL-divergence
+            kl_loss = nn.KLDivLoss(reduction='batchmean')
+            smart_loss = kl_loss(
+                F.log_softmax(perturbed_logits, dim=-1),
+                F.softmax(logits, dim=-1)
+            ) + kl_loss(
+                F.log_softmax(logits, dim=-1),
+                F.softmax(perturbed_logits, dim=-1)
+            )
+            return smart_loss
+        else:
+            # Regression: Mean Squared Error
+            squared_loss = nn.MSELoss()
+            smart_loss = squared_loss(perturbed_logits, logits)
+            return smart_loss
+
+            
+

@@ -428,32 +428,9 @@ def train_multitask(args):
 
                 # Add SMART regularization
                 if smart_regularizer:
-                    embeddings_1 = model.bert.embed(b_ids_1)
-                    embeddings_2 = model.bert.embed(b_ids_2)
-                    perturb_embeddings_1 = smart_regularizer.perturb(embeddings_1, b_mask_1)
-                    perturb_embeddings_2 = smart_regularizer.perturb(embeddings_2, b_mask_2)
-                    perturb_embeddings = torch.cat((perturb_embeddings_1, perturb_embeddings_2[:, 1:, :]), dim=1)
-                    attention_mask = torch.cat((b_mask_1, b_mask_2[:, 1:]), dim=1)
-
-                    with torch.no_grad():
-                        perturbed_outputs = model.bert.encode(perturb_embeddings, attention_mask)
-                        perturbed_logits = model.bert.pooler_dense(perturbed_outputs[:, 0])
-                        perturbed_logits = model.bert.pooler_af(perturbed_logits)
-
-                    # Classification: KL-divergence
-                    kl_loss = nn.KLDivLoss(reduction='batchmean')
-                    smart_loss = kl_loss(
-                        F.log_softmax(perturbed_logits, dim=-1),
-                        F.softmax(logits, dim=-1)
-                    ) + kl_loss(
-                        F.log_softmax(logits, dim=-1),
-                        F.softmax(perturbed_logits, dim=-1)
-                    )
-
-                    combined_loss = loss + smart_loss
-                    combined_loss.backward()
-                else:
-                    loss.backward()
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], classifier=True)
+                    
+                loss.backward()
 
                 optimizer.step()
 
