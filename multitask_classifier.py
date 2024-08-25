@@ -18,7 +18,8 @@ from datasets import (
     load_multitask_data,
 )
 from evaluation import model_eval_multitask, test_model_multitask
-from optimizer import AdamW, SophiaG, SMART
+from optimizer import AdamW, SophiaG
+from regularization import SMART
 
 TQDM_DISABLE = False
 
@@ -365,6 +366,10 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, b_ids, b_mask, classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
@@ -395,6 +400,10 @@ def train_multitask(args):
                 logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 normalized_logits = torch.sigmoid(logits) * 5
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
