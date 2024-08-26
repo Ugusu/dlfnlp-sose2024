@@ -227,7 +227,7 @@ def train_model(model: nn.Module,
             # Save the model
             torch.save(model, output_dir)
 
-        # Stop early if no improvement
+        # Stop early if no improvement on validation loss
         if early_stopper.early_stop(val_loss):
             break
 
