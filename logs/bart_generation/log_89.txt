@@ -1,0 +1,33 @@
+epochs: 3
+learning_rate: 0.001
+optimizer: SophiaG
+optimizer_params: {'lr': 0.001, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}
+use_scheduler: False
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 10
+max_length: 256
+gradual_unfreezing: False
+num_layers_to_freeze: 6
+rl_weight: 0.85
+dataset: etpc-paraphrase-train.csv
+subset: 0.01
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [0.3183643865094939, 0.4117046839049908, 0.4798349126246825]
+penalized_bleu_val: 0.3183412300858003
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to half of the training dataThis is to make sure the model learns to generate the most important tokens, and also learnthat htis type of input may be None, as it is for the validation and test
+example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
+example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
+example_predictions: [' policy to to to services to to representatives to to peers to to regulations to to values to to for to to the to to rules to to post to to passengers to to policy to peers peers to peers representatives to peers services to peers post', ' the to to to services to to representatives to to peers to to values to to for to to regulations to to rules to to shares to to post to to policy to to toward to to viewed to to passengers to to have to to the', ' the to to to services to to representatives to to peers to to values to to for to to regulations to to rules to to shares to to policy to to toward to to post to to against to to viewed to to have to to the', ' the to to to services to to representatives to to peers to to values to to for to to regulations to to rules to to the to peers peers to peers services to peers representatives to peers values to peers for to peers post to to post', ' the to to to services to to representatives to to peers to to values to to for to to regulations to to rules to to the to peers peers to peers services to peers representatives to peers values to peers for to peers rules to peers post']

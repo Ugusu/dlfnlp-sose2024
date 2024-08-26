@@ -12,13 +12,16 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from bert import BertModel
+from context_bert import GlobalContextLayer, GlobalContextLayerRegularized
 from datasets import (
     SentenceClassificationDataset,
     SentencePairDataset,
     load_multitask_data,
 )
 from evaluation import model_eval_multitask, test_model_multitask
-from optimizer import AdamW
+from optimizer import AdamW, SophiaG
+from regularization import SMART
+from utils import PoolingStrategy, OptimizerType
 
 TQDM_DISABLE = False
 
@@ -61,6 +64,16 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
 
+        # Global Context Layers
+        args = get_args()
+        self.encoding_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE) \
+            if args.regularize_context is False \
+            else GlobalContextLayerRegularized(hidden_size=BERT_HIDDEN_SIZE)
+
+        self.pooling_global_context_layer = GlobalContextLayer(hidden_size=BERT_HIDDEN_SIZE) \
+            if args.regularize_context is False \
+            else GlobalContextLayerRegularized(hidden_size=BERT_HIDDEN_SIZE)
+
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.sentiment_classifier = nn.Linear(
@@ -81,34 +94,64 @@ class MultitaskBERT(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
-                return_pooler_output: bool = True
+                add_extra_layer: bool = False,
+                pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                 ) -> torch.Tensor:
         """
-        Processes input sentences and produces embeddings using the BERT model.
+        Processes input sentences and produces embeddings using the BERT model based on the selected pooling strategy.
 
         Args:
             input_ids (torch.Tensor): Tensor of input token IDs.
             attention_mask (torch.Tensor): Tensor of attention masks.
-            return_pooler_output (bool, optional): If True (default), return the pooled output (CLS token's hidden
-                                                   state); otherwise, return the sequence of hidden states.
+            add_extra_layer (bool): Flag to determine whether to add extra global context-aware layer
+            pooling_strategy (PoolingStrategy): Enum indicating the pooling strategy.
 
         Returns:
-            torch.Tensor: Pooled output or sequence of hidden states.
+            torch.Tensor: The pooled output tensor.
         """
 
-        # When thinking of improvements, you can later try modifying this
-        # (e.g., by adding other layers).
-
         outputs = self.bert(input_ids, attention_mask=attention_mask)
+        sequence_output = outputs["last_hidden_state"]  # [batch_size, seq_len, hidden_size]
 
-        if return_pooler_output:
-            return outputs["pooler_output"]  # CLS token output
-        else:
-            return outputs["last_hidden_state"]  # Sequence of hidden states
+        if add_extra_layer:
+            sequence_output, attention_scores = self.encoding_global_context_layer(sequence_output)
+
+        match pooling_strategy:
+            case PoolingStrategy.CLS:
+                # Use CLS token embedding as aggregate of whole sequence embedding
+                pooled_output = sequence_output[:, 0, :]  # [batch_size, hidden_size]
+
+            case PoolingStrategy.AVERAGE:
+                # Apply average pooling over the sequence length
+                pooled_output = torch.mean(sequence_output, dim=1)  # [batch_size, hidden_size]
+
+            case PoolingStrategy.MAX:
+                # Apply max pooling over the sequence length
+                pooled_output, _ = torch.max(sequence_output, dim=1)  # [batch_size, hidden_size]
+
+            case PoolingStrategy.ATTENTION:
+                # Use attention scores from the Global Context Layer for pooling
+                _, attention_scores = self.pooling_global_context_layer(sequence_output)  # [batch_size, seq_len, 1]
+
+                # Sum attention scores across the second dimension (attending to all tokens)
+                attention_weights = attention_scores.sum(dim=2)
+
+                # Apply softmax to get proper weights
+                attention_weights = F.softmax(attention_weights, dim=1) # [batch_size, seq_len, 1]
+
+                # Compute weighted sum
+                pooled_output = torch.bmm(attention_weights.unsqueeze(1), sequence_output).squeeze(1) # [batch_size, hidden_size]
+
+            case _:
+                raise ValueError(f"Unknown pooling strategy: {pooling_strategy}")
+
+        return pooled_output
 
     def predict_sentiment(self,
                           input_ids: torch.Tensor,
-                          attention_mask: torch.Tensor
+                          attention_mask: torch.Tensor,
+                          add_extra_layer: bool = False,
+                          pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                           ) -> torch.Tensor:
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
@@ -127,7 +170,9 @@ class MultitaskBERT(nn.Module):
         # Get the pooled output from the forward method (CLS token's hidden state by default)
         pooled_output: torch.Tensor = self.forward(
             input_ids=input_ids,
-            attention_mask=attention_mask
+            attention_mask=attention_mask,
+            add_extra_layer=add_extra_layer,
+            pooling_strategy=pooling_strategy
         )
 
         # Apply dropout
@@ -142,7 +187,9 @@ class MultitaskBERT(nn.Module):
                            input_ids_1: torch.Tensor,
                            attention_mask_1: torch.Tensor,
                            input_ids_2: torch.Tensor,
-                           attention_mask_2: torch.Tensor
+                           attention_mask_2: torch.Tensor,
+                           add_extra_layer: bool = False,
+                           pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                            ) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit for predicting whether they are paraphrases.
@@ -169,10 +216,16 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask)
-        embedding = self.dropout(embedding)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=all_input_ids,
+            attention_mask=all_attention_mask,
+            add_extra_layer=add_extra_layer,
+            pooling_strategy=pooling_strategy
+        )
 
-        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(embedding)
+        pooled_output = self.dropout(pooled_output)
+
+        is_paraphrase_logit: torch.Tensor = self.paraphrase_classifier(pooled_output)
 
         return is_paraphrase_logit
 
@@ -180,8 +233,9 @@ class MultitaskBERT(nn.Module):
                            input_ids_1: torch.Tensor,
                            attention_mask_1: torch.Tensor,
                            input_ids_2: torch.Tensor,
-                           attention_mask_2:
-                           torch.Tensor
+                           attention_mask_2: torch.Tensor,
+                           add_extra_layer: bool = False,
+                           pooling_strategy: PoolingStrategy = PoolingStrategy.CLS
                            ) -> torch.Tensor:
         """
         Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
@@ -202,12 +256,18 @@ class MultitaskBERT(nn.Module):
         all_input_ids = torch.cat((input_ids_1, input_ids_2[:, 1:]), dim=1)
         all_attention_mask = torch.cat((attention_mask_1, attention_mask_2[:, 1:]), dim=1)
 
-        embedding = self.forward(all_input_ids, all_attention_mask)
-        embedding = self.dropout(embedding)
+        pooled_output: torch.Tensor = self.forward(
+            input_ids=all_input_ids,
+            attention_mask=all_attention_mask,
+            add_extra_layer=add_extra_layer,
+            pooling_strategy=pooling_strategy
+        )
 
-        similarity_logit: torch.Tensor = self.similarity_prediction(embedding)
+        pooled_output = self.dropout(pooled_output)
 
-        return similarity_logit
+        similarity_logit: torch.Tensor = self.similarity_prediction(pooled_output)
+
+        return torch.sigmoid(similarity_logit) * 5
 
 
 def save_model(model, optimizer, args, config, filepath):
@@ -329,8 +389,28 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr)
+
+    match args.optimizer_type:
+        case OptimizerType.ADAMW:
+            optimizer = AdamW(model.parameters(), lr=lr)
+        case OptimizerType.SOPHIA:
+            optimizer = SophiaG(model.parameters(), lr=lr)
+        case _:
+            raise ValueError(f"Unsupported optimizer type: {args.optimizer_type}")
+
     best_dev_acc = float("-inf")
+
+    smart_regularizer = None
+    if args.smart_enabled:
+        smart_regularizer_args = {}
+        if args.epsilon is not None:
+            smart_regularizer_args['epsilon'] = args.epsilon
+        if args.alpha is not None:
+            smart_regularizer_args['alpha'] = args.alpha
+        if args.steps is not None:
+            smart_regularizer_args['steps'] = args.steps
+
+        smart_regularizer = SMART(model, **smart_regularizer_args)
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -355,8 +435,12 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask)
+                logits = model.predict_sentiment(b_ids, b_mask, args.context_layer, args.pooling_strategy)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, b_ids, b_mask, [model.dropout, model.sentiment_classifier], classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
@@ -384,9 +468,12 @@ def train_multitask(args):
                 b_labels = b_labels.to(device).float()  # Convert labels to Float
 
                 optimizer.zero_grad()
-                logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
-                normalized_logits = torch.sigmoid(logits) * 5
+                normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [model.dropout, model.similarity_prediction], classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
@@ -414,10 +501,16 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
+                logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
+
+                # Add SMART regularization
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [model.dropout, model.paraphrase_classifier], classifier=True)
+                    
                 loss.backward()
+
                 optimizer.step()
 
                 train_loss += loss.item()
@@ -433,6 +526,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
@@ -444,6 +539,8 @@ def train_multitask(args):
                 model=model,
                 device=device,
                 task=args.task,
+                context_layer=args.context_layer,
+                pooling_strategy=args.pooling_strategy,
             )
         )
 
@@ -452,7 +549,8 @@ def train_multitask(args):
             "sts": (sts_train_corr, sts_dev_corr),
             "qqp": (quora_train_acc, quora_dev_acc),
             "multitask": ((sst_train_acc + sts_train_corr + quora_train_acc) / 3,
-                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3) if args.task == "multitask" else (None, None),
+                          (sst_dev_acc + sts_dev_corr + quora_dev_acc) / 3) if args.task == "multitask" else (
+            None, None),
         }[args.task]
 
         print(
@@ -475,7 +573,9 @@ def test_model(args):
         model = model.to(device)
         print(f"Loaded model to test from {args.filepath}")
 
-        return test_model_multitask(args, model, device)
+        sst_accuracy, quora_accuracy, sts_corr = test_model_multitask(args, model, device)
+
+        return sst_accuracy, quora_accuracy, sts_corr
 
 
 def get_args():
@@ -505,6 +605,30 @@ def get_args():
     # Add this line to include subset_size
     parser.add_argument("--subset_size", type=int, default=None,
                         help="Number of examples to load from each dataset for testing")
+
+    # Add this line to include context_layer as a boolean flag
+    parser.add_argument("--context_layer", action="store_true", help="Include context layer if this flag is set.")
+
+    # Add this line to include regularized_context as a boolean flag
+    parser.add_argument("--regularize_context", action="store_true",
+                        help="Use regularized context layer variant if this flag is set.")
+
+    # Pooling strategy
+    parser.add_argument(
+        "--pooling_strategy",  # Renamed from "pooling"
+        type=PoolingStrategy,  # Directly convert to enum
+        help='Choose the pooling strategy: "cls", "average", "max", or "attention".',
+        choices=list(PoolingStrategy),
+        default=PoolingStrategy.CLS,
+    )
+
+    # Update optimizer argument
+    parser.add_argument("--optimizer_type",  # Renamed from "optimizer"
+                        type=OptimizerType,  # Directly convert to enum
+                        default=OptimizerType.SOPHIA,
+                        choices=list(OptimizerType),
+                        help="Optimizer to use"
+    )
 
     args, _ = parser.parse_known_args()
 
@@ -590,13 +714,21 @@ def get_args():
     )
     parser.add_argument("--local_files_only", action="store_true")
 
+    # Smoothness-Inducing Adversarial Regularization.
+    parser.add_argument("--smart_enabled", action="store_true")
+    parser.add_argument("--epsilon", type=float, default=None)
+    parser.add_argument("--alpha", type=float, default=None)
+    parser.add_argument("--steps", type=int, default=None)
+
     args = parser.parse_args()
+
     return args
+
 
 
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt" # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
     test_model(args)
