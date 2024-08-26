@@ -9,13 +9,13 @@ batch_size: 64
 max_length: 256
 gradual_unfreezing: True
 num_layers_to_freeze: 12
-rl_weight: 0.85
+rl_weight: 0
 dataset: etpc-paraphrase-train.csv
 subset: 1
 val_dataset: etpc-paraphrase-dev.csv
 test_dataset: etpc-paraphrase-generation-test-student.csv
-penalized_bleu_epochs: [22.277417549269128, 22.072040093077604, 20.246518551280985, 20.279741831284465, 0, 0]
-penalized_bleu_val: 24.266389336580907
+penalized_bleu_epochs: [22.33446568265977, 22.168752660661447, 20.524654035182856, 20.3852244028958, 20.67044974181848, 20.47671951234201]
+penalized_bleu_val: 24.52168636158606
 penalized_bleu_test: 0.0
 prefix: True
 prefix_length: 10
@@ -30,4 +30,4 @@ other_details: masked a random verb, adjective, noun, and conjunction
 rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to half of the training dataThis is to make sure the model learns to generate the most important tokens, and also learnthat htis type of input may be None, as it is for the validation and test
 example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
 example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
-example_predictions: ['Oracle said on Thursday that 34.75 million PeopleSoft shares had been tendered for sale.', 'But it was reported that, by the end of the year, the Danish ban had been successful in reducing the spread among wild animals.', '10 in Indiana and five in Illinois. State officials have reported 18 cases in Wisconsin.', 'students are most likely to be employed by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows. Overall,  NOUN AUX ADV ADJ PART AU', 'Two of the six people who testified before Congress Wednesday were involved in a long-running dispute about airing Yankees games on national television.']
+example_predictions: ['Oracle said on Thursday that 34.75 million PeopleSoft shares had been tendered for sale.', 'But it was not clear whether the ban had been effective in reducing the number of deaths among food animals.', '10 in Indiana and five in Illinois. State health officials have reported 18 cases in Michigan, five in Minnesota, two in Wisconsin, and one in Wisconsin', 'students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-life portrait shows. Overall,  NOUN AUX ADV ADJ PART AU', 'Two of the six people who testified before Congress Wednesday were engaged in a long-running dispute about airing Yankees games on television.']
