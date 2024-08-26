@@ -65,17 +65,18 @@ def get_best_parameters(parameter_grid):
 
         if matthews_corr > best_matthew:
             best_matthew = matthews_corr
-            best_params = {'learning_rate': lr, 'batch_size': batch_size, 'optimizer': optim_name}
+            best_params = {'learning_rate': lr, 'batch_size': batch_size, 'optimizer': optim_name,
+                           'weight_decay': weight_decay}
     print(f"\nBest Matthew: {best_matthew:.4f}")
     print(f"Best Hyperparameters: {best_params}")
 
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-5],
+        'starting_lr': [3e-5],
         'optimizer': ['SophiaG', 'AdamW'],
         'batch_size': [96],
-        'weight_decay': [0.001, 0.01]
+        'weight_decay': [0.1]
     }
     seed_everything()
     get_best_parameters(parameter_grid)

@@ -64,12 +64,32 @@ class EarlyStopping:
         return False
 
 
+def get_weights(dataset: pd.DataFrame) -> torch.tensor:
+    """
+    Makes weights for loss function
+    Args:
+        dataset (pd.DataFrame): Train dataset.
+    Returns:
+        torch.tensor: Tensor of weights for each label.
+    """
+    binary_labels = []
+    for row in dataset['paraphrase_types']:
+        labels = np.zeros(7, dtype=float)
+        for i in range(1, 8):
+            if str(i) in row:
+                labels[i - 1] = 1
+        binary_labels.append(labels)
+    class_weights = sum(sum(binary_labels)) / (len(sum(binary_labels)) * sum(binary_labels))
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32)
+    return class_weights_tensor
+
 
 def transform_data(dataset: pd.DataFrame,
                    max_length: int = 256,
                    tokenizer_name: str = 'facebook/bart-large',
                    labels: bool = True,
-                   batch_size: int = 16
+                   batch_size: int = 16,
+                   train: bool = False
                    ) -> DataLoader:
     """
     Binarizes labels ( Currently, the labels are in the form of [2, 5, 6, 0, 0, 0, 0]. This means that
@@ -81,6 +101,7 @@ def transform_data(dataset: pd.DataFrame,
         tokenizer_name (str): Tokenizer to use.
         labels (bool): If using the test dataset, set to False as there are no labels to binarize.
         batch_size (int): Batch size.
+        train (bool): True if train dataset.
 
     Returns:
         DataLoader: Transformed DataLoader.
@@ -125,6 +146,7 @@ def train_model(model: nn.Module,
                 device: torch.device,
                 scheduler: torch.optim.lr_scheduler,
                 optimizer: optimizer.Optimizer,
+                weights: torch.tensor,
                 epochs: int = 3,
                 output_dir: str = "output.pt"
                 ) -> nn.Module:
@@ -138,6 +160,7 @@ def train_model(model: nn.Module,
         device (torch.device): Device to be used.
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
+        weights (torch.tensor): Weights for loss function.
         scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
         optimizer (optimizer.Optimizer) Optimizer to be used
 
@@ -145,7 +168,7 @@ def train_model(model: nn.Module,
         nn.Module: Trained model.
     """
     # Loss Function and Optimizer
-    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn = torch.nn.CrossEntropyLoss(weight=weights)
 
     # Set best validation loss threshold
     best_matthews = float("-inf")
@@ -397,8 +420,9 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
                                 batch_size=args.batch_size)
     val_data = transform_data(dev_dataset, max_length=args.max_length,
                               batch_size=args.batch_size)
-    test_data = transform_data(test_dataset, labels=False,
+    test_data = transform_data(test_dataset, labels=False, train=True,
                                max_length=args.max_length, batch_size=args.batch_size)
+    class_weight_tensor = get_weights(train_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
@@ -411,7 +435,7 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
     scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05 * args.lr)
 
     model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
-                        optimizer=optimizer)
+                        optimizer=optimizer, weights = class_weight_tensor)
 
     print("Training finished.")
 
