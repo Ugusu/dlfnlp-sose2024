@@ -63,7 +63,7 @@ def get_best_parameters(parameter_grid):
                                                                                 weights=class_weight_tensor)
         accuracy, matthews_corr = bart_detection.evaluate_model(model, val_data, device)
         print(f"Learning Rate: {lr}, Batch Size: {batch_size}, Optimizer: {optim_name}, Accuracy: {accuracy:.4f},"
-              f" Matthew: {matthews_corr}")
+              f" Matthew: {matthews_corr}, Weight Decay: {weight_decay}")
 
         df.append([best_mcc, best_accuracy, best_epoch, lr, batch_size, optim_name, weight_decay])
     results = pd.DataFrame(df, columns=['MCC', 'Accuracy', 'Epoch', 'lr', 'Batch Size', 'Optimizer', 'Weight Decay'])
