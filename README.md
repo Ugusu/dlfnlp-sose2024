@@ -185,7 +185,7 @@ strategies were tested:
 This experimentation aimed to identify whether these approaches could provide a more comprehensive 
 representation, thereby improving the model's performance.
 
-## 1.3 Dealing with Data Imbalance
+### 1.3 Dealing with Data Imbalance
 The task at hand for the BART Paraphrase Type Detection was a multiclass classification problem. Every sentence pair has at least one of seven paraphrase types assigned to them. The dataset is very skewed towards type 2, 6 and 7 paraphrases, which proved to be quite challenging for part 1 of the project, where the model managed to achieve 83.3% accuracy, by overfitting on the dataset. An idea to fix this was implementing class weights into the Loss Function, which give each class a weight depending on their abundance. Less represented classes get higher importance, the trade-off however, would of course be a less accurate model. This approach was improved on by Li et al (2019) in 'Dice Loss for Data-imbalanced NLP Task, which dynamically adjust these weights, using the Dice-Score as a base for a loss function.
 
 ## 2. Methodology
@@ -293,6 +293,12 @@ without the extra layer and with or without regularization.
 
 We recommend running these scripts from the project's home directory.
 
+### **3.2 Experimenting with BART Paraphrase Type Detection
+Similar to above, the hyperparamter optimization was done using grid search in the BART Paraphrase Type Detection task on the GWDG HPC cluster. This can be done by running the [Python script](bart_detection_grid_search.py) file. With the additional parameter "weight_decay" in the optimizer, the MCC score can be improved, acting as L2 regularization, especially using the AdamW optimizer.
+Additionally, early stopping with a patience of 3 was implemented to prevent overfitting and improve computation time over the 10 epochs.
+Like Liu et al. (2023) recommends for Sophia optimizer, CosineAnnealing "with final LR equal to 0.05 times peak LR" is also used in addition to gradient clipping. Ininitally, I experimented with 
+CosineAnnealing with warm up, but that seemed to make performance worse, as it would get stuck after the initial warm up for some reason, which may be due to bad initialization at that time.
+As mentioned above, I wanted to expand on class weights with dice loss, but was unable to make it work in time.
 ---
 
 ## **4. Results**
