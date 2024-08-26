@@ -1,0 +1,32 @@
+epochs: 6
+learning_rate: 3e-05
+optimizer: AdamW
+optimizer_params: {'lr': 3e-05, 'betas': (0.1, 0.001), 'eps': 1e-08, 'weight_decay': 0.01}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 1
+max_length: 256
+gradual_unfreezing: True
+num_layers_to_freeze: 12
+dataset: etpc-paraphrase-train.csv
+subset: 0.01
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [28.187929573822526, 30.667809455217416, 30.07035609564097, 33.903190706713815, 27.14986542359874, 32.573022793177934]
+penalized_bleu_val: 32.38368647919633
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to the training data
+example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
+example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
+example_predictions: ['Oracle Corp said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered.', 'But it said, the study did not show whether the vaccine had been effective in preventing the spread among food animals.  CCONJ PRON VERB SCONJ DET ADJ NOUN AUX AUX ADP VERB', '10 in Indiana and five in Illinois. State health officials have reported 18 cases of measles in Wisconsin.', 'Teachers are most likely to be taught by a 15 - year veteran with a high workload and slightly eroding interest in staying in teaching, the work - force portrait shows.  NOUN NOUN ADP DET NUM PUNCT', 'Two of the six people who testified before Congress Wednesday were engaged in a long-running dispute with the New York Yankees about tickets to Yankees games.  NUM ADP DET NUM NOUN PUNCT']

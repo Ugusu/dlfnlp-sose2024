@@ -1,0 +1,26 @@
+epochs: 5
+optimizer: AdamW
+optimizer_params: {'lr': 1e-05, 'betas': (0.1, 0.001), 'eps': 1e-08, 'weight_decay': 0.01}
+use_scheduler: False
+scheduler_step_size: 1
+scheduler_gamma: 0.2
+batch_size: 1
+max_length: 256
+num_layers_to_freeze: 8
+dataset: etpc-paraphrase-train.csv
+subset: 0.01
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [19.396622434288933, 16.607625520915015, 19.242001658941135, 17.064189897831085, 26.959932179376437]
+penalized_bleu_val: 19.091901431481666
+penalized_bleu_test: 0.0
+prefix: None
+prefix_length: None
+prefix_method: None
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked random verb and adjective
