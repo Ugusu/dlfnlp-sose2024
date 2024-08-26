@@ -122,8 +122,8 @@ def train_model(model: nn.Module,
                 train_data: DataLoader,
                 val_data: DataLoader,
                 device: torch.device,
-                lr: float = 1e-5,
-                optimizer: str = 'SophiaG',
+                scheduler: torch.optim.lr_scheduler,
+                optimizer: optimizer.Optimizer,
                 epochs: int = 3,
                 output_dir: str = "output.pt"
                 ) -> nn.Module:
@@ -137,18 +137,14 @@ def train_model(model: nn.Module,
         device (torch.device): Device to be used.
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
-        optimizer (str): Optimizer to be used
-        lr (float): Learning rate.
+        scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
+        optimizer (optimizer.Optimizer) Optimizer to be used
 
     Returns:
         nn.Module: Trained model.
     """
     # Loss Function and Optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
-    if optimizer == 'SophiaG':
-        optimizer = SophiaG(model.parameters(), lr=lr)
-    if optimizer == 'AdamW':
-        optimizer = AdamW(model.parameters(), lr=lr)
 
     # Set best validation loss threshold
     best_matthews = float("-inf")
@@ -186,7 +182,7 @@ def train_model(model: nn.Module,
 
             train_loss += loss.item()
             num_batches += 1
-
+        scheduler.step()
         # Calculate Training loss
         train_loss = train_loss / num_batches
 
@@ -405,8 +401,16 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, val_data, device, epochs=args.epochs, lr=args.lr,
-                        optimizer=args.optimizer)
+    # implement CosineAnnealing Scheduler with warmup
+    if args.optimizer == 'SophiaG':
+        optimizer = SophiaG(model.parameters(), lr=args.lr)
+    if args.optimizer == 'AdamW':
+        optimizer = AdamW(model.parameters(), lr=args.lr)
+
+    scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05*args.lr)
+
+    model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
+                        optimizer=optimizer)
 
     print("Training finished.")
 

@@ -50,8 +50,14 @@ def get_best_parameters(parameter_grid):
         model = bart_detection.BartWithClassifier()
         device = torch.device("cuda")
         model.to(device)
-        model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, lr=lr,
-                            optimizer=optim_name)
+        if optim_name == 'SophiaG':
+            optimizer = SophiaG(model.parameters(), lr=lr)
+        if optim_name == 'AdamW':
+            optimizer = AdamW(model.parameters(), lr=lr)
+        scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05*lr)
+
+        model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, scheduler=scheduler,
+                                           optimizer=optimizer)
         accuracy, matthews_corr = bart_detection.evaluate_model(model, val_data, device)
         print(f"Learning Rate: {lr}, Batch Size: {batch_size}, Optimizer: {optim_name}, Accuracy: {accuracy:.4f},"
               f" Matthew: {matthews_corr}")
