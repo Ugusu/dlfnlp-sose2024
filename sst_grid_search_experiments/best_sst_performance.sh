@@ -37,10 +37,10 @@ python -u multitask_classifier.py \
   --local_files_only \
   --option finetune \
   --task sst \
-  --pooling cls \
+  --pooling attention \
   --regularize_context \
-  --lr 0.00001 \
-  --hidden_dropout_prob 0.3 \
+  --lr 0.00005 \
+  --hidden_dropout_prob 0.5 \
   --batch_size 64 \
   --optimizer adamw \
   --epochs 5
