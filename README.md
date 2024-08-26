@@ -513,49 +513,32 @@ if num_trainable == max_layers:
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
 The reward function for the paraphrase generation model is defined as:
-$$
-R = 0.5 \cdot B + 0.5 \cdot C
-$$
-where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the cosine similarity score.
+$$R = 0.5 \cdot B + 0.5 \cdot C$$
+where $$(R)$$ is the total reward, $$(B)$$ is the BLEU-like score, and $$(C)$$ is the cosine similarity score.
 
 #### 1. BLEU-like Score (B)
 The BLEU-like score is computed as:
-$$
-B = BP \cdot P
-$$
-where $(BP)$ is the brevity penalty and $(P)$ is the precision.
+$$B = BP \cdot P$$
+where $$(BP)$$ is the brevity penalty and $$(P)$$ is the precision.
 
 #### 2. Precision (P)
-Let $(r)$ be the reference tokens and $(g)$ be the generated tokens. Then:
-$$
-P = \frac{\sum_{w \in g} \min(\text{count}_g(w), \text{count}_r(w))}{|g|}
-$$
-where $(\text{count}_g(w))$ and $(\text{count}_r(w))$ are the counts of word $(w)$ in the generated and reference sentences respectively.
-Brevity Penalty $(BP)$
-$$
-BP = \begin{cases}
-\exp(1 - \frac{|r|}{|g|}) & \text{if } |g| < |r| \
-1 & \text{otherwise}
-\end{cases}
-$$
-where $(|r|)$ and $(|g|)$ are the lengths of the reference and generated sentences respectively.
+Let $$(r)$$ be the reference tokens and $$(g)$$ be the generated tokens. Then:
+$$P = \frac{\sum_{w \in g} \min(\text{count}_g(w), \text{count}_r(w))}{|g|}$$
+where $$(\text{count}_g(w))$$ and $$(\text{count}_r(w))$$ are the counts of word $$(w)$$ in the generated and reference sentences respectively.
+Brevity Penalty $$(BP)$$
+$$BP = \exp(1 - \frac{|r|}{|g|}) \cdot \mathbb{I}(|g| < |r|) + \mathbb{I}(|g| \geq |r|)$$
+where $$(|r|)$$ and $$(|g|)$$ are the lengths of the reference and generated sentences respectively.
 #### 3. Cosine Similarity Score (C)
-The cosine similarity between the input sentence $(s_1)$ and the generated paraphrase $(s_2)$ is calculated as:
-$$
-C = \frac{\vec{v_1} \cdot \vec{v_2}}{||\vec{v_1}|| \cdot ||\vec{v_2}||}
-$$
-where $(\vec{v_1})$ and $(\vec{v_2})$ are the term frequency vectors of $(s_1)$ and $(s_2)$ respectively.
+The cosine similarity between the input sentence $$(s_1)$$ and the generated paraphrase $$(s_2)$$ is calculated as:
+$$C = \frac{\vec{v_1} \cdot \vec{v_2}}{||\vec{v_1}|| \cdot ||\vec{v_2}||}$$
+where $$(\vec{v_1})$$ and $$(\vec{v_2})$$ are the term frequency vectors of $$(s_1)$$ and $$(s_2)$$ respectively.
 3. 
 More explicitly:
-$$
-C = \frac{\sum_{w \in W} \text{tf}(w, s_1) \cdot \text{tf}(w, s_2)}{\sqrt{\sum_{w \in W} \text{tf}(w, s_1)^2} \cdot \sqrt{\sum_{w \in W} \text{tf}(w, s_2)^2}}
-$$
-where $(W)$ is the set of unique words in both sentences, and $(\text{tf}(w, s))$ is the term frequency of word $(w)$ in sentence $(s)$.
+$$C = \frac{\sum_{w \in W} \text{tf}(w, s_1) \cdot \text{tf}(w, s_2)}{\sqrt{\sum_{w \in W} \text{tf}(w, s_1)^2} \cdot \sqrt{\sum_{w \in W} \text{tf}(w, s_2)^2}}$$
+where $$(W)$$ is the set of unique words in both sentences, and $$(\text{tf}(w, s))$$ is the term frequency of word $$(w)$$ in sentence $$(s)$$.
 
 The training process uses a combination of supervised learning (SL) and reinforcement learning (RL) to optimize the paraphrase generation model. The loss function is a weighted sum of the SL loss and the RL loss.
-$$
-L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}
-$$
+$$L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}$$
 #### 4.2.6 Results #### 
 
 The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
