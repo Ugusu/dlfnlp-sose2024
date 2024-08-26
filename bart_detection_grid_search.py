@@ -76,7 +76,7 @@ def get_best_parameters(parameter_grid):
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-6, 1e-5],
+        'starting_lr': [1e-3, 1e-4],
         'optimizer': ['AdamW', 'SophiaG'],
         'batch_size': [16, 32],
     }
