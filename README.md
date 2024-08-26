@@ -337,6 +337,7 @@ Additionally, early stopping with a patience of 3 was implemented to prevent ove
 Like Liu et al. (2023) recommends for Sophia optimizer, CosineAnnealing "with final LR equal to 0.05 times peak LR" is also used in addition to gradient clipping. Ininitally, I experimented with 
 CosineAnnealing with warm up, but that seemed to make performance worse, as it would get stuck after the initial warm up for some reason, which may be due to bad initialization at that time.
 As mentioned above, I wanted to expand on class weights with dice loss, but was unable to make it work in time.
+
 ---
 
 ## **4. Results**
