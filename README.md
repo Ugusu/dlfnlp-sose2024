@@ -1,14 +1,3 @@
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/contrib/auto-render.min.js"></script>
-<script>
-  renderMathInElement(document.body, {
-    delimiters: [
-      {left: "$$", right: "$$", display: true},
-      {left: "$", right: "$", display: false},
-    ],
-  });
-</script>
-
 Here's a structured README template for your group project:
 
 ---
@@ -472,10 +461,10 @@ if num_trainable == max_layers:
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
 The reward function for the paraphrase generation model is defined as:
-$$
+\[
 R = 0.5 \cdot B + 0.5 \cdot C
-$$
-where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the cosine similarity score.
+\]
+where \(R\) is the total reward, \(B\) is the BLEU-like score, and \(C\) is the cosine similarity score.
 
 #### 1. BLEU-like Score (B)
 The BLEU-like score is computed as:
