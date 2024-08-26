@@ -47,7 +47,7 @@ def get_best_parameters(parameter_grid):
                                                    batch_size=batch_size)
         val_data = bart_detection.transform_data(dev_dataset, max_length=256,
                                                  batch_size=batch_size)
-
+        class_weight_tensor = bart_detection.get_weights(train_dataset)
         model = bart_detection.BartWithClassifier()
         device = torch.device("cuda")
         model.to(device)
@@ -58,7 +58,7 @@ def get_best_parameters(parameter_grid):
         scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05 * lr)
 
         model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, scheduler=scheduler,
-                                           optimizer=optimizer)
+                                           optimizer=optimizer, weight_decay=class_weight_tensor)
         accuracy, matthews_corr = bart_detection.evaluate_model(model, val_data, device)
         print(f"Learning Rate: {lr}, Batch Size: {batch_size}, Optimizer: {optim_name}, Accuracy: {accuracy:.4f},"
               f" Matthew: {matthews_corr}")
