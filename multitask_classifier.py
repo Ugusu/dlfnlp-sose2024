@@ -20,6 +20,7 @@ from datasets import (
 )
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW, SophiaG
+from regularization import SMART
 from utils import PoolingStrategy, OptimizerType
 
 TQDM_DISABLE = False
@@ -399,6 +400,18 @@ def train_multitask(args):
 
     best_dev_acc = float("-inf")
 
+    smart_regularizer = None
+    if args.smart_enabled:
+        smart_regularizer_args = {}
+        if args.epsilon is not None:
+            smart_regularizer_args['epsilon'] = args.epsilon
+        if args.alpha is not None:
+            smart_regularizer_args['alpha'] = args.alpha
+        if args.steps is not None:
+            smart_regularizer_args['steps'] = args.steps
+
+        smart_regularizer = SMART(model, **smart_regularizer_args)
+
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -424,6 +437,10 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask, args.context_layer, args.pooling_strategy)
                 loss = F.cross_entropy(logits, b_labels.view(-1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, b_ids, b_mask, [model.dropout, model.sentiment_classifier], classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
@@ -453,6 +470,10 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
+                
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [model.dropout, model.similarity_prediction], classifier=True)
+
                 loss.backward()
                 optimizer.step()
 
@@ -483,7 +504,13 @@ def train_multitask(args):
                 logits = model.predict_paraphrase(b_ids_1, b_mask_1, b_ids_2, b_mask_2, args.context_layer, args.pooling_strategy)
                 bce_with_logits_loss = nn.BCEWithLogitsLoss()
                 loss = bce_with_logits_loss(logits.squeeze(), b_labels.float())
+
+                # Add SMART regularization
+                if smart_regularizer:
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [model.dropout, model.paraphrase_classifier], classifier=True)
+                    
                 loss.backward()
+
                 optimizer.step()
 
                 train_loss += loss.item()
@@ -686,6 +713,12 @@ def get_args():
         default=1e-3 if args.option == "pretrain" else 1e-5,
     )
     parser.add_argument("--local_files_only", action="store_true")
+
+    # Smoothness-Inducing Adversarial Regularization.
+    parser.add_argument("--smart_enabled", action="store_true")
+    parser.add_argument("--epsilon", type=float, default=None)
+    parser.add_argument("--alpha", type=float, default=None)
+    parser.add_argument("--steps", type=int, default=None)
 
     args = parser.parse_args()
 

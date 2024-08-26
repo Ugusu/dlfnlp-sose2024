@@ -84,6 +84,10 @@ There are a lot of parameters that can be set. The most important ones are:
 | `--hidden_dropout_prob` | Dropout probability for hidden layers.                                                |
 | `--lr`                  | Learning rate, defaults to `1e-3` for `pretrain`, `1e-5` for `finetune`.              |
 | `--local_files_only`    | Force the use of local files only (do not download from remote repositories).         |
+| `--smart_enable`        | Enables Smoothness-Inducing Adversarial Regularization (SMART).                       |
+| `--epsilon`             | The epsilon (used in SMART).                                                          |
+| `--alpha`               | Step size for adversarial perturbation in SMART.                                      |
+| `--steps`               | Number of steps for generating perturbations in SMART.                                |
 
 All parameters and their descriptions can be seen by running:
 
@@ -181,6 +185,14 @@ strategies were tested:
 This experimentation aimed to identify whether these approaches could provide a more comprehensive 
 representation, thereby improving the model's performance.
 
+### 1.3 Dealing with Data Imbalance
+The task at hand for the BART Paraphrase Type Detection was a multiclass classification problem. Every sentence pair has at least one of seven paraphrase types assigned to them. The dataset is very skewed towards type 2, 6 and 7 paraphrases, which proved to be quite challenging for part 1 of the project, where the model managed to achieve 83.3% accuracy, by overfitting on the dataset. An idea to fix this was implementing class weights into the Loss Function, which give each class a weight depending on their abundance. Less represented classes get higher importance, the trade-off however, would of course be a less accurate model. This approach was improved on by Li et al (2019) in 'Dice Loss for Data-imbalanced NLP Task, which dynamically adjust these weights, using the Dice-Score as a base for a loss function.
+
+### 1.4 Smoothness-Inducing Adversarial Regularization (SMART)
+Smoothness-Inducing Adversarial Regularization (SMART) is a regularization method, which makes the model learn smother boudaries.
+The main principle behind the method is adding small noisy to the input of the model during finetuning, to make the model more generalized
+around the data point *x*<sub>i</sub> and be immune the the small changes in the input.
+
 ## 2. Methodology
 
 ### BERT
@@ -244,6 +256,38 @@ where $\(\alpha_i\)$ represents the attention weight assigned to each hidden sta
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
 
+### **2.3 Smoothness-Inducing Adversarial Regularization (SMART)**
+
+SMART receives the logits predictions of the model $$\gamma$$ and its input $$x$$. It then adds a noise (perturbation) $$\delta$$ to the input.
+Before applying the noise to the input, it is updated for *M* steps depending on the gradient from the perturbed inputs.
+
+$$\delta = \delta + \alpha \cdot \text{sign}(\nabla_{\delta} \mathcal{L}(\theta; x + \delta))$$
+
+where $$\alpha$$ is the step size and $$\epsilon$$ is the maximum perturbation size.
+
+Then the noisy input is used to make predictions:
+
+$$\gamma_{\text{perturbed}} = \mathcal{F}(x + \delta)$$
+
+The predictions on the noisy input are compared to the original predictions on the clear input, and a loss is computed. That loss is either KL-divergence
+if the task is classification, or Mean Squared Error if the task is regression.
+
+- Classification:
+
+$$\mathcal{L}_{\text{SMART}} = \frac{1}{2} \left( \mathcal{KL}(\gamma_{\text{perturbed}} \parallel \gamma + \mathcal{KL}(\gamma \parallel \gamma_{\text{perturbed}}) \right)$$
+
+
+- Regression:
+
+$$\mathcal{L}_{\text{SMART}} = \frac{1}{N} \sum_{i=1}^{N} (\gamma_{\text{perturbed}, i} - \gamma_i)^2$$
+
+
+Finally, the loss is then added to the task loss:
+
+$$\mathcal{L}(\theta; x) = \mathcal{L}(\theta; x) + \mathcal{L}_\text{SMART}(\theta; x + \delta)$$
+
+The training time is increased due to double back propagation.
+
 ---
 
 ## **3. Experiments**
@@ -286,6 +330,13 @@ without the extra layer and with or without regularization.
 
 We recommend running these scripts from the project's home directory.
 
+### **3.2 Experimenting with BART Paraphrase Type Detection**
+
+Similar to above, the hyperparamter optimization was done using grid search in the BART Paraphrase Type Detection task on the GWDG HPC cluster. This can be done by running the [Python script](bart_detection_grid_search.py) file. With the additional parameter "weight_decay" in the optimizer, the MCC score can be improved, acting as L2 regularization, especially using the AdamW optimizer.
+Additionally, early stopping with a patience of 3 was implemented to prevent overfitting and improve computation time over the 10 epochs.
+Like Liu et al. (2023) recommends for Sophia optimizer, CosineAnnealing "with final LR equal to 0.05 times peak LR" is also used in addition to gradient clipping. Ininitally, I experimented with 
+CosineAnnealing with warm up, but that seemed to make performance worse, as it would get stuck after the initial warm up for some reason, which may be due to bad initialization at that time.
+As mentioned above, I wanted to expand on class weights with dice loss, but was unable to make it work in time.
 ---
 
 ## **4. Results**
@@ -544,6 +595,74 @@ These results obtained using a subset of the data as the training set and valida
 
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
 
+### 4.4 BART for Paraphrase Type Detection
+
+#### **4.4.1 Data Overview**
+
+The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned  on `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
+The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
+#### **4.4.2 The MCC Score**
+The MCC score is defined as:
+$$
+MCC = (TP x TN - FP x FN) \over (\sqrt(TP))
+$$
+
+#### **4.4.3 Impact of Class Weights on accuracy and MMC score**
+| configuration                  |Accuracy             | MCC score          |
+|--------------------------------|---------------------|--------------------|
+| baseline                       | 83.33               | 0.067              |
+| Class weights with baseline    | 61.5                | 0.148              |
+| Best                           | 68.34               | 0.201              |
+
+As predicted, the Accuracy will go down, as a compromise, due to prioritizing the minority class, but is still acceptable. The biggest problem with Class Weight implementation, was that it was very sensitive to bad hyperparamerization, especially when using SophiaG optimizer. The AdamW optimizer performed better on average and was more robust, but choosing a too low or high learning rate or too low batch size can make the model easily collapse.
+
+#### **4.4.4 Overall best MCC score**
+The highest MCC score achieved was **0.201** with the following configuration:
+- **Pooling Strategy:** `Attention`
+- **Extra Context Layer:** `False`
+- **Regularize Context:** `True`
+- **Learning Rate:** `5e-5`
+- **Hidden Dropout Probability:** `0.5`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Epochs:** `5`
+
+### 4.5 Smoothness-Inducing Adversarial Regularization (SMART)
+
+#### BERT: Paraphrase Detection:
+
+Overall performance of the model seems to increase. The results are comparable to trainings done on higher number of epochs.
+This also can be explained by the fact that SMART basically does data augmentation, and increases the training time on each epoch. Therefore the result is intuitive. Further scaling and computational performances are to be studied and compared.
+
+#### BERT: Sentiment Classification:
+
+SMART does not significatly affect the performance of this task. In most cases the accuracy is lower than the baseline. The obvious explanation is parameter overwrite during the second backpropagation.
+
+#### BERT: Semantic Textual Similarity:
+
+The performance of seems not improve much above the baseline. While the task is similar to Paraphrase Detection, the prediction is not binary and shows the degree of similarity. The alteration of the input by SMART scews the sequences and similar inputs seem to look less similar. In theory SMART still can be used for the task to improve performance, however the noise model should be handled in a more deliberate way.
+
+### Best BERT: Paraphrase Detection:
+
+The best performance (0.878) was achived with:
+
+- **Epochs:** `2`
+- **Batch Size:** `64`
+- **optimizer:** `SophiaG`
+- **optimizer parameters:** `{'lr': 1e-05, 'betas': (0.965, 0.99), 'rho': 0.04, 'weight_decay': 0.1}`
+- **hidden_dropout_prob**: 0.2
+- **smart_enabled** True
+- **alpha** 0.02
+- **steps** 1
+- **epsilon** 1e-5
+- **option** finetune
+
+Can be replicated with:
+
+```sh
+$ python -u multitask_classifier.py --use_gpu --local_files_only --option finetune --task qqp --hidden_dropout_prob 0.2 --epochs 2 --smart_enabled
+```
+
 ---
 
 ## Results Summary
@@ -552,11 +671,11 @@ Based on these results, I decided to add the average pooling strategie to the mo
 
 The results for evaluation on the dev dataset. training was done for 6 epochs for paraphrase generation and 5 epochs for paraphrase detection.
 
-|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
+|               | **Paraphrase Type Detection (MCC)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
-| Baseline      | 0.833                               | 20.790                                           |
-| Improvement 1 | ...                                 | 24.521 (without RL)                              |
-| Improvement 2 | ...                                 | 24.315 (with RL)                                 |
+| Baseline      | 0.067                               | 20.790                                           |
+| Improvement 1 | 0.148                               | 24.521 (without RL)                              |
+| Improvement 2 | 0.201                               | 24.315 (with RL)                                 |
 
 ### BERT
 
@@ -583,7 +702,7 @@ Here Paraphrase Detection was trained for 1 epoch:
 | Extra CGA Layer                                | 0.520                              | 0.876                          | 0.851                                 |
 | CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
 | Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
-| Improvement 4                                  | ...                                | ...                            | ...                                   |
+| SMART                                          | 0.515                              | 0.867                          | 0.856                                 |
 | Improvement 5                                  | ...                                | ...                            | ...                                   |
 | Improvement 6                                  | ...                                | ...                            | ...                                   |
 
@@ -658,6 +777,7 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Gradual Unfreezing and Discriminative Learning Rates](https://arxiv.org/pdf/1801.06146): Howard and Ruder, 2018
 - [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
 - [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
+- [Dice Loss for Data-imbalanced NLP Task](https://arxiv.org/abs/1911.02855): Li et al., 2019
 
 ## Acknowledgement
 
