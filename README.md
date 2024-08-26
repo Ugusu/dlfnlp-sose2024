@@ -669,7 +669,7 @@ $ python -u multitask_classifier.py --use_gpu --local_files_only --option finetu
 
 ### BART
 
-The results for evaluation on the dev dataset. training was done for 5 epochs.
+The results for evaluation on the dev dataset. training was done for 6 epochs for paraphrase generation and 5 epochs for paraphrase detection.
 
 |               | **Paraphrase Type Detection (MCC)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
