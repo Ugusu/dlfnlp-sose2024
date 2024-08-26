@@ -404,6 +404,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--optimizer", type=str, default='AdamW')
+    parser.add_argument('--weight_decay', type=float, default=0.1)
     args = parser.parse_args()
     return args
 
@@ -434,20 +435,20 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     # implement CosineAnnealing Scheduler with warmup
     if args.optimizer == 'SophiaG':
-        optimizer = SophiaG(model.parameters(), lr=args.lr)
+        optimizer = SophiaG(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     if args.optimizer == 'AdamW':
-        optimizer = AdamW(model.parameters(), lr=args.lr)
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05 * args.lr)
 
-    model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
-                        optimizer=optimizer, weights=class_weight_tensor)
+    model, best_mcc, best_accuracy, num_epochs = train_model(model, train_data, val_data, device,
+                                                             epochs=args.epochs, scheduler=scheduler,
+                                                             optimizer=optimizer, weights=class_weight_tensor)
 
     print("Training finished.")
 
-    accuracy, matthews_corr = evaluate_model(model, val_data, device)
-    print(f"The accuracy of the model is: {accuracy:.3f}")
-    print(f"Matthews Correlation Coefficient of the model is: {matthews_corr:.3f}")
+    print(f"The accuracy of the model is: {best_accuracy:.3f}")
+    print(f"Matthews Correlation Coefficient of the model is: {best_mcc:.3f}")
 
     test_ids = test_dataset["id"]
     test_results = test_model(model, test_data, test_ids, device)

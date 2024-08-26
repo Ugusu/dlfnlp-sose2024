@@ -69,15 +69,15 @@ def get_best_parameters(parameter_grid):
 
         df.append([best_mcc, best_accuracy, best_epoch, lr, batch_size, optim_name, weight_decay])
     results = pd.DataFrame(df, columns=['MCC', 'Accuracy', 'Epoch', 'lr', 'Batch Size', 'Optimizer', 'Weight Decay'])
-    results.to_csv()
+    results.to_csv('results.csv')
 
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-5],
+        'starting_lr': [5e-5],
         'optimizer': ['SophiaG'],
-        'batch_size': [16],
-        'weight_decay': [0.1]
+        'batch_size': [96],
+        'weight_decay': [0.01]
     }
     seed_everything()
     get_best_parameters(parameter_grid)
