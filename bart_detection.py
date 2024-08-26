@@ -1,5 +1,6 @@
 import argparse
 import random
+from typing import Tuple, Any
 
 import numpy as np
 import optimizer
@@ -148,7 +149,7 @@ def train_model(model: nn.Module,
                 weights: np.array,
                 epochs: int = 3,
                 output_dir: str = "output.pt"
-                ) -> nn.Module:
+                ) -> tuple[nn.Module, float, float, int]:
     """
     Trains a BartWithClassifier model for paraphrase detection, saves the model in specified output_dir, prints
     training accuracy, training loss and validation loss for each epoch and returns the model
@@ -165,6 +166,9 @@ def train_model(model: nn.Module,
 
     Returns:
         nn.Module: Trained model.
+        float: Best MCC
+        float: Accuracy at best MCC
+        int: Number of Epochs at bes MCC
     """
     # Loss Function and Optimizer
     class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
@@ -245,6 +249,8 @@ def train_model(model: nn.Module,
         # Update for best Matthews Correlation Coefficient
         if val_matthews < best_matthews:
             best_matthews = val_matthews
+            best_accuracy = val_accuracy
+            best_epoch = epoch + 1
 
             # Save the model
             torch.save(model, output_dir)
@@ -253,7 +259,7 @@ def train_model(model: nn.Module,
         if early_stopper.early_stop(val_loss):
             break
 
-    return model
+    return model, best_matthews, best_accuracy, best_epoch
 
 
 def test_model(model: nn.Module,
@@ -308,7 +314,7 @@ def test_model(model: nn.Module,
 def evaluate_model(model: nn.Module,
                    test_data: DataLoader,
                    device: torch.device
-                   ) -> float:
+                   ) -> tuple[float, float]:
     """
     This function measures the accuracy of our model's prediction on a given train/validation set
     We measure how many of the seven paraphrase types the model has predicted correctly for each data point.
@@ -334,7 +340,7 @@ def evaluate_model(model: nn.Module,
             attention_mask = attention_mask.to(device)
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            predicted_labels = (outputs > 0.9).int()
+            predicted_labels = (outputs > 0.5).int()
 
             all_pred.append(predicted_labels)
             all_labels.append(labels)

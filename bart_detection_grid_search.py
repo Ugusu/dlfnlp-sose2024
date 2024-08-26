@@ -35,6 +35,7 @@ def seed_everything(seed: int = 11711) -> None:
 
 
 def get_best_parameters(parameter_grid):
+    df = []
     best_matthew = -1
     best_params = None
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
@@ -57,25 +58,25 @@ def get_best_parameters(parameter_grid):
             optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05 * lr)
 
-        model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, scheduler=scheduler,
-                                           optimizer=optimizer, weights=class_weight_tensor)
+        model, best_mcc, best_accuracy, best_epoch = bart_detection.train_model(model, train_data,
+                                                                                val_data, device, epochs=10,
+                                                                                scheduler=scheduler,
+                                                                                optimizer=optimizer,
+                                                                                weights=class_weight_tensor)
         accuracy, matthews_corr = bart_detection.evaluate_model(model, val_data, device)
         print(f"Learning Rate: {lr}, Batch Size: {batch_size}, Optimizer: {optim_name}, Accuracy: {accuracy:.4f},"
               f" Matthew: {matthews_corr}")
 
-        if matthews_corr > best_matthew:
-            best_matthew = matthews_corr
-            best_params = {'learning_rate': lr, 'batch_size': batch_size, 'optimizer': optim_name,
-                           'weight_decay': weight_decay}
-    print(f"\nBest Matthew: {best_matthew:.4f}")
-    print(f"Best Hyperparameters: {best_params}")
+        df.append([best_mcc, best_accuracy, best_epoch, lr, batch_size, optim_name, weight_decay])
+    results = pd.DataFrame(df, columns=['MCC', 'Accuracy', 'Epoch', 'lr', 'Batch Size', 'Optimizer', 'Weight Decay'])
+    results.to_csv()
 
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [3e-5],
-        'optimizer': ['SophiaG', 'AdamW'],
-        'batch_size': [96],
+        'starting_lr': [1e-5],
+        'optimizer': ['SophiaG'],
+        'batch_size': [16],
         'weight_decay': [0.1]
     }
     seed_everything()
