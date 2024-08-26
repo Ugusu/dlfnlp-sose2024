@@ -343,7 +343,7 @@ def train_multitask(args):
         if args.steps is not None:
             smart_regularizer_args['steps'] = args.steps
 
-        smart_regularizer = SMART(model.bert, **smart_regularizer_args)
+        smart_regularizer = SMART(model, **smart_regularizer_args)
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
