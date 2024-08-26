@@ -370,6 +370,8 @@ For an illustrative comparison, refer to the corresponding [box plot](sst_grid_s
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
 
+
+
 ### 4.2 BART for Paraphrase Generation
 
 #### **4.2.1 Data Overview**
@@ -623,7 +625,7 @@ The correlation scores on the development dataset for each of these implementati
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategy and the linear similarity prediction.
 
 
-#### **4.3.3 Combining both strategies**
+#### **4.3.3 Effectiveness of both strategies**
 
 
 ---
