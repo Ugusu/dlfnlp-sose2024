@@ -1,3 +1,4 @@
+
 import argparse
 import random
 from typing import Tuple, Any
@@ -13,7 +14,6 @@ from transformers import AutoTokenizer, BartModel
 from optimizer import SophiaG, AdamW
 from sklearn.metrics import matthews_corrcoef
 from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
-import dice_loss
 
 TQDM_DISABLE = False
 
@@ -173,7 +173,7 @@ def train_model(model: nn.Module,
     """
     # Loss Function and Optimizer
     class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
-    loss_fn = dice_loss.DiceLoss()
+    loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
 
     # Set best mmc threshold
     best_matthews = float("-inf")
@@ -205,7 +205,7 @@ def train_model(model: nn.Module,
 
             optimizer.zero_grad()
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
-            loss = loss_fn(outputs.flatten(dim=0), b_labels)
+            loss = loss_fn(outputs, b_labels)
             loss.backward()
             # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
@@ -239,7 +239,7 @@ def train_model(model: nn.Module,
                 b_labels = b_labels.to(device)
 
                 outputs = model(input_ids=b_ids, attention_mask=b_mask)
-                loss = loss_fn(outputs.flatten(dim=0), b_labels)
+                loss = loss_fn(outputs, b_labels)
                 val_loss += loss.item()
 
         # Calculate Validation loss and accuracy
