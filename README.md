@@ -293,7 +293,8 @@ without the extra layer and with or without regularization.
 
 We recommend running these scripts from the project's home directory.
 
-### **3.2 Experimenting with BART Paraphrase Type Detection
+### **3.2 Experimenting with BART Paraphrase Type Detection**
+
 Similar to above, the hyperparamter optimization was done using grid search in the BART Paraphrase Type Detection task on the GWDG HPC cluster. This can be done by running the [Python script](bart_detection_grid_search.py) file. With the additional parameter "weight_decay" in the optimizer, the MCC score can be improved, acting as L2 regularization, especially using the AdamW optimizer.
 Additionally, early stopping with a patience of 3 was implemented to prevent overfitting and improve computation time over the 10 epochs.
 Like Liu et al. (2023) recommends for Sophia optimizer, CosineAnnealing "with final LR equal to 0.05 times peak LR" is also used in addition to gradient clipping. Ininitally, I experimented with 
