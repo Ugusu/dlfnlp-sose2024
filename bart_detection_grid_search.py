@@ -52,9 +52,9 @@ def get_best_parameters(parameter_grid):
         device = torch.device("cuda")
         model.to(device)
         if optim_name == 'SophiaG':
-            optimizer = SophiaG(model.parameters(), lr=lr)
+            optimizer = SophiaG(model.parameters(), lr=lr, weight_decay=weight_decay)
         if optim_name == 'AdamW':
-            optimizer = AdamW(model.parameters(), lr=lr)
+            optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05 * lr)
 
         model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, scheduler=scheduler,
