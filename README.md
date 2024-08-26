@@ -242,7 +242,7 @@ where $n$ is the number of tokens in the sequence.
 The maximum value across all token hidden states is selected for each dimension:
 
 $$
-\mathbf{p}_j = \max_{i} \mathbf{h}_{ij}
+\mathbf{p_\text{j}} = \max_{i} \mathbf{h}_{ij}
 $$
 
 4. **Attention-Based Pooling:**
@@ -587,9 +587,7 @@ The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, whic
 The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
 #### **4.4.2 The MCC Score**
 The MCC score is defined as:
-$$
-MCC = (TP x TN - FP x FN) \over (\sqrt(TP))
-$$
+$$MCC = (TP x TN - FP x FN) \over (\sqrt(TP))$$
 
 #### **4.4.3 Impact of Class Weights on accuracy and MMC score**
 | configuration                  |Accuracy             | MCC score          |
