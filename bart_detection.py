@@ -55,7 +55,14 @@ class EarlyStopping:
         self.counter = 0
         self.loss = float('inf')
 
-    def early_stop(self, val_loss):
+    def early_stop(self, val_loss) -> bool:
+        """
+        Early stopping function. Stops after 3 epochs of no improved Loss.
+        Args:
+            val_loss (float): Current Validation loss.
+        Returns:
+            bool: Returns True if early stopping is triggered, else False.
+        """
         if val_loss < self.loss:
             self.loss = val_loss
             self.counter = 0
