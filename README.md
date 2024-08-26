@@ -558,6 +558,38 @@ These results obtained using a subset of the data as the training set and valida
 
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
 
+### 4.4 BART for Paraphrase Type Detection
+
+#### **4.4.1 Data Overview**
+
+The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned  on `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
+The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
+#### **4.4.2 The MCC Score**
+The MCC score is defined as:
+$$
+MCC = (TP x TN - FP x FN) \over (\sqrt(TP))
+$$
+
+#### **4.4.3 Impact of Class Weights on accuracy and MMC score**
+| configuration                  |Accuracy             | MCC score          |
+|--------------------------------|---------------------|--------------------|
+| baseline                       | 83.33               | 0.067              |
+| Class weights with baseline    | 61.5                | 0.148              |
+| Best                           | 68.34               | 0.201              |
+
+As predicted, the Accuracy will go down, as a compromise, due to prioritizing the minority class, but is still acceptable. The biggest problem with Class Weight implementation, was that it was very sensitive to bad hyperparamerization, especially when using SophiaG optimizer. The AdamW optimizer performed better on average and was more robust, but choosing a too low or high learning rate or too low batch size can make the model easily collapse.
+
+#### **4.4.4 Overall best MCC score**
+The highest MCC score achieved was **0.201** with the following configuration:
+- **Pooling Strategy:** `Attention`
+- **Extra Context Layer:** `False`
+- **Regularize Context:** `True`
+- **Learning Rate:** `5e-5`
+- **Hidden Dropout Probability:** `0.5`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Epochs:** `5`
+
 ---
 
 ## Results Summary
@@ -566,11 +598,11 @@ Based on these results, I decided to add the average pooling strategie to the mo
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
+|               | **Paraphrase Type Detection (MCC)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
-| Baseline      | 0.833                               | -                                                |
-| Improvement 1 | ...                                 | 22.765                                           |
-| Improvement 2 | ...                                 | 24.266                                           |
+| Baseline      | 0.067                               | -                                                |
+| Improvement 1 | 0.148                               | 22.765                                           |
+| Improvement 2 | 0.201                               | 24.266                                           |
 
 ### BERT
 
