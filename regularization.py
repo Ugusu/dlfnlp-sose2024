@@ -76,7 +76,7 @@ class SMART:
         concatenated_attention_masks = attention_masks[0]
 
         for i in range(len(input_ids)):
-            embeddings = self.model.embed(input_ids[i])
+            embeddings = self.model.bert.embed(input_ids[i])
             embeddings = self.perturb(embeddings, attention_masks[i])
             if concatenated_embeddings is None:
                 concatenated_embeddings = embeddings
