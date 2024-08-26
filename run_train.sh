@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=train-bart-detection
-#SBATCH -t 01:15:00                  # estimated time
+#SBATCH -t 04:30:00                  # estimated time
 #SBATCH -p grete                     # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G A100:1                    # take 1 GPU, see https://docs.hpc.gwdg.de/compute_partitions/gpu_partitions/index.html for more options
 #SBATCH --mem-per-gpu=8G             # setting the right constraints for the splitted gpu partitions
@@ -33,7 +33,7 @@ echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the script:
 # This is the default training command; change to specific task and desired hyperparameters
-python bart_detection.py --epochs=10 --use_gpu
+python bart_detection_grid_search.py
 
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-train-bart-detection-<jobid>.out
