@@ -84,6 +84,10 @@ There are a lot of parameters that can be set. The most important ones are:
 | `--hidden_dropout_prob` | Dropout probability for hidden layers.                                                |
 | `--lr`                  | Learning rate, defaults to `1e-3` for `pretrain`, `1e-5` for `finetune`.              |
 | `--local_files_only`    | Force the use of local files only (do not download from remote repositories).         |
+| `--smart_enable`        | Enables Smoothness-Inducing Adversarial Regularization (SMART)                        |
+| `--epsilon`             | The epsilon (used in SMART)                                                           |
+| `--alpha`               | Step size for adversarial perturbation in SMART                                       |
+| `--steps`               | Number of steps for generating perturbations in SMART                                 |
 
 All parameters and their descriptions can be seen by running:
 
