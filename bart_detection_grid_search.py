@@ -39,9 +39,9 @@ def get_best_parameters(parameter_grid):
     best_params = None
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
-    for lr, batch_size, optim_name in itertools.product(parameter_grid['learning_rate'],
-                                                        parameter_grid['batch_size'],
-                                                        parameter_grid['optimizer']):
+    for lr, optim_name, batch_size in itertools.product(parameter_grid['starting_lr'],
+                                                        parameter_grid['optimizer'],
+                                                        parameter_grid['batch_size']):
         train_data = bart_detection.transform_data(train_dataset, max_length=256,
                                                    batch_size=batch_size)
         val_data = bart_detection.transform_data(dev_dataset, max_length=256,
