@@ -72,20 +72,18 @@ class SMART:
         if not isinstance(attention_masks, list):
             attention_masks = [attention_masks]
 
-        concatenated_embeddings = None
-        concatenated_attention_masks = attention_masks[0]
+        all_input_ids = input_ids[0]
+        all_attention_mask = attention_masks[0]
 
-        for i in range(len(input_ids)):
-            embeddings = self.model.bert.embed(input_ids[i])
-            embeddings = self.perturb(embeddings, attention_masks[i])
-            if concatenated_embeddings is None:
-                concatenated_embeddings = embeddings
-            else:
-                concatenated_embeddings = torch.cat((concatenated_embeddings, embeddings[:, 1:, :]), dim=1)
-                concatenated_attention_masks = torch.cat((concatenated_attention_masks, attention_masks[i][:, 1:]), dim=1)
+        for i in range(1, len(input_ids)):
+            all_input_ids = torch.cat((all_input_ids, input_ids[i]), dim=1)
+            all_attention_mask = torch.cat((all_attention_mask, attention_masks[i]), dim=1)
+
+        embeddings = self.model.bert.embed(all_input_ids)
+        perturbed_embeddings = self.perturb(embeddings, all_attention_mask)
 
         with torch.no_grad():
-            perturbed_hidden_state = self.model.bert.encode(concatenated_embeddings, concatenated_attention_masks)
+            perturbed_hidden_state = self.model.bert.encode(perturbed_embeddings, all_attention_mask)
             perturbed_cls = self.model.bert.pooler_dense(perturbed_hidden_state[:, 0])
             perturbed_cls = self.model.bert.pooler_af(perturbed_cls)
             perturbed_logits = perturbed_hidden_state
