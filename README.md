@@ -550,7 +550,7 @@ These results obtained using a subset of the data as the training set and valida
 
 ### 4.3 BERT for Semantic Textual Similarity (STS)
 
-### **4.3.1 Effectiveness of Pre-training on the Quora Dataset**
+#### **4.3.1 Effectiveness of Pre-training on the Quora Dataset**
 
 Given the substantial size of the Quora dataset, I hypothesized that pre-training on this data could enhance the model's performance on the STS task through multitask learning. But as previously discussed, the pre-training on the Quora dataset should be conducted prior to fine-tuning on the STS dataset. This approach prevents the Quora dataset from overwriting the learned weights derived from the STS dataset, due to the relative size difference between the two datasets.
 
@@ -612,7 +612,7 @@ All other hyperparameters were configured as follows:
 - **subset_size:** None
 - **task:** sts
 
-The correlation scores on the development dataset for each of these implementations were as follows:
+The correlation scores obtained on the development dataset for each of these implementations were:
  
 | Pooling Strategy                                     | STS Corr (Max)     |
 |------------------------------------------------------|--------------------|
@@ -622,10 +622,10 @@ The correlation scores on the development dataset for each of these implementati
 | Average, independent, cosine similarity              | 0.406              |
 
 
-Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategy and the linear similarity prediction.
-
-
-#### **4.3.3 Effectiveness of both strategies**
+#### **4.3.3 Improvement decission**
+Based on these results from **4.3.2 I decided to use average pooling on a combined embedding for both sentences. 
+The results from **4.3.1 suggest that loading the state of the model for the Paraphrase Detection task might further improve the performance on the STS task. Therefore, finally I decided to first
+Given 
 
 
 ---
