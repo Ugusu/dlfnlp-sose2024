@@ -263,6 +263,8 @@ Before applying the noise to the input, it is updated for *M* steps depending on
 
 $$\delta = \delta + \alpha \cdot \text{sign}(\nabla_{\delta} \mathcal{L}(\theta; x + \delta))$$
 
+$$\delta = clip(\delta, -\epsilon, \epsilon)$$
+
 where $$\alpha$$ is the step size and $$\epsilon$$ is the maximum perturbation size.
 
 Then the noisy input is used to make predictions:
