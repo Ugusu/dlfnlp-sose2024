@@ -1,0 +1,29 @@
+epochs: 6
+learning_rate: 3e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 1e-05, 'betas': (0.1, 0.001), 'rho': 0.02, 'weight_decay': 0.1}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 10
+max_length: 256
+gradual_unfreezing: True
+num_layers_to_freeze: 12
+dataset: etpc-paraphrase-train.csv
+subset: 0.1
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [24.896962748427867, 24.920251199470158, 23.260908392223637, 23.75408476933615, 23.04679925226086, 24.004151105805196]
+penalized_bleu_val: 25.544481125624067
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+The sentence parts are rotated if there is a comma in between

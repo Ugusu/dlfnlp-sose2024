@@ -1,0 +1,32 @@
+epochs: 3
+learning_rate: 1e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 1e-05, 'betas': (0.1, 0.001), 'rho': 0.02, 'weight_decay': 0.01}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 1
+max_length: 256
+gradual_unfreezing: True
+num_layers_to_freeze: 12
+dataset: etpc-paraphrase-train.csv
+subset: 0.01
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [25.92087600480684, 33.073309227966085, 30.310841607358103]
+penalized_bleu_val: 30.604675751806937
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to the training data
+example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
+example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
+example_predictions: ['Oracle said 34.75 million PeopleSoft employees had been added to its payroll system as of Thursday morning.', 'But it was not clear how effective, if at all, the Danish ban had been in reducing the spread among the animals.  CCONJ PRON VERB SCONJ DET ADJ NOUN AUX AUX ADJ', '10 in Indiana and five in Illinois. State health officials said there have been 18 suspected cases in Wisconsin, four in Michigan and one in Ohio.', 'students are most likely to be taught by a 15 - year veteran with a growing workload and slightly less interest in staying in teaching, the work - force survey shows. Overall, the work force survey found that students were more likely to', 'Two of the six people who testified before Congress Wednesday were engaged in a long-running dispute about whether the New York Yankees and New York Mets should be allowed to play together.']

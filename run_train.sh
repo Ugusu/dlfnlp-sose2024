@@ -33,8 +33,7 @@ echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the script:
 # This is the default training command; change to specific task and desired hyperparameters
-python -u multitask_classifier.py --use_gpu --local_files_only --option finetune --task sst --hidden_dropout_prob 0.1
-
+python -u multitask_classifier.py --use_gpu --local_files_only --option finetune --task sst --hidden_dropout_prob 0.2
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-train-multitask_classifier-<jobid>.out
 # tail -f slurm_files/slurm-train-multitask_classifier-<jobid>.err
