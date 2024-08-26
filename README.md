@@ -138,7 +138,7 @@ BART has 2 tasks:
 - BART_generation: for this task, we used the BART model to generate paraphrases of a given sentence.
   - We used the `BartForConditionalGeneration` model from the `transformers` library the pretrained `bart-large` has been used.
   - The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs.
-  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 5 epochs with a batch size of 16.
+  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 6 epochs with a batch size of 64.
   - The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 
 - BART_detection: We used BART-large model to detect 7 differenct paraphrase types given a sentence. Tokenization was done using AutoTokenizer from the transformers library and using a pretrained BartModel from the same library, the model was fine-tuned on the etpc-paraphrase-train.csv using AdamW optimzer and CrossEntropyLoss loss function and validated on the etpc-paraphrase-dev.csv dataset for 5 epochs, learning rate 1e-5 and batch size 16. It is saved for best validation loss performance and was then tested on the etpc-paraphrase-generation-test-student dataset.
@@ -471,9 +471,9 @@ if num_trainable == max_layers:
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
 The reward function for the paraphrase generation model is defined as:
-$$
+[
 R = 0.5 \cdot B + 0.5 \cdot C
-$$
+]
 where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the cosine similarity score.
 
 #### 1. BLEU-like Score (B)
