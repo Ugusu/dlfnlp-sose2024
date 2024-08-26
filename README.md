@@ -481,7 +481,7 @@ The results for the dev dataset.
 | Baseline                     | 0.522                              | 0.877                          | 0.849                                 |
 | Extra CGA Layer              | 0.263                              | 0.865                          | 0.770                                 |
 | CGA-based Attention-Pooling  | 0.276                              | 0.867                          | 0.698                                 |
-| Optimal Hyperparameters Only | (waiting for results)              | (waiting for results)          | (waiting for results)                 |
+| Optimal Hyperparameters Only | 0.328                              | 0.874                          | 0.797                                 |
 | Improvement 4                | ...                                | ...                            | ...                                   |
 | Improvement 5                | ...                                | ...                            | ...                                   |
 | Improvement 6                | ...                                | ...                            | ...                                   |
