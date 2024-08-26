@@ -9,12 +9,12 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
-#from torch.optim.lr_scheduler import ExponentialLR
+
 
 from tqdm import tqdm
 
 
-from bert_modified import BertModel
+from bert_mean_pooling import BertModel
 
 from datasets import (
     SentenceClassificationDataset,
@@ -300,22 +300,10 @@ def train_multitask(args):
     optimizer.load_state_dict(checkpoint['optim'])
     
     
-    #num_training_steps = len(sts_train_dataloader) * args.epochs
-    #num_warmup_steps = int(0.1 * num_training_steps) 
+   
     
     
-    # Initialize warm-up scheduler
-    
-    #warmup_scheduler = get_linear_schedule_with_warmup(
-    #optimizer,
-    #num_warmup_steps=num_warmup_steps,
-    #num_training_steps=num_training_steps)
-    
-    
-    
-    # Initialize exponential decay scheduler
-    
-    #decay_scheduler = ExponentialLR(optimizer, gamma=0.9) 
+  
     
     
     
@@ -326,7 +314,7 @@ def train_multitask(args):
         model.train()
         train_loss = 0
         num_batches = 0
-        step=1
+        
         if args.task == "sst" or args.task == "multitask":
             # Train the model on the sst dataset.
 
@@ -375,23 +363,11 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 normalized_logits = model.predict_similarity(b_ids_1, b_mask_1, b_ids_2, b_mask_2)
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
-                
-                
-                
-                #bce_loss = nn.BCELoss()
-                #loss = bce_loss(normalized_logits.squeeze(), b_labels_normalized)
+    
                 
                 loss.backward()
                 optimizer.step()
                 
-                # Update learning rate
-                #if step < num_warmup_steps:
-                    #warmup_scheduler.step()  # Warm-up phase
-                #else:
-                    #decay_scheduler.step()  # Exponential decay after warm-up
-                
-                
-                #step += 1
                 train_loss += loss.item()
                 num_batches += 1
 
