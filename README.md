@@ -600,8 +600,8 @@ Next, I aimed to better adapt the sentence embeddings to the STS task by introdu
 2. **Independent Embeddings**: Separate embeddings for each sentence.
 
 For the independent embeddings strategy, I tested two approaches.
-- Applying linear layer similarity, which is the approach from Phase 1. The **predict_similarity** function concatenates both embeddings and feeding them into a linear layer to get a similarity score, which is then normalized to match the scoring domain, which is [0,5]. This approach is implemented calling the **multitask_classifier_independent_embeddings.py** classifier in the **run_train.sh** script.
-- Applying cosine similarity to both embeddings. The **predict_similarity** function obtains the cosine similarity of both embeddings, which belongs to the interval [-1,1], and normalizes it to match the scoring domain. This approach is implemented calling the **multitask_classifier_cosine_sim.py** classifier in the **run_train.sh** script.
+- Applying linear layer similarity, which is the approach from Phase 1. The `predict_similarity` function concatenates both embeddings and feeding them into a linear layer to get a similarity score, which is then normalized to match the scoring domain, which is [0,5]. This approach is implemented calling the `multitask_classifier_independent_embeddings.py` classifier in the `run_train.sh` script.
+- Applying cosine similarity to both embeddings. The `predict_similarity` function obtains the cosine similarity of both embeddings, which belongs to the interval [-1,1], and normalizes it to match the scoring domain. This approach is implemented calling the `multitask_classifier_cosine_sim.py` classifier in the `run_train.sh` script.
 
 All other hyperparameters were configured as follows:  
 
