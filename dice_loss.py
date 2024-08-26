@@ -97,6 +97,7 @@ class DiceLoss(nn.Module):
 
     def _multiple_class(self, input, target, logits_size, mask=None):
         flat_input = input
+        target = target.to(torch.int64)
         flat_target = F.one_hot(target, num_classes=logits_size).float() if self.index_label_position else target.float()
         flat_input = torch.nn.Softmax(dim=1)(flat_input) if self.with_logits else flat_input
 
