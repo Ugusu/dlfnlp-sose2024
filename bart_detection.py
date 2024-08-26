@@ -249,7 +249,7 @@ def train_model(model: nn.Module,
         print(f"Validation Matthews Correlation Coefficient : {val_matthews}")
 
         # Update for best Matthews Correlation Coefficient
-        if val_matthews < best_matthews:
+        if val_matthews > best_matthews:
             best_matthews = val_matthews
             best_accuracy = val_accuracy
             best_epoch = epoch + 1

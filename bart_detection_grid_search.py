@@ -73,10 +73,10 @@ def get_best_parameters(parameter_grid):
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-4, 5e-5],
-        'optimizer': ['AdamW'],
-        'batch_size': [96],
-        'weight_decay': [0.01]
+        'starting_lr': [1e-3, 1e-5, 5e-4, 1e-4],
+        'optimizer': ['SophiaG', 'AdamW'],
+        'batch_size': [16, 48, 96],
+        'weight_decay': [0.1, 0.01]
     }
     seed_everything()
     results = get_best_parameters(parameter_grid)
