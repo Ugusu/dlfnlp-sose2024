@@ -33,7 +33,7 @@ echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the script:
 # This is the default training command; change to specific task and desired hyperparameters
-python bart_detection.py --use_gpu --batch_size=96 --lr=0.0001 --epochs=10 --weight_decay=0.01 --optimizer=AdamW
+python bart_detection.py --use_gpu --batch_size=96 --lr=0.0001 --epochs=10 --weight_decay=0.001 --optimizer=AdamW
 
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-train-bart-detection-<jobid>.out
