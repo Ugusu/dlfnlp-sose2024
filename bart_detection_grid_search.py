@@ -64,9 +64,9 @@ def get_best_parameters(parameter_grid):
 
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-5, 1e-6],
-        'optimizer': ['AdamW', 'SophiaG'],
-        'batch_size': [16, 32],
+        'starting_lr': [2e-5, 3e-5],
+        'optimizer': ['SophiaG'],
+        'batch_size': [16, 32, 48, 96],
     }
     seed_everything()
     get_best_parameters(parameter_grid)
