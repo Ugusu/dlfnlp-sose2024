@@ -372,7 +372,7 @@ def train_multitask(args):
                 loss = F.cross_entropy(logits, b_labels.view(-1))
                 
                 if smart_regularizer:
-                    loss += smart_regularizer.forward(logits, b_ids, b_mask, classifier=True)
+                    loss += smart_regularizer.forward(logits, b_ids, b_mask, [self.dropout, self.sentiment_classifier], classifier=True)
 
                 loss.backward()
                 optimizer.step()
@@ -406,7 +406,7 @@ def train_multitask(args):
                 loss = F.mse_loss(normalized_logits, b_labels.view(-1, 1))
                 
                 if smart_regularizer:
-                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], classifier=True)
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [self.dropout, self.predict_similarity], classifier=True)
 
                 loss.backward()
                 optimizer.step()
@@ -441,7 +441,7 @@ def train_multitask(args):
 
                 # Add SMART regularization
                 if smart_regularizer:
-                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], classifier=True)
+                    loss += smart_regularizer.forward(logits, [b_ids_1, b_ids_2], [b_mask_1, b_mask_2], [self.dropout, self.predict_paraphrase], classifier=True)
                     
                 loss.backward()
 

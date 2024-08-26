@@ -43,7 +43,7 @@ class SMART:
         
         for step in range(self.steps):
             perturbed_embeddings = input_embeddings + perturbation
-            outputs = self.model.encode(perturbed_embeddings, attention_mask)
+            outputs = self.model.bert.encode(perturbed_embeddings, attention_mask)
             loss = outputs.norm()
             
             if perturbation.grad is not None:
@@ -54,11 +54,18 @@ class SMART:
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon).detach()
             perturbation.requires_grad_(True)
-            self.model.zero_grad()
+            self.model.bert.zero_grad()
 
         return input_embeddings + perturbation
     
-    def forward(self, logits: torch.Tensor, input_ids: list[torch.Tensor], attention_masks: list[torch.Tensor], classifier: bool=True) -> torch.Tensor:
+    def forward(
+        self, 
+        logits: torch.Tensor, 
+        input_ids: list[torch.Tensor], 
+        attention_masks: list[torch.Tensor], 
+        layers: list,
+        classifier: bool=True,
+    ) -> torch.Tensor:
         if not isinstance(input_ids, list):
             input_ids = [input_ids]
         
@@ -78,9 +85,14 @@ class SMART:
                 concatenated_attention_masks = torch.cat((concatenated_attention_masks, attention_masks[i][:, 1:]), dim=1)
 
         with torch.no_grad():
-            perturbed_outputs = self.model.encode(concatenated_embeddings, concatenated_attention_masks)
-            perturbed_logits = self.model.pooler_dense(perturbed_outputs[:, 0])
-            perturbed_logits = self.model.pooler_af(perturbed_logits)
+            perturbed_hidden_state = self.model.bert.encode(concatenated_embeddings, concatenated_attention_masks)
+            perturbed_cls = self.model.bert.pooler_dense(perturbed_hidden_state[:, 0])
+            perturbed_cls = self.model.bert.pooler_af(perturbed_cls)
+            perturbed_logits = perturbed_hidden_state
+
+            for layer in layers:
+                perturbed_logits = layer(perturbed_logits)
+
         
         if classifier:
             # Classification: KL-divergence
