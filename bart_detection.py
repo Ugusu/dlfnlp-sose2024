@@ -371,7 +371,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=256)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--optimizer", type=str, default='AdamW')
     args = parser.parse_args()
