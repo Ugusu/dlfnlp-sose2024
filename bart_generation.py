@@ -46,7 +46,7 @@ config_dict = {
     "max_length": 256,
     "gradual_unfreezing": True,
     "num_layers_to_freeze": 12,
-    "rl_weight": 0,
+    "rl_weight": 0.85,
     "dataset": "etpc-paraphrase-train.csv",
     "subset": 1,
     "val_dataset": "etpc-paraphrase-dev.csv",
