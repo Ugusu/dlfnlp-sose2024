@@ -468,9 +468,9 @@ where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the 
 
 #### 1. BLEU-like Score (B)
 The BLEU-like score is computed as:
-$$
+[
 B = BP \cdot P
-$$
+]
 where $(BP)$ is the brevity penalty and $(P)$ is the precision.
 
 #### 2. Precision (P)
