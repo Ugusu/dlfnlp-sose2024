@@ -754,7 +754,12 @@ Explain the contribution of each group member:
 **Enno Weber:**
 - Phase 1: 
   - Implemented BART paraphrase detection transformer, training loop and test function.
-- Phase 2: ...
+- Phase 2:
+  - Implemented Class Weights into CV Loss Function
+  - Extensive Hyperparameter Search
+  - Implemented Early Stopping
+  - Compared and implemented different Learning Rate schedulers including CosineAnnealingLR and CosineAnnealingLR with warmup
+  - improved regularization by adding weight decay to optimizer
 
 ---
 
