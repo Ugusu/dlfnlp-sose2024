@@ -173,7 +173,7 @@ def train_model(model: nn.Module,
     """
     # Loss Function and Optimizer
     class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
-    loss_fn = DiceLoss()
+    loss_fn = dice_loss.DiceLoss()
 
     # Set best mmc threshold
     best_matthews = float("-inf")
