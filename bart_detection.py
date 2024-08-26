@@ -371,7 +371,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=256)
-    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--optimizer", type=str, default='AdamW')
     args = parser.parse_args()
@@ -408,7 +408,7 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
         optimizer = AdamW(model.parameters(), lr=args.lr)
     warmup_epochs = 3
     cosine_epochs = args.epochs - warmup_epochs
-    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=1e-6, total_iters=cosine_epochs)
+    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=0.01 / args.lr, total_iters=cosine_epochs)
     cosine_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=cosine_epochs, eta_min=0)
     scheduler = SequentialLR(optimizer=optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
                              milestones=[warmup_epochs])
