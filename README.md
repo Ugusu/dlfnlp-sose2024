@@ -274,7 +274,7 @@ if the task is classification, or Mean Squared Error if the task is regression.
 
 - Classification:
 
-$$\mathcal{L}_{\text{SMART}} = \frac{1}{2} \left( \mathcal{KL}(\gamma_{\text{perturbed}} \parallel \gamma + \mathcal{KL}(\gamma \parallel \gamma_{\text{perturbed}}) \right)$$
+$$\mathcal{L}_{\text{SMART}} = \frac{1}{2} \left( \mathcal{KL}(\gamma_{\text{perturbed}} \parallel \gamma) + \mathcal{KL}(\gamma \parallel \gamma_{\text{perturbed}}) \right)$$
 
 
 - Regression:
