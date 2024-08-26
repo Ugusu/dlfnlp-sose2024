@@ -51,7 +51,7 @@ class EarlyStopping:
     def __init__(self, patience=3):
         self.patience = patience
         self.counter = 0
-        self.loss = float('-inf')
+        self.loss = float('inf')
 
     def early_stop(self, val_loss):
         if val_loss < self.loss:
