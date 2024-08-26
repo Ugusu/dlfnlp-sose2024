@@ -749,7 +749,9 @@ Explain the contribution of each group member:
   - Implemented the `BertLayer` class.
   - Developed functionality for paraphrase prediction task.
   - Developed the training loop for paraphrase prediction task.
-- Phase 2: ...
+- Phase 2:
+  - Implemented Smoothness-Inducing Adversarial Regularization (SMART).
+  - Trying to locate task performance downgrade reasons.
 
 **Enno Weber:**
 - Phase 1: 
@@ -778,6 +780,8 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
 - [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
 - [Dice Loss for Data-imbalanced NLP Task](https://arxiv.org/abs/1911.02855): Li et al., 2019
+- [BERTer: The Efficient One](https://arxiv.org/abs/2407.14039): Pradyumna Saligram, Andrew Lanpouthakoun, 2024
+- [SMART: Robust and Efficient Fine-Tuning for Pre-trained Natural Language Models through Principled Regularized Optimization](https://arxiv.org/abs/1911.03437): Haoming Jiang et al. 2021
 
 ## Acknowledgement
 
