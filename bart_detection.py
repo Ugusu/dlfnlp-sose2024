@@ -178,11 +178,10 @@ def train_model(model: nn.Module,
             loss = loss_fn(outputs, b_labels)
             loss.backward()
             optimizer.step()
-            scheduler.step()
 
             train_loss += loss.item()
             num_batches += 1
-
+        scheduler.step()
         # Calculate Training loss
         train_loss = train_loss / num_batches
 
