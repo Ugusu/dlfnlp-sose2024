@@ -205,7 +205,7 @@ def train_model(model: nn.Module,
 
             optimizer.zero_grad()
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
-            loss = loss_fn(outputs, b_labels)
+            loss = loss_fn(outputs.flatten(), b_labels)
             loss.backward()
             # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
@@ -239,7 +239,7 @@ def train_model(model: nn.Module,
                 b_labels = b_labels.to(device)
 
                 outputs = model(input_ids=b_ids, attention_mask=b_mask)
-                loss = loss_fn(outputs, b_labels)
+                loss = loss_fn(outputs.flatten(), b_labels)
                 val_loss += loss.item()
 
         # Calculate Validation loss and accuracy
