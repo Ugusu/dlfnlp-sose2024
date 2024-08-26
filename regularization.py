@@ -39,11 +39,15 @@ class SMART:
         Returns:
             perturbed_embeddings (torch.Tensor): The embeddings with adversarial perturbation.
         """
+        print(f'perturb: input_embeddings.shape: {input_embeddings.shape}')
         perturbation = torch.randn_like(input_embeddings, requires_grad=True)
+        print(f'perturb: perturbation.shape: {perturbation.shape}')
         
         for step in range(self.steps):
             perturbed_embeddings = input_embeddings + perturbation
+            print(f'perturb: perturbed_embeddings.shape: {perturbed_embeddings.shape}')
             outputs = self.model.bert.encode(perturbed_embeddings, attention_mask)
+            print(f'perturb: outputs.shape: {outputs.shape}')
             loss = outputs.norm()
             
             if perturbation.grad is not None:
@@ -52,7 +56,9 @@ class SMART:
             loss.backward(retain_graph=True)
 
             perturbation = perturbation + self.alpha * perturbation.grad.sign()
+            print(f'perturb: perturbation.shape step {step}: {perturbation.shape}')
             perturbation = torch.clamp(perturbation, -self.epsilon, self.epsilon).detach()
+            print(f'perturb: perturbation.shape clamp step {step}: {perturbation.shape}')
             perturbation.requires_grad_(True)
             self.model.bert.zero_grad()
 
@@ -81,15 +87,20 @@ class SMART:
 
         embeddings = self.model.bert.embed(all_input_ids)
         perturbed_embeddings = self.perturb(embeddings, all_attention_mask)
+        print(f'smart forward: perturbed_embeddings.shape: {perturbed_embeddings.shape}')
 
         with torch.no_grad():
             perturbed_hidden_state = self.model.bert.encode(perturbed_embeddings, all_attention_mask)
+            print(f'smart forward: perturbed_hidden_state.shape: {perturbed_hidden_state.shape}')
             perturbed_cls = self.model.bert.pooler_dense(perturbed_hidden_state[:, 0])
             perturbed_cls = self.model.bert.pooler_af(perturbed_cls)
             perturbed_logits = perturbed_hidden_state
 
             for layer in layers:
                 perturbed_logits = layer(perturbed_logits)
+
+            print(f'smart forward: perturbed_logits.shape: {perturbed_logits.shape}')
+            print(f'smart forward: logits.shape: {logits.shape}')
 
         
         if classifier:

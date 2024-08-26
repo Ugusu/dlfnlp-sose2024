@@ -131,11 +131,17 @@ class MultitaskBERT(nn.Module):
             attention_mask=attention_mask
         )
 
+        print(f'model predict_sentiment: pooled_output.shape: {pooled_output.shape}')
+
         # Apply dropout
         pooled_output = self.dropout(pooled_output)
 
+        print(f'model predict_sentiment: pooled_output.shape dropout: {pooled_output.shape}')
+
         # Compute logits for sentiment classification
         logits: torch.Tensor = self.sentiment_classifier(input=pooled_output)
+
+        print(f'model predict_sentiment: logits.shape: {logits.shape}')
 
         return logits
 
