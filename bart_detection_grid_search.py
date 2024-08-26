@@ -36,8 +36,6 @@ def seed_everything(seed: int = 11711) -> None:
 
 def get_best_parameters(parameter_grid):
     df = []
-    best_matthew = -1
-    best_params = None
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
     for lr, optim_name, batch_size, weight_decay in itertools.product(parameter_grid['starting_lr'],
@@ -69,7 +67,9 @@ def get_best_parameters(parameter_grid):
 
         df.append([best_mcc, best_accuracy, best_epoch, lr, batch_size, optim_name, weight_decay])
     results = pd.DataFrame(df, columns=['MCC', 'Accuracy', 'Epoch', 'lr', 'Batch Size', 'Optimizer', 'Weight Decay'])
-    results.to_csv('results.csv')
+    results.to_csv(
+        "data/results.csv", index=False, sep="\t"
+    )
 
 
 if __name__ == "__main__":
