@@ -9,6 +9,7 @@ import sys
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from enum import Enum
 from functools import partial
 from hashlib import sha256
 from pathlib import Path
@@ -694,3 +695,13 @@ def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str, all
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     masked_tokens = [tokenizer.mask_token if token in important_tokens else token for token in tokens]
     return tokenizer.convert_tokens_to_string(masked_tokens)'''
+
+class PoolingStrategy(Enum):
+    CLS = "cls"
+    AVERAGE = "average"
+    MAX = "max"
+    ATTENTION = "attention"
+
+class OptimizerType(Enum):
+    ADAMW = "adamw"
+    SOPHIA = "sophia"
