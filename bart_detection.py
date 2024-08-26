@@ -13,6 +13,7 @@ from transformers import AutoTokenizer, BartModel
 from optimizer import SophiaG, AdamW
 from sklearn.metrics import matthews_corrcoef
 from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
+import dice_loss
 
 TQDM_DISABLE = False
 
@@ -172,7 +173,7 @@ def train_model(model: nn.Module,
     """
     # Loss Function and Optimizer
     class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
-    loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
+    loss_fn = DiceLoss()
 
     # Set best mmc threshold
     best_matthews = float("-inf")
