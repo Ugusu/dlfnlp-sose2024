@@ -180,6 +180,8 @@ def train_model(model: nn.Module,
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
             loss = loss_fn(outputs, b_labels)
             loss.backward()
+            # gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
             optimizer.step()
 
             train_loss += loss.item()
