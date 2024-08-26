@@ -290,7 +290,7 @@ We recommend running these scripts from the project's home directory.
 
 ## **4. Results**
 
-### 4.1 Grid Search, CGA and Attention-based Pooling
+### 4.1 BERT for Sentiment Prediction: Grid Search, CGA and Attention-based Pooling
 
 #### **4.1.1 Data Overview**
 
@@ -298,12 +298,12 @@ A total of 768 experiments were conducted, all of which successfully completed. 
 
 #### **4.1.2 Overall Best SST Accuracy Performance**
 
-The highest SST accuracy achieved was **0.530233** with the following configuration:
-- **Pooling Strategy:** `CLS`
+The highest SST accuracy achieved was **0.537** with the following configuration:
+- **Pooling Strategy:** `Attention`
 - **Extra Context Layer:** `False`
 - **Regularize Context:** `True`
-- **Learning Rate:** `1e-5`
-- **Hidden Dropout Probability:** `0.3`
+- **Learning Rate:** `5e-5`
+- **Hidden Dropout Probability:** `0.5`
 - **Batch Size:** `64`
 - **Optimizer:** `AdamW`
 - **Epochs:** `5`
@@ -319,56 +319,46 @@ the same order of magnitude.
 
 #### **4.1.3 Overall Effect of CGA Layer on SST Performance**
 
-The Global Context Layer showed the following impact on SST accuracy:
+The regularized Contextual Global Attention (CGA) Layer showed better accuracy than the non-regularized variant.
+The following table shows the best accuracy values reached with and without the regularized CGA layer variant, and using
+the optimal hyperparameters found via grid search. An improvement upon the baseline accuracy 0.522 of the vanilla version was
+demonstrated:
 
-| CGA Layer w/ optimized Hyperparameters | SST Accuracy |
-|----------------------------------------|--------------|
-| False                                  | 0.530        |
-| True                                   | 0.520        |
-| Baseline                               | 0.522        |
+| CGA Layer | Best SST Accuracy |
+|-----------|-------------------|
+| Baseline  | 0.522             |
+| True      | 0.527             |
+| False     | 0.537             |
 
-
-The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
-selection optimized through the grid search. Similarly the higher accuracy with CGA-based Attention-pooling can be attributed
-to optimal hyperparameters, rather than the pooling mechanism itself. The following table shows the results, all using the optimal hyperparameters found  via the grid search:
-
-| **Stanford Sentiment Treebank (SST)** | **Best Dev accuracy** |
-|---------------------------------------|-----------------------|
-| Baseline                              | 0.522                 | 
-| Contextual Global Attention (CGA)     | 0.520                 |
-| CGA-based Attention-pooling           | 0.530                 |
-| Optimal Hyperparameters Only          | 0.530                 |
+The higher accuracy of the model without a CGA layer with respect to the baseline can be attributed to the newly introduced attention-based pooling using a CGA layer, as well as the alternate hyperparameter
+selection optimized through the grid search.
 
 The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer slightly outperformed the one with it, with most
 results being concentrated on the ~0.500 mark for both types of models. 
 
-#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
+![alt text](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png)
 
-A deeper insight into the effects of regularized and non-regularized CGA layers on SST performance across all experiments
-reveals:
-- Regularization increases STT accuracy when extra CGA layer is present.
-- Attention-based pooling using a CGA layer doesn't improve SST accuracy on average, even when regularized.
+#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
 
 Additionally, the best SST performance under different conditions was as follows:
 
-- **With Extra Context Layer:** 0.523 (CLS, Regularize Context: True, AdamW)
-- **With Attention Pooling:** 0.522 (Attention, Regularize Context: True, AdamW)
-- **With Both:** 0.505 (Regularize Context: True, AdamW)
+- The performance is quite stable across the configurations, with a median accuracy close to ~0.500.
+- Outliers indicate that in some cases, the accuracy can drop significantly, especially when the context is not regularized.
+- Regularizing context appears to have less impact on the distribution, but a few extreme low outliers are observed.
 
 ![alt text](sst_grid_search_experiments/analyses_visualizations/sst_performance_comparison.png)
 
 #### **4.1.4 Effectiveness of Pooling Strategies**
 
 
-Pooling strategies were evaluated. All pooling strategies show equal performance, showcasing no effect on accuracy based on it. 
-It is still better than the baseline of 0.522, but this can be attributed to optimal hyperparameter selection as well:
+Pooling strategies were evaluated. CGA-based attention-pooling showed the best SST dev accuracy result.
 
 | Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
 |------------------|---------------------|--------------------|
-| CLS (default)    | 0.428               | 0.530              |
-| Attention        | 0.428               | 0.530              |
-| Average          | 0.428               | 0.530              |
-| Max              | 0.428               | 0.530              |
+| CLS (default)    | 0.472               | 0.534              |
+| Attention        | 0.473               | 0.537              |
+| Average          | 0.478               | 0.529              |
+| Max              | 0.474               | 0.533              |
 
 For an illustrative comparison, refer to the corresponding [box plot](sst_grid_search_experiments/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
 
@@ -390,9 +380,10 @@ The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset,
 #### **4.2.2 Best Model Performance**
 
 The best model performance was achieved with the following configuration:
-- **Epochs:** `10`
-- **Batch Size:** `10`
+- **Epochs:** `6`
+- **Batch Size:** `64`
 - **optimizer:** `SophiaG`
+- **optimizer parameters:** `{'lr': 3e-05, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}`
 - **scheduler gamma:** `0.675`
 - **scheduler step size:** `1`
 - **gradual unfreezing:** `8 layers`
@@ -411,12 +402,109 @@ This configuration can be replicated by running the following script:
 The Parse-Instructed Prefix (PIP) method was implemented to improve the quality of the generated paraphrases. The PIP method uses a parse tree to guide the generation of syntactically controlled paraphrases. The method was tested with different prefix lengths and methods to determine the optimal configuration for the BART model.
 In simple words, the PIP method uses a prefix to guide the model in generating paraphrases that adhere to the syntactic structure of the input sentence.
 
-#### **4.2.4 Reinforcement Learning for Paraphrase Generation**
+Key features of the PrefixModel:
 
-Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward, which is the penalized BLEU score in this case.
+Prefix Addition: A learnable prefix is added to the input embeddings. This prefix acts as a task-specific prompt that guides the model's behavior.
+```
+self.prefix = nn.Parameter(torch.randn(1, prefix_length, base_model.config.d_model))
+```
+
+Indirect Method: The model uses an MLP to generate the actual prefix from the learnable parameters. This adds flexibility to the prefix generation.
+```
+self.prefix_mlp = nn.Sequential(
+    nn.Linear(base_model.config.d_model, base_model.config.d_model),
+    nn.ReLU(),
+    nn.Linear(base_model.config.d_model, base_model.config.d_model)
+)
+```
+Integration with Base Model: The prefix is concatenated with the input embeddings before being passed to the encoder.
+```
+inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
+```
+
+Attention Mask Adjustment: The attention mask is adjusted to account for the added prefix.
+```
+prefix_attention_mask = torch.ones(batch_size, self.prefix_length, device=attention_mask.device)
+attention_mask = torch.cat([prefix_attention_mask, attention_mask], dim=1)
+```
+
+### **4.2.4 Gradual Unfreezing**
+Gradual unfreezing is a technique used to fine-tune large pre-trained models more effectively. It involves progressively unfreezing layers of the model during training, starting from the top (output) layers and moving towards the bottom (input) layers.
+Key aspects of gradual unfreezing in this implementation:
+
+Initial Freezing: A specified number of layers are initially frozen (parameters set to not require gradients).
+```
+for i in range(num_layers_to_freeze):
+    for param in model.model.encoder.layers[i].parameters():
+        param.requires_grad = False
+```
+Gradual Unfreezing: In each epoch or at specified intervals, a certain number of layers are unfrozen.
+```
+for i in range(num_layers_to_unfreeze):
+    for param in model.model.encoder.layers[-i].parameters():
+        param.requires_grad = True
+```
+Separate Unfreezing for Encoder and Decoder: The process is applied to both encoder and decoder layers independently.
+Tracking Trainable Layers: The code keeps track of how many layers are trainable after each unfreezing step.
+```
+num_trainable = sum([1 for layer in model.model.encoder.layers for param in layer.parameters() if param.requires_grad])
+```
+Maximum Limit: A maximum number of layers to unfreeze is set to prevent unfreezing the entire model if not desired.
+```
+if num_trainable == max_layers:
+    print(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+```
 
 
-#### 4.2.5 Results #### 
+
+#### **4.2.5 Reinforcement Learning for Paraphrase Generation**
+
+Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
+The reward function for the paraphrase generation model is defined as:
+$$
+R = 0.5 \cdot B + 0.5 \cdot C
+$$
+where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the cosine similarity score.
+
+#### 1. BLEU-like Score (B)
+The BLEU-like score is computed as:
+$$
+B = BP \cdot P
+$$
+where $(BP)$ is the brevity penalty and $(P)$ is the precision.
+
+#### 2. Precision (P)
+Let $(r)$ be the reference tokens and $(g)$ be the generated tokens. Then:
+$$
+P = \frac{\sum_{w \in g} \min(\text{count}_g(w), \text{count}_r(w))}{|g|}
+$$
+where $(\text{count}_g(w))$ and $(\text{count}_r(w))$ are the counts of word $(w)$ in the generated and reference sentences respectively.
+Brevity Penalty $(BP)$
+$$
+BP = \begin{cases}
+\exp(1 - \frac{|r|}{|g|}) & \text{if } |g| < |r| \
+1 & \text{otherwise}
+\end{cases}
+$$
+where $(|r|)$ and $(|g|)$ are the lengths of the reference and generated sentences respectively.
+#### 3. Cosine Similarity Score (C)
+The cosine similarity between the input sentence $(s_1)$ and the generated paraphrase $(s_2)$ is calculated as:
+$$
+C = \frac{\vec{v_1} \cdot \vec{v_2}}{||\vec{v_1}|| \cdot ||\vec{v_2}||}
+$$
+where $(\vec{v_1})$ and $(\vec{v_2})$ are the term frequency vectors of $(s_1)$ and $(s_2)$ respectively.
+3. 
+More explicitly:
+$$
+C = \frac{\sum_{w \in W} \text{tf}(w, s_1) \cdot \text{tf}(w, s_2)}{\sqrt{\sum_{w \in W} \text{tf}(w, s_1)^2} \cdot \sqrt{\sum_{w \in W} \text{tf}(w, s_2)^2}}
+$$
+where $(W)$ is the set of unique words in both sentences, and $(\text{tf}(w, s))$ is the term frequency of word $(w)$ in sentence $(s)$.
+
+The training process uses a combination of supervised learning (SL) and reinforcement learning (RL) to optimize the paraphrase generation model. The loss function is a weighted sum of the SL loss and the RL loss.
+$$
+L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}
+$$
+#### 4.2.6 Results #### 
 
 The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
@@ -441,6 +529,21 @@ Examples:
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
 
+### 4.3 BERT for Paraphrase Type Detection
+
+#### **4.3.1 Effectiveness of Pooling Strategies**
+ Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+ 
+| Pooling Strategy                                     | STS Corr (Max)     |
+|------------------------------------------------------|--------------------|
+| CLS, combined, logit (default)                       | 0.864              |
+| Average, combined, logit                             | 0.867              |
+| Average, independent, logit                          | 0.406              |
+| Average, independent, cosine similarity              | 0.406              |
+
+
+Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+
 ---
 
 ## Results Summary
@@ -453,7 +556,7 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 |---------------|-------------------------------------|--------------------------------------------------|
 | Baseline      | 0.833                               | -                                                |
 | Improvement 1 | ...                                 | 22.765                                           |
-| Improvement 2 | ...                                 | 24.211                                           |
+| Improvement 2 | ...                                 | 24.266                                           |
 
 ### BERT
 
@@ -466,7 +569,7 @@ The results for the dev dataset.
 | Baseline                     | 0.522                              | 0.877                          | 0.849                                 |
 | Extra CGA Layer              | 0.263                              | 0.865                          | 0.770                                 |
 | CGA-based Attention-Pooling  | 0.276                              | 0.867                          | 0.698                                 |
-| Optimal Hyperparameters Only | (waiting for results)              | (waiting for results)          | (waiting for results)                 |
+| Optimal Hyperparameters Only | 0.328                              | 0.874                          | 0.797                                 |
 | Improvement 4                | ...                                | ...                            | ...                                   |
 | Improvement 5                | ...                                | ...                            | ...                                   |
 | Improvement 6                | ...                                | ...                            | ...                                   |
@@ -496,8 +599,11 @@ Explain the contribution of each group member:
   - Implemented the `embed` function in the `BertModel` class.
   - Implemented missing functionality for the sentiment analysis task.
   - Assisted in adding docstrings and type hints to functions in `bert.py` and `multitask_classifier.py`.
-  - Filled and generated AI-usage card with input from all team members.
-- Phase 2: ...
+- Phase 2:
+  - Improved sentiment analysis task accuracy by implementing and experimenting with:
+    - Contextual Global Attention (CGA)
+    - Pooling strategies, including CGA-based attention-pooling
+    - Grid search experimentation for optimal hyperparameters
 
 **Amirreza Aleyasin:**
 - Phase 1:
@@ -544,16 +650,14 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762): Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin
 - [Paraphrase Types for Generation and Detection](https://aclanthology.org/2023.emnlp-main.746.pdf): Jan Philip Wahle, Bela Gipp, Terry Ruas, University of Göttingen, Germany {wahle,gipp,ruas}@uni-goettingen.de
 - [SemEval-2016 Task 1: Semantic Textual Similarity, Monolingual and Cross-Lingual Evaluation](https://www.researchgate.net/publication/305334510_SemEval-2016_Task_1_Semantic_Textual_Similarity_Monolingual_and_Cross-Lingual_Evaluation): Eneko Agirre, Carmen Banea, Daniel Cer, Mona Diab
-- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
-- [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
-
-#TODO: (Phase 2) List all references (repositories, papers, etc.) used for your project.
 - [SophiaG Optimizer](https://arxiv.org/abs/2305.14342): Liu et al., 2023
 - [Parse-Instructed Prefix for Syntactically Controlled Paraphrase Generation](https://aclanthology.org/2023.findings-acl.659/): Wan et al., 2023
 - [Rotary Positional Encoding](https://arxiv.org/abs/2104.09864v5): Su et al., 2021
 - [SwiGLU Activation Function]()https://arxiv.org/abs/2002.05202v1: Noam Shazeer, 2020
 - [Paraphrase Generation with Deep Reinforcement Learning](https://aclanthology.org/D18-1421/): Li, Jiang, Shang et al., 2018
 - [Gradual Unfreezing and Discriminative Learning Rates](https://arxiv.org/pdf/1801.06146): Howard and Ruder, 2018
+- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
+- [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
 
 ## Acknowledgement
 
