@@ -370,34 +370,20 @@ For an illustrative comparison, refer to the corresponding [box plot](sst_grid_s
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
 
-### 4.2 BERT for Paraphrase Type Detection
+### 4.2 BART for Paraphrase Generation
 
-#### **4.2.1 Effectiveness of Pooling Strategies**
- Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
- 
-| Pooling Strategy                                     | STS Corr (Max)     |
-|------------------------------------------------------|--------------------|
-| CLS, combined, logit (default)                       | 0.864              |
-| Average, combined, logit                             | 0.867              |
-| Average, independent, logit                          | 0.406              |
-| Average, independent, cosine similarity              | 0.406              |
-
-
-Based on these results, I decided to add the average pooling strategies to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
-
-### 4.3 BART for Paraphrase Generation
-
-#### **4.3.1 Data Overview**
+#### **4.2.1 Data Overview**
 
 The BART model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned for 3-10 epochs with a batch size of 1-100 and evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
 
-#### **4.3.2 Best Model Performance**
+#### **4.2.2 Best Model Performance**
 
 The best model performance was achieved with the following configuration:
-- **Epochs:** `10`
-- **Batch Size:** `10`
+- **Epochs:** `6`
+- **Batch Size:** `64`
 - **optimizer:** `SophiaG`
+- **optimizer parameters:** `{'lr': 3e-05, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}`
 - **scheduler gamma:** `0.675`
 - **scheduler step size:** `1`
 - **gradual unfreezing:** `8 layers`
@@ -411,17 +397,114 @@ This configuration can be replicated by running the following script:
     python bart_generation.py --use_gpu
     
 
-#### **4.3.3 PIP Prefix Method**
+#### **4.2.3 PIP Prefix Method**
 
 The Parse-Instructed Prefix (PIP) method was implemented to improve the quality of the generated paraphrases. The PIP method uses a parse tree to guide the generation of syntactically controlled paraphrases. The method was tested with different prefix lengths and methods to determine the optimal configuration for the BART model.
 In simple words, the PIP method uses a prefix to guide the model in generating paraphrases that adhere to the syntactic structure of the input sentence.
 
-#### **4.3.4 Reinforcement Learning for Paraphrase Generation**
+Key features of the PrefixModel:
 
-Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward, which is the penalized BLEU score in this case.
+Prefix Addition: A learnable prefix is added to the input embeddings. This prefix acts as a task-specific prompt that guides the model's behavior.
+```
+self.prefix = nn.Parameter(torch.randn(1, prefix_length, base_model.config.d_model))
+```
+
+Indirect Method: The model uses an MLP to generate the actual prefix from the learnable parameters. This adds flexibility to the prefix generation.
+```
+self.prefix_mlp = nn.Sequential(
+    nn.Linear(base_model.config.d_model, base_model.config.d_model),
+    nn.ReLU(),
+    nn.Linear(base_model.config.d_model, base_model.config.d_model)
+)
+```
+Integration with Base Model: The prefix is concatenated with the input embeddings before being passed to the encoder.
+```
+inputs_embeds = torch.cat([prefix, inputs_embeds], dim=1)
+```
+
+Attention Mask Adjustment: The attention mask is adjusted to account for the added prefix.
+```
+prefix_attention_mask = torch.ones(batch_size, self.prefix_length, device=attention_mask.device)
+attention_mask = torch.cat([prefix_attention_mask, attention_mask], dim=1)
+```
+
+### **4.2.4 Gradual Unfreezing**
+Gradual unfreezing is a technique used to fine-tune large pre-trained models more effectively. It involves progressively unfreezing layers of the model during training, starting from the top (output) layers and moving towards the bottom (input) layers.
+Key aspects of gradual unfreezing in this implementation:
+
+Initial Freezing: A specified number of layers are initially frozen (parameters set to not require gradients).
+```
+for i in range(num_layers_to_freeze):
+    for param in model.model.encoder.layers[i].parameters():
+        param.requires_grad = False
+```
+Gradual Unfreezing: In each epoch or at specified intervals, a certain number of layers are unfrozen.
+```
+for i in range(num_layers_to_unfreeze):
+    for param in model.model.encoder.layers[-i].parameters():
+        param.requires_grad = True
+```
+Separate Unfreezing for Encoder and Decoder: The process is applied to both encoder and decoder layers independently.
+Tracking Trainable Layers: The code keeps track of how many layers are trainable after each unfreezing step.
+```
+num_trainable = sum([1 for layer in model.model.encoder.layers for param in layer.parameters() if param.requires_grad])
+```
+Maximum Limit: A maximum number of layers to unfreeze is set to prevent unfreezing the entire model if not desired.
+```
+if num_trainable == max_layers:
+    print(f"limit for unfreezing reached, {max_layers} layers are already unfrozen")
+```
 
 
-#### 4.3.5 Results #### 
+
+#### **4.2.5 Reinforcement Learning for Paraphrase Generation**
+
+Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
+The reward function for the paraphrase generation model is defined as:
+$$
+R = 0.5 \cdot B + 0.5 \cdot C
+$$
+where $(R)$ is the total reward, $(B)$ is the BLEU-like score, and $(C)$ is the cosine similarity score.
+
+#### 1. BLEU-like Score (B)
+The BLEU-like score is computed as:
+$$
+B = BP \cdot P
+$$
+where $(BP)$ is the brevity penalty and $(P)$ is the precision.
+
+#### 2. Precision (P)
+Let $(r)$ be the reference tokens and $(g)$ be the generated tokens. Then:
+$$
+P = \frac{\sum_{w \in g} \min(\text{count}_g(w), \text{count}_r(w))}{|g|}
+$$
+where $(\text{count}_g(w))$ and $(\text{count}_r(w))$ are the counts of word $(w)$ in the generated and reference sentences respectively.
+Brevity Penalty $(BP)$
+$$
+BP = \begin{cases}
+\exp(1 - \frac{|r|}{|g|}) & \text{if } |g| < |r| \
+1 & \text{otherwise}
+\end{cases}
+$$
+where $(|r|)$ and $(|g|)$ are the lengths of the reference and generated sentences respectively.
+#### 3. Cosine Similarity Score (C)
+The cosine similarity between the input sentence $(s_1)$ and the generated paraphrase $(s_2)$ is calculated as:
+$$
+C = \frac{\vec{v_1} \cdot \vec{v_2}}{||\vec{v_1}|| \cdot ||\vec{v_2}||}
+$$
+where $(\vec{v_1})$ and $(\vec{v_2})$ are the term frequency vectors of $(s_1)$ and $(s_2)$ respectively.
+3. 
+More explicitly:
+$$
+C = \frac{\sum_{w \in W} \text{tf}(w, s_1) \cdot \text{tf}(w, s_2)}{\sqrt{\sum_{w \in W} \text{tf}(w, s_1)^2} \cdot \sqrt{\sum_{w \in W} \text{tf}(w, s_2)^2}}
+$$
+where $(W)$ is the set of unique words in both sentences, and $(\text{tf}(w, s))$ is the term frequency of word $(w)$ in sentence $(s)$.
+
+The training process uses a combination of supervised learning (SL) and reinforcement learning (RL) to optimize the paraphrase generation model. The loss function is a weighted sum of the SL loss and the RL loss.
+$$
+L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}
+$$
+#### 4.2.6 Results #### 
 
 The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
@@ -446,6 +529,21 @@ Examples:
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
 
+### 4.3 BERT for Paraphrase Type Detection
+
+#### **4.3.1 Effectiveness of Pooling Strategies**
+ Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+ 
+| Pooling Strategy                                     | STS Corr (Max)     |
+|------------------------------------------------------|--------------------|
+| CLS, combined, logit (default)                       | 0.864              |
+| Average, combined, logit                             | 0.867              |
+| Average, independent, logit                          | 0.406              |
+| Average, independent, cosine similarity              | 0.406              |
+
+
+Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+
 ---
 
 ## Results Summary
@@ -458,7 +556,7 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 |---------------|-------------------------------------|--------------------------------------------------|
 | Baseline      | 0.833                               | -                                                |
 | Improvement 1 | ...                                 | 22.765                                           |
-| Improvement 2 | ...                                 | 24.211                                           |
+| Improvement 2 | ...                                 | 24.266                                           |
 
 ### BERT
 
