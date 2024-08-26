@@ -64,6 +64,12 @@ class EarlyStopping:
         return False
 
 
+def l1_loss_fn(loss_fn, output, target, model, lambda_1=0.01):
+    l1_reg = sum(p.abs().sum() for p in model.parameters())
+    total_loss = loss_fn + lambda_1 * l1_reg
+    return total_loss
+
+
 def transform_data(dataset: pd.DataFrame,
                    max_length: int = 256,
                    tokenizer_name: str = 'facebook/bart-large',
@@ -174,7 +180,7 @@ def train_model(model: nn.Module,
 
             optimizer.zero_grad()
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
-            loss = loss_fn(outputs, b_labels)
+            loss = l1_loss_fn(loss_fn, outputs, b_labels, model)
             loss.backward()
             # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
@@ -407,7 +413,7 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
     if args.optimizer == 'AdamW':
         optimizer = AdamW(model.parameters(), lr=args.lr)
 
-    scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05*args.lr)
+    scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs, eta_min=0.05 * args.lr)
 
     model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
                         optimizer=optimizer)
