@@ -408,7 +408,7 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
         optimizer = AdamW(model.parameters(), lr=args.lr)
     warmup_epochs = 3
     cosine_epochs = args.epochs - warmup_epochs
-    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=1e-6 / args.lr, total_iters=cosine_epochs)
+    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=1e-6, total_iters=cosine_epochs)
     cosine_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=cosine_epochs, eta_min=0)
     scheduler = SequentialLR(optimizer=optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
                              milestones=[warmup_epochs])
