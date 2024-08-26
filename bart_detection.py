@@ -174,8 +174,10 @@ def train_model(model: nn.Module,
     class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
     loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
 
-    # Set best validation loss threshold
+    # Set best mmc threshold
     best_matthews = float("-inf")
+    best_accuracy = 0
+    best_epoch = 0
 
     # Initialize early stopping
     early_stopper = EarlyStopping(patience=3)
