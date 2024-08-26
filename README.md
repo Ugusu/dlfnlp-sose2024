@@ -546,10 +546,30 @@ Examples:
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
 
-### 4.3 BERT for Paraphrase Type Detection
+### 4.3 BERT for Semantic Textual Similarity (STS)
 
-#### **4.3.1 Effectiveness of Pooling Strategies**
+### **4.3.1 Effectiveness of Pre-training on the Quora Dataset**
+
+Given the substantial size of the Quora dataset, I hypothesized that pre-training on this data could enhance the model's performance on the STS task through multitask learning. But as previously discussed, the pre-training on the Quora dataset should be conducted prior to fine-tuning on the STS dataset. This approach prevents the Quora dataset from overwriting the learned weights derived from the STS dataset, due to the relative size difference between the two datasets.
+
+Another argument supporting this strategy is the fact that the tasks of paraphrase detection and semantic textual similarity share certain underlying similarities:
+
+- In the Paraphrase Detection task, the logits produced by the model's `predict_paraphrase` method represent the probability that a given sentence pair is a paraphrase.
+- In the STS task, the output of the `predict_similarity` method represents the semantic similarity between two phrases, where a score of 0 indicates that they have nothing in common, and a score of 5 indicates that they are paraphrases. By rescaling this similarity score to the interval [0,1], it can also be interpreted as the probability that both sentences are paraphrases.
+
+
+#### **4.3.2 Effectiveness of Average Pooling**
  Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+All other hyperparameters share the following configuration:
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **optimizer:** `AdamW`
+- **learning rate:** `1e-05`
+- **option:** 'finetune'
+- **seed:** 11711
+- **subset_size:** None
+- **task:** sts
+
  
 | Pooling Strategy                                     | STS Corr (Max)     |
 |------------------------------------------------------|--------------------|
@@ -560,6 +580,10 @@ These results obtained using a subset of the data as the training set and valida
 
 
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+
+
+
+
 
 ---
 
