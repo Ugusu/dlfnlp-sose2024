@@ -167,7 +167,7 @@ def train_model(model: nn.Module,
         nn.Module: Trained model.
     """
     # Loss Function and Optimizer
-    class_weights_tensor = torch.tensor(weights, dtype=torch.float32)
+    class_weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
     loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor)
 
     # Set best validation loss threshold
