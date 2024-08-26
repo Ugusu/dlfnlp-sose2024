@@ -185,6 +185,11 @@ strategies were tested:
 This experimentation aimed to identify whether these approaches could provide a more comprehensive 
 representation, thereby improving the model's performance.
 
+### 1.3 Smoothness-Inducing Adversarial Regularization (SMART)
+Smoothness-Inducing Adversarial Regularization (SMART) is a regularization method, which makes the model learn smother boudaries.
+The main principle behind the method is adding small noisy to the input of the model during finetuning, to make the model more generalized
+around the data point *x*<sub>i</sub> and be immune the the small changes in the input.
+
 ## 2. Methodology
 
 ### BERT
@@ -247,6 +252,38 @@ $$
 where $\(\alpha_i\)$ represents the attention weight assigned to each hidden state.
 
 These pooling strategies were implemented and evaluated to identify the most effective approach for improving performance in sentiment analysis.
+
+### **2.3 Smoothness-Inducing Adversarial Regularization (SMART)**
+
+SMART receives the logits predictions of the model $$\gamma$$ and its input $$x$$. It then adds a noise (perturbation) $$\delta$$ to the input.
+Before applying the noise to the input, it is updated for *M* steps depending on the gradient from the perturbed inputs.
+
+$$\delta = \delta + \alpha \cdot \text{sign}(\nabla_{\delta} \mathcal{L}(\theta; x + \delta))$$
+
+where $$\alpha$$ is the step size and $$\epsilon$$ is the maximum perturbation size.
+
+Then the noisy input is used to make predictions:
+
+$$\gamma_{\text{perturbed}} = \mathcal{F}(x + \delta)$$
+
+The predictions on the noisy input are compared to the original predictions on the clear input, and a loss is computed. That loss is either KL-divergence
+if the task is classification, or Mean Squared Error if the task is regression.
+
+- Classification:
+
+$$\mathcal{L}_{\text{SMART}} = \frac{1}{2} \left( \mathcal{KL}(\gamma_{\text{perturbed}} \parallel \gamma + \mathcal{KL}(\gamma \parallel \gamma_{\text{perturbed}}) \right)$$
+
+
+- Regression:
+
+$$\mathcal{L}_{\text{SMART}} = \frac{1}{N} \sum_{i=1}^{N} (\gamma_{\text{perturbed}, i} - \gamma_i)^2$$
+
+
+Finally, the loss is then added to the task loss:
+
+$$\mathcal{L}(\theta; x) = \mathcal{L}(\theta; x) + \mathcal{L}_\text{SMART}(\theta; x + \delta)$$
+
+The training time is increased due to double back propagation.
 
 ---
 
@@ -548,6 +585,42 @@ These results obtained using a subset of the data as the training set and valida
 
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
 
+### 4.4 Smoothness-Inducing Adversarial Regularization (SMART)
+
+#### BERT: Paraphrase Detection:
+
+Overall performance of the model seems to increase. The results are comparable to trainings done on higher number of epochs.
+This also can be explained by the fact that SMART basically does data augmentation, and increases the training time on each epoch. Therefore the result is intuitive. Further scaling and computational performances are to be studied and compared.
+
+#### BERT: Sentiment Classification:
+
+SMART does not significatly affect the performance of this task. In most cases the accuracy is lower than the baseline. The obvious explanation is parameter overwrite during the second backpropagation.
+
+#### BERT: Semantic Textual Similarity:
+
+The performance of seems not improve much above the baseline. While the task is similar to Paraphrase Detection, the prediction is not binary and shows the degree of similarity. The alteration of the input by SMART scews the sequences and similar inputs seem to look less similar. In theory SMART still can be used for the task to improve performance, however the noise model should be handled in a more deliberate way.
+
+### Best BERT: Paraphrase Detection:
+
+The best performance (0.878) was achived with:
+
+- **Epochs:** `2`
+- **Batch Size:** `64`
+- **optimizer:** `SophiaG`
+- **optimizer parameters:** `{'lr': 1e-05, 'betas': (0.965, 0.99), 'rho': 0.04, 'weight_decay': 0.1}`
+- **hidden_dropout_prob**: 0.2
+- **smart_enabled** True
+- **alpha** 0.02
+- **steps** 1
+- **epsilon** 1e-5
+- **option** finetune
+
+Can be replicated with:
+
+```sh
+$ python -u multitask_classifier.py --use_gpu --local_files_only --option finetune --task qqp --hidden_dropout_prob 0.2 --epochs 2 --smart_enabled
+```
+
 ---
 
 ## Results Summary
@@ -587,7 +660,7 @@ Here Paraphrase Detection was trained for 1 epoch:
 | Extra CGA Layer                                | 0.520                              | 0.876                          | 0.851                                 |
 | CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
 | Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
-| Improvement 4                                  | ...                                | ...                            | ...                                   |
+| SMART                                          | 0.515                              | 0.867                          | 0.856                                 |
 | Improvement 5                                  | ...                                | ...                            | ...                                   |
 | Improvement 6                                  | ...                                | ...                            | ...                                   |
 
