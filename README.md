@@ -290,7 +290,7 @@ We recommend running these scripts from the project's home directory.
 
 ## **4. Results**
 
-### 4.1 Grid Search, CGA and Attention-based Pooling
+### 4.1 BERT for Sentiment Prediction: Grid Search, CGA and Attention-based Pooling
 
 #### **4.1.1 Data Overview**
 
@@ -298,12 +298,12 @@ A total of 768 experiments were conducted, all of which successfully completed. 
 
 #### **4.1.2 Overall Best SST Accuracy Performance**
 
-The highest SST accuracy achieved was **0.530233** with the following configuration:
-- **Pooling Strategy:** `CLS`
+The highest SST accuracy achieved was **0.537** with the following configuration:
+- **Pooling Strategy:** `Attention`
 - **Extra Context Layer:** `False`
 - **Regularize Context:** `True`
-- **Learning Rate:** `1e-5`
-- **Hidden Dropout Probability:** `0.3`
+- **Learning Rate:** `5e-5`
+- **Hidden Dropout Probability:** `0.5`
 - **Batch Size:** `64`
 - **Optimizer:** `AdamW`
 - **Epochs:** `5`
@@ -319,56 +319,46 @@ the same order of magnitude.
 
 #### **4.1.3 Overall Effect of CGA Layer on SST Performance**
 
-The Global Context Layer showed the following impact on SST accuracy:
+The regularized Contextual Global Attention (CGA) Layer showed better accuracy than the non-regularized variant.
+The following table shows the best accuracy values reached with and without the regularized CGA layer variant, and using
+the optimal hyperparameters found via grid search. An improvement upon the baseline accuracy 0.522 of the vanilla version was
+demonstrated:
 
-| CGA Layer w/ optimized Hyperparameters | SST Accuracy |
-|----------------------------------------|--------------|
-| False                                  | 0.530        |
-| True                                   | 0.520        |
-| Baseline                               | 0.522        |
+| CGA Layer | Best SST Accuracy |
+|-----------|-------------------|
+| Baseline  | 0.522             |
+| True      | 0.527             |
+| False     | 0.537             |
 
-
-The higher accuracy of the model without a CGA layer with respect to the baseline lies in the alternate hyperparameter
-selection optimized through the grid search. Similarly the higher accuracy with CGA-based Attention-pooling can be attributed
-to optimal hyperparameters, rather than the pooling mechanism itself. The following table shows the results, all using the optimal hyperparameters found  via the grid search:
-
-| **Stanford Sentiment Treebank (SST)** | **Best Dev accuracy** |
-|---------------------------------------|-----------------------|
-| Baseline                              | 0.522                 | 
-| Contextual Global Attention (CGA)     | 0.520                 |
-| CGA-based Attention-pooling           | 0.530                 |
-| Optimal Hyperparameters Only          | 0.530                 |
+The higher accuracy of the model without a CGA layer with respect to the baseline can be attributed to the newly introduced attention-based pooling using a CGA layer, as well as the alternate hyperparameter
+selection optimized through the grid search.
 
 The generated [violin plot](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png) shows that the model without the CGA Layer slightly outperformed the one with it, with most
 results being concentrated on the ~0.500 mark for both types of models. 
 
-#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
+![alt text](sst_grid_search_experiments/analyses_visualizations/impact_cga_sst_accuracy.png)
 
-A deeper insight into the effects of regularized and non-regularized CGA layers on SST performance across all experiments
-reveals:
-- Regularization increases STT accuracy when extra CGA layer is present.
-- Attention-based pooling using a CGA layer doesn't improve SST accuracy on average, even when regularized.
+#### **4.1.4 Effect of CGA Layers and Attention Pooling on SST Performance**
 
 Additionally, the best SST performance under different conditions was as follows:
 
-- **With Extra Context Layer:** 0.523 (CLS, Regularize Context: True, AdamW)
-- **With Attention Pooling:** 0.522 (Attention, Regularize Context: True, AdamW)
-- **With Both:** 0.505 (Regularize Context: True, AdamW)
+- The performance is quite stable across the configurations, with a median accuracy close to ~0.500.
+- Outliers indicate that in some cases, the accuracy can drop significantly, especially when the context is not regularized.
+- Regularizing context appears to have less impact on the distribution, but a few extreme low outliers are observed.
 
 ![alt text](sst_grid_search_experiments/analyses_visualizations/sst_performance_comparison.png)
 
 #### **4.1.4 Effectiveness of Pooling Strategies**
 
 
-Pooling strategies were evaluated. All pooling strategies show equal performance, showcasing no effect on accuracy based on it. 
-It is still better than the baseline of 0.522, but this can be attributed to optimal hyperparameter selection as well:
+Pooling strategies were evaluated. CGA-based attention-pooling showed the best SST dev accuracy result.
 
 | Pooling Strategy | SST Accuracy (Mean) | SST Accuracy (Max) |
 |------------------|---------------------|--------------------|
-| CLS (default)    | 0.428               | 0.530              |
-| Attention        | 0.428               | 0.530              |
-| Average          | 0.428               | 0.530              |
-| Max              | 0.428               | 0.530              |
+| CLS (default)    | 0.472               | 0.534              |
+| Attention        | 0.473               | 0.537              |
+| Average          | 0.478               | 0.529              |
+| Max              | 0.474               | 0.533              |
 
 For an illustrative comparison, refer to the corresponding [box plot](sst_grid_search_experiments/analyses_visualizations/sst_accuracy_by_pooling_strategy.png).
 
@@ -380,14 +370,29 @@ For an illustrative comparison, refer to the corresponding [box plot](sst_grid_s
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
 
-### 4.2 BART for Paraphrase Generation
+### 4.2 BERT for Paraphrase Type Detection
 
-#### **4.2.1 Data Overview**
+#### **4.2.1 Effectiveness of Pooling Strategies**
+ Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+ 
+| Pooling Strategy                                     | STS Corr (Max)     |
+|------------------------------------------------------|--------------------|
+| CLS, combined, logit (default)                       | 0.864              |
+| Average, combined, logit                             | 0.867              |
+| Average, independent, logit                          | 0.406              |
+| Average, independent, cosine similarity              | 0.406              |
+
+
+Based on these results, I decided to add the average pooling strategies to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+
+### 4.3 BART for Paraphrase Generation
+
+#### **4.3.1 Data Overview**
 
 The BART model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned for 3-10 epochs with a batch size of 1-100 and evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
 
-#### **4.2.2 Best Model Performance**
+#### **4.3.2 Best Model Performance**
 
 The best model performance was achieved with the following configuration:
 - **Epochs:** `10`
@@ -406,17 +411,17 @@ This configuration can be replicated by running the following script:
     python bart_generation.py --use_gpu
     
 
-#### **4.2.3 PIP Prefix Method**
+#### **4.3.3 PIP Prefix Method**
 
 The Parse-Instructed Prefix (PIP) method was implemented to improve the quality of the generated paraphrases. The PIP method uses a parse tree to guide the generation of syntactically controlled paraphrases. The method was tested with different prefix lengths and methods to determine the optimal configuration for the BART model.
 In simple words, the PIP method uses a prefix to guide the model in generating paraphrases that adhere to the syntactic structure of the input sentence.
 
-#### **4.2.4 Reinforcement Learning for Paraphrase Generation**
+#### **4.3.4 Reinforcement Learning for Paraphrase Generation**
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward, which is the penalized BLEU score in this case.
 
 
-#### 4.2.5 Results #### 
+#### 4.3.5 Results #### 
 
 The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
@@ -440,21 +445,6 @@ Examples:
   - Loss: 0.7631
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
-
-### 4.3 BERT for Paraphrase Type Detection
-
-#### **4.3.1 Effectiveness of Pooling Strategies**
- Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
- 
-| Pooling Strategy                                     | STS Corr (Max)     |
-|------------------------------------------------------|--------------------|
-| CLS, combined, logit (default)                       | 0.864              |
-| Average, combined, logit                             | 0.867              |
-| Average, independent, logit                          | 0.406              |
-| Average, independent, cosine similarity              | 0.406              |
-
-
-Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
 
 ---
 
@@ -511,8 +501,11 @@ Explain the contribution of each group member:
   - Implemented the `embed` function in the `BertModel` class.
   - Implemented missing functionality for the sentiment analysis task.
   - Assisted in adding docstrings and type hints to functions in `bert.py` and `multitask_classifier.py`.
-  - Filled and generated AI-usage card with input from all team members.
-- Phase 2: ...
+- Phase 2:
+  - Improved sentiment analysis task accuracy by implementing and experimenting with:
+    - Contextual Global Attention (CGA)
+    - Pooling strategies, including CGA-based attention-pooling
+    - Grid search experimentation for optimal hyperparameters
 
 **Amirreza Aleyasin:**
 - Phase 1:
@@ -559,8 +552,7 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762): Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin
 - [Paraphrase Types for Generation and Detection](https://aclanthology.org/2023.emnlp-main.746.pdf): Jan Philip Wahle, Bela Gipp, Terry Ruas, University of Göttingen, Germany {wahle,gipp,ruas}@uni-goettingen.de
 - [SemEval-2016 Task 1: Semantic Textual Similarity, Monolingual and Cross-Lingual Evaluation](https://www.researchgate.net/publication/305334510_SemEval-2016_Task_1_Semantic_Textual_Similarity_Monolingual_and_Cross-Lingual_Evaluation): Eneko Agirre, Carmen Banea, Daniel Cer, Mona Diab
-- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
-- [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
+
 
 #TODO: (Phase 2) List all references (repositories, papers, etc.) used for your project.
 - [SophiaG Optimizer](https://arxiv.org/abs/2305.14342): Liu et al., 2023
@@ -569,6 +561,8 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [SwiGLU Activation Function]()https://arxiv.org/abs/2002.05202v1: Noam Shazeer, 2020
 - [Paraphrase Generation with Deep Reinforcement Learning](https://aclanthology.org/D18-1421/): Li, Jiang, Shang et al., 2018
 - [Gradual Unfreezing and Discriminative Learning Rates](https://arxiv.org/pdf/1801.06146): Howard and Ruder, 2018
+- [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
+- [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
 
 ## Acknowledgement
 
