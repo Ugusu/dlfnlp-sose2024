@@ -596,10 +596,10 @@ Here Paraphrase Detection was trained for 1 epoch:
 
 | **Independent**                                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
 |------------------------------------------------|------------------------------------|--------------------------------|---------------------------------------|
-| Baseline                                       | 0.534                              | 0.860                          | 0.863                                 |
-| Extra CGA Layer                                | 0.520                              | 0.876                          | 0.851                                 |
-| CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
-| Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
+| Baseline                                       | 0.522                              | 0.860                          | 0.863                                 |
+| Extra CGA Layer                                | 0.527                              | 0.876                          | 0.851                                 |
+| CGA-based Attention-Pooling                    | 0.537                              | 0.854                          | 0.850                                 |
+| Using Grid Search Optimal Hyperparams (no CGA) | 0.534                              | 0.873                          | 0.861                                 |
 | Improvement 4                                  | ...                                | ...                            | ...                                   |
 | Improvement 5                                  | ...                                | ...                            | ...                                   |
 | Improvement 6                                  | ...                                | ...                            | ...                                   |
