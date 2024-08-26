@@ -185,7 +185,10 @@ strategies were tested:
 This experimentation aimed to identify whether these approaches could provide a more comprehensive 
 representation, thereby improving the model's performance.
 
-### 1.3 Smoothness-Inducing Adversarial Regularization (SMART)
+### 1.3 Dealing with Data Imbalance
+The task at hand for the BART Paraphrase Type Detection was a multiclass classification problem. Every sentence pair has at least one of seven paraphrase types assigned to them. The dataset is very skewed towards type 2, 6 and 7 paraphrases, which proved to be quite challenging for part 1 of the project, where the model managed to achieve 83.3% accuracy, by overfitting on the dataset. An idea to fix this was implementing class weights into the Loss Function, which give each class a weight depending on their abundance. Less represented classes get higher importance, the trade-off however, would of course be a less accurate model. This approach was improved on by Li et al (2019) in 'Dice Loss for Data-imbalanced NLP Task, which dynamically adjust these weights, using the Dice-Score as a base for a loss function.
+
+### 1.4 Smoothness-Inducing Adversarial Regularization (SMART)
 Smoothness-Inducing Adversarial Regularization (SMART) is a regularization method, which makes the model learn smother boudaries.
 The main principle behind the method is adding small noisy to the input of the model during finetuning, to make the model more generalized
 around the data point *x*<sub>i</sub> and be immune the the small changes in the input.
@@ -327,6 +330,13 @@ without the extra layer and with or without regularization.
 
 We recommend running these scripts from the project's home directory.
 
+### **3.2 Experimenting with BART Paraphrase Type Detection**
+
+Similar to above, the hyperparamter optimization was done using grid search in the BART Paraphrase Type Detection task on the GWDG HPC cluster. This can be done by running the [Python script](bart_detection_grid_search.py) file. With the additional parameter "weight_decay" in the optimizer, the MCC score can be improved, acting as L2 regularization, especially using the AdamW optimizer.
+Additionally, early stopping with a patience of 3 was implemented to prevent overfitting and improve computation time over the 10 epochs.
+Like Liu et al. (2023) recommends for Sophia optimizer, CosineAnnealing "with final LR equal to 0.05 times peak LR" is also used in addition to gradient clipping. Ininitally, I experimented with 
+CosineAnnealing with warm up, but that seemed to make performance worse, as it would get stuck after the initial warm up for some reason, which may be due to bad initialization at that time.
+As mentioned above, I wanted to expand on class weights with dice loss, but was unable to make it work in time.
 ---
 
 ## **4. Results**
@@ -585,7 +595,39 @@ These results obtained using a subset of the data as the training set and valida
 
 Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
 
-### 4.4 Smoothness-Inducing Adversarial Regularization (SMART)
+### 4.4 BART for Paraphrase Type Detection
+
+#### **4.4.1 Data Overview**
+
+The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs. The model was fine-tuned  on `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
+The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
+#### **4.4.2 The MCC Score**
+The MCC score is defined as:
+$$
+MCC = (TP x TN - FP x FN) \over (\sqrt(TP))
+$$
+
+#### **4.4.3 Impact of Class Weights on accuracy and MMC score**
+| configuration                  |Accuracy             | MCC score          |
+|--------------------------------|---------------------|--------------------|
+| baseline                       | 83.33               | 0.067              |
+| Class weights with baseline    | 61.5                | 0.148              |
+| Best                           | 68.34               | 0.201              |
+
+As predicted, the Accuracy will go down, as a compromise, due to prioritizing the minority class, but is still acceptable. The biggest problem with Class Weight implementation, was that it was very sensitive to bad hyperparamerization, especially when using SophiaG optimizer. The AdamW optimizer performed better on average and was more robust, but choosing a too low or high learning rate or too low batch size can make the model easily collapse.
+
+#### **4.4.4 Overall best MCC score**
+The highest MCC score achieved was **0.201** with the following configuration:
+- **Pooling Strategy:** `Attention`
+- **Extra Context Layer:** `False`
+- **Regularize Context:** `True`
+- **Learning Rate:** `5e-5`
+- **Hidden Dropout Probability:** `0.5`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Epochs:** `5`
+
+### 4.5 Smoothness-Inducing Adversarial Regularization (SMART)
 
 #### BERT: Paraphrase Detection:
 
@@ -629,11 +671,11 @@ $ python -u multitask_classifier.py --use_gpu --local_files_only --option finetu
 
 The results for evaluation on the dev dataset. training was done for 5 epochs.
 
-|               | **Paraphrase Type Detection (acc)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
+|               | **Paraphrase Type Detection (MCC)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
-| Baseline      | 0.833                               | -                                                |
-| Improvement 1 | ...                                 | 22.765                                           |
-| Improvement 2 | ...                                 | 24.266                                           |
+| Baseline      | 0.067                               | -                                                |
+| Improvement 1 | 0.148                               | 22.765                                           |
+| Improvement 2 | 0.201                               | 24.266                                           |
 
 ### BERT
 
@@ -735,6 +777,7 @@ Artificial Intelligence (AI) aided the development of this project. For transpar
 - [Gradual Unfreezing and Discriminative Learning Rates](https://arxiv.org/pdf/1801.06146): Howard and Ruder, 2018
 - [Context-aware Self-Attention Networks](https://arxiv.org/abs/1902.05766): Baosong Yang, Jian Li, Derek Wong, Lidia S. Chao, Xing Wang, Zhaopeng Tu
 - [Self-Attentive Pooling for Efficient Deep Learning](https://arxiv.org/abs/2209.07659): Fang Chen, Gourav Datta, Souvik Kundu, Peter Beerel
+- [Dice Loss for Data-imbalanced NLP Task](https://arxiv.org/abs/1911.02855): Li et al., 2019
 
 ## Acknowledgement
 
