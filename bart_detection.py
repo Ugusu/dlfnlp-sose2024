@@ -222,13 +222,13 @@ def train_model(model: nn.Module,
 
         # Update for best Matthews Correlation Coefficient
         if val_matthews < best_matthews:
-            best_matthews = val_loss
+            best_matthews = val_matthews
 
             # Save the model
             torch.save(model, output_dir)
 
         # Stop early if no improvement
-        if early_stopper.early_stop(val_matthews):
+        if early_stopper.early_stop(val_loss):
             break
 
     return model
