@@ -673,9 +673,9 @@ The results for evaluation on the dev dataset. training was done for 5 epochs.
 
 |               | **Paraphrase Type Detection (MCC)** | **Paraphrase Type Generation ( Penalized_BLEU)** |
 |---------------|-------------------------------------|--------------------------------------------------|
-| Baseline      | 0.067                               | -                                                |
-| Improvement 1 | 0.148                               | 22.765                                           |
-| Improvement 2 | 0.201                               | 24.266                                           |
+| Baseline      | 0.067                               | 20.790                                           |
+| Improvement 1 | 0.148                               | 24.521 (without RL)                              |
+| Improvement 2 | 0.201                               | 24.315 (with RL)                                 |
 
 ### BERT
 
