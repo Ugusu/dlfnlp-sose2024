@@ -39,9 +39,10 @@ def get_best_parameters(parameter_grid):
     best_params = None
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv", sep="\t")
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv", sep="\t")
-    for lr, optim_name, batch_size in itertools.product(parameter_grid['starting_lr'],
-                                                        parameter_grid['optimizer'],
-                                                        parameter_grid['batch_size']):
+    for lr, optim_name, batch_size, weight_decay in itertools.product(parameter_grid['starting_lr'],
+                                                                      parameter_grid['optimizer'],
+                                                                      parameter_grid['batch_size'],
+                                                                      parameter_grid['weight_decay']):
         train_data = bart_detection.transform_data(train_dataset, max_length=256,
                                                    batch_size=batch_size)
         val_data = bart_detection.transform_data(dev_dataset, max_length=256,
@@ -54,7 +55,7 @@ def get_best_parameters(parameter_grid):
             optimizer = SophiaG(model.parameters(), lr=lr)
         if optim_name == 'AdamW':
             optimizer = AdamW(model.parameters(), lr=lr)
-        scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05*lr)
+        scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=10, eta_min=0.05 * lr)
 
         model = bart_detection.train_model(model, train_data, val_data, device, epochs=10, scheduler=scheduler,
                                            optimizer=optimizer)
@@ -68,11 +69,13 @@ def get_best_parameters(parameter_grid):
     print(f"\nBest Matthew: {best_matthew:.4f}")
     print(f"Best Hyperparameters: {best_params}")
 
+
 if __name__ == "__main__":
     parameter_grid = {
-        'starting_lr': [1e-4, 1e-5],
-        'optimizer': ['SophiaG'],
-        'batch_size': [16, 48, 96],
+        'starting_lr': [1e-5],
+        'optimizer': ['SophiaG', 'AdamW'],
+        'batch_size': [96],
+        'weight_decay': [0.001, 0.01]
     }
     seed_everything()
     get_best_parameters(parameter_grid)

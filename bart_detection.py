@@ -64,11 +64,6 @@ class EarlyStopping:
         return False
 
 
-def l1_loss_fn(loss_fn, model, lambda_1=0.01):
-    l1_reg = sum(p.abs().sum() for p in model.parameters())
-    total_loss = loss_fn + lambda_1 * l1_reg
-    return total_loss
-
 
 def transform_data(dataset: pd.DataFrame,
                    max_length: int = 256,
@@ -180,7 +175,7 @@ def train_model(model: nn.Module,
 
             optimizer.zero_grad()
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
-            loss = l1_loss_fn(loss_fn(outputs, b_labels), model)
+            loss = loss_fn(outputs, b_labels)
             loss.backward()
             # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
@@ -214,7 +209,7 @@ def train_model(model: nn.Module,
                 b_labels = b_labels.to(device)
 
                 outputs = model(input_ids=b_ids, attention_mask=b_mask)
-                loss = l1_loss_fn(loss_fn(outputs, b_labels), model)
+                loss = loss_fn(outputs, b_labels)
                 val_loss += loss.item()
 
         # Calculate Validation loss and accuracy
