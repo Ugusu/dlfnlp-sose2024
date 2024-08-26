@@ -557,10 +557,50 @@ Another argument supporting this strategy is the fact that the tasks of paraphra
 - In the Paraphrase Detection task, the logits produced by the model's `predict_paraphrase` method represent the probability that a given sentence pair is a paraphrase.
 - In the STS task, the output of the `predict_similarity` method represents the semantic similarity between two phrases, where a score of 0 indicates that they have nothing in common, and a score of 5 indicates that they are paraphrases. By rescaling this similarity score to the interval [0,1], it can also be interpreted as the probability that both sentences are paraphrases.
 
+The next question that arose was how to transfer the knowledge gained from the Paraphrase Detection task to the STS task. The saved model state includes not only its weights but also the state of the optimizer. To explore the best approach, I tested two different implementations: one where both the model state and the optimizer state were loaded, and another where only the model state was loaded.
+
+Using the scripts from the Phase 1 submission, the experiment was conducted as follows:
+
+1. **Paraphrase Detection Task**: I fine-tuned the pre-trained model using the following parameter configuration:  
+   - **Epochs:** `10`
+   - **Batch Size:** `64`
+   - **optimizer:** `AdamW`
+   - **learning rate:** `1e-05`
+   - **option:** 'finetune'
+   - **seed:** 11711
+   - **subset_size:** 20000
+   - **task:** qqp
+
+2. **STS Task**: I then evaluated the STS task using the same configuration, but using the whole dataset instead of a subset:  
+   
+   This evaluation was performed in three different ways:
+   - Without loading the state of the Quora Question Pairs (QQP) model.
+   - Loading only the state of the model.
+   - Loading both the state of the model and the optimizer.
+
+The correlation scores on the development dataset for each of these implementations were as follows:  
+
+| Strategy                                     | STS Corr (Max)     |
+|----------------------------------------------|--------------------|
+| No previous knowledge (default)              | 0.864              |
+| Model state                                  | 0.866              |
+| Model and optimizer state                    | 0.850              |
+
+
+
 
 #### **4.3.2 Effectiveness of Average Pooling**
- Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
-All other hyperparameters share the following configuration:
+Next, I aimed to better adapt the sentence embeddings to the STS task by introducing average pooling. Given that the STS task involves sentence pairs, I tested average pooling with two different embedding strategies: 
+
+1. **Combined Embedding**: A single embedding that represents both sentences together.
+2. **Independent Embeddings**: Separate embeddings for each sentence.
+
+For the independent embeddings strategy, I tested two approaches:
+- Using the same similarity prediction as in Phase 1 (linear similarity), by concatenating both embeddings and feeding them into a linear layer.
+- Applying cosine similarity between the two embeddings.
+
+All other hyperparameters were configured as follows:  
+
 - **Epochs:** `10`
 - **Batch Size:** `64`
 - **optimizer:** `AdamW`
@@ -570,19 +610,20 @@ All other hyperparameters share the following configuration:
 - **subset_size:** None
 - **task:** sts
 
+The correlation scores on the development dataset for each of these implementations were as follows:
  
 | Pooling Strategy                                     | STS Corr (Max)     |
 |------------------------------------------------------|--------------------|
-| CLS, combined, logit (default)                       | 0.864              |
-| Average, combined, logit                             | 0.867              |
-| Average, independent, logit                          | 0.406              |
+| CLS, combined, linear (default)                      | 0.864              |
+| Average, combined, linear                            | 0.867              |
+| Average, independent, linear                         | 0.406              |
 | Average, independent, cosine similarity              | 0.406              |
 
 
-Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategy and the linear similarity prediction.
 
 
-
+#### **4.3.3 Combining both strategies**
 
 
 ---
