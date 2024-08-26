@@ -1,5 +1,6 @@
 import argparse
 import ast
+import math
 import os
 import random
 
@@ -21,6 +22,11 @@ from utils import tag_pos, get_important_tokens
 
 import multiprocessing
 from functools import partial
+
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+from collections import Counter
+from math import exp
 
 TQDM_DISABLE = False
 
@@ -503,50 +509,83 @@ class PrefixModel(nn.Module):
 
         return outputs
 
+def compute_bleu_like_score(reference_tokens, generated_tokens):
+    """
+    Compute a BLEU-like score manually.
+    Args:
+    reference_tokens (list): List of tokens in the reference sentence.
+    generated_tokens (list): List of tokens in the generated sentence.
+    Returns:
+    float: The BLEU-like score.
+    """
+    reference_counter = Counter(reference_tokens)
+    generated_counter = Counter(generated_tokens)
 
+    # Calculate precision
+    overlap = sum(min(generated_counter[word], reference_counter[word]) for word in generated_tokens)
+    precision = overlap / len(generated_tokens)
+
+    # Calculate brevity penalty
+    ref_len = len(reference_tokens)
+    gen_len = len(generated_tokens)
+    brevity_penalty = exp(1 - ref_len / gen_len) if gen_len < ref_len else 1.0
+
+    # Compute BLEU-like score
+    bleu_like_score = brevity_penalty * precision
+    return bleu_like_score
+
+
+def cosine_similarity(sentence1, sentence2):
+    """Calculate the cosine similarity between two sentences."""
+    # Tokenize the sentences into words
+    words1 = sentence1.lower().split()
+    words2 = sentence2.lower().split()
+
+    # Create word frequency dictionaries
+    freq1 = Counter(words1)
+    freq2 = Counter(words2)
+
+    # Get the set of unique words from both sentences
+    unique_words = set(freq1.keys()) | set(freq2.keys())
+
+    # Calculate dot product and magnitudes
+    dot_product = sum(freq1.get(word, 0) * freq2.get(word, 0) for word in unique_words)
+    magnitude1 = math.sqrt(sum(freq1.get(word, 0)**2 for word in unique_words))
+    magnitude2 = math.sqrt(sum(freq2.get(word, 0)**2 for word in unique_words))
+
+    # Avoid division by zero
+    if magnitude1 * magnitude2 == 0:
+        return 0
+
+    return dot_product / (magnitude1 * magnitude2)
 
 # adopting Reinforcement Learning for Paraphrase Generation
-def compute_reward(generated, reference, input_sentence, tokenizer):
+def compute_reward(generated_sentence: str, reference: str, input_sentence: str, tokenizer):
     """
-    Compute reward for generated paraphrase based on BLEU score and diversity.
+    Compute the reward for a generated sentence based on a BLEU-like score and input sentence similarity.
+    Args:
+    generated_sentence (str): The generated sentence.
+    reference (str): The reference sentence.
+    input_sentence (str): The input sentence.
+    tokenizer (AutoTokenizer): Tokenizer for the model.
+    Returns:
+    float: The computed reward.
     """
 
-    bleu = BLEU()
+    # Tokenize sentences
+    reference_tokens = reference.split()
+    generated_tokens = generated_sentence.split()
 
-    try:
-        generated_tokens = tokenizer.tokenize(generated, add_special_tokens=False)
-    except:
-        generated_tokens = []
-    reference_tokens = tokenizer.tokenize(reference, add_special_tokens=False)
-    input_tokens = tokenizer.tokenize(input_sentence, add_special_tokens=False)
+    # Compute BLEU-like score
+    bleu_like_score = compute_bleu_like_score(reference_tokens, generated_tokens)
 
-    # Calculate BLEU score
-    try:
-        bleu_score_reference = bleu.corpus_score(reference_tokens, generated_tokens).score
-    except:
-        bleu_score_reference = 0.001
+    # Compute cosine similarity between generated sentence and input sentence
+    similarity_score = cosine_similarity(reference, generated_sentence)
 
-    try:
-        # Penalize BLEU score if its to close to the input
-        bleu_score_inputs = 100 - bleu.corpus_score(input_tokens, generated_tokens).score
-    except:
-        bleu_score_inputs = 0.001
+    # Compute reward
+    reward = 0.50 * bleu_like_score + 0.50 * similarity_score
 
-    # Penalize BLEU and rescale it to 0-100
-    # If you perfectly predict all the targets, you should get a penalized BLEU score of around 52
-    reward = bleu_score_reference * bleu_score_inputs / 52
-
-    #bleu_score = sentence_bleu(reference_tokens, generated_tokens)
-    #diversity_score = 1 - sentence_bleu(input_tokens, generated_tokens)
-
-    #reward = bleu_score * diversity_score
-
-    # Penalize reward based on the difference in length
-    length_difference = abs(len(generated_tokens) - len(reference_tokens))
-    length_penalty = 2 * length_difference
-
-    # Apply length penalty
-    reward -= length_penalty
+    #print(f"BLEU-like score: {bleu_like_score}, Similarity score: {similarity_score}, Reward: {reward}")
 
     return reward
 
@@ -629,13 +668,11 @@ def train_model(model: BartForConditionalGeneration,
             return loss_fc(outputs.logits.view(-1, vocab_size), labels.view(-1))
         else:
             rewards = torch.tensor(rewards, device=device)
-            for i in range(len(outputs)):
-                logit = outputs[i]
-                reward = rewards[i]
-                normalized_reward = reward / rewards.mean()
-                new_logit = logit * normalized_reward
-                outputs[i] = new_logit
             rl_loss = loss_fc(outputs.view(-1, vocab_size), labels.view(-1))
+            #print(f"RL loss: {rl_loss}")
+            # lower loss is better, higher reward is better
+            rl_loss = rl_loss - (rl_loss * rewards.mean())
+            #print(f"RL loss: {rl_loss}")
             return rl_loss
 
 
@@ -735,7 +772,7 @@ def train_model(model: BartForConditionalGeneration,
         penalized_bleu_list.append(penalized_bleu)
 
     # load the best model
-    model = BartForConditionalGeneration.from_pretrained(output_dir)
+    model = BartForConditionalGeneration.from_pretrained(output_dir, local_files_only=True)
     #print(f"Best model loaded with penalized BLEU score: {best_penalized_bleu}")
     print(f"Best model loaded with lowest loss: {best_loss}")
 
@@ -929,7 +966,7 @@ def finetune_paraphrase_generation(args: argparse.Namespace, config_dict: dict) 
     test_dataset = pd.read_csv(f"{data_path}/etpc-paraphrase-generation-test-student.csv", sep="\t")
 
     # You might do a split of the train data into train/validation set here
-    # we split the train and generated dev, then usd dev as the validation set
+    ## we split the train and generated dev, then usd dev as the validation set
 
     # subset for development
     frac = config_dict["subset"]
@@ -984,4 +1021,4 @@ if __name__ == "__main__":
     config_dict["seed"] = args.seed
     config_dict["use_gpu"] = args.use_gpu
     finetune_paraphrase_generation(args, config_dict)
-    #genetic_algorithm(config_dict, population_size=3, generations=2, args=args)
+
