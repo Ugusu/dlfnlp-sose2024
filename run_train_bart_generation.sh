@@ -33,7 +33,7 @@ echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the script:
 # This is the default training command; change to specific task and desired hyperparameters
-python bart_generation --use_gpu
+python bart_generation.py --use_gpu
 
 # Check live logs (replace <jobid> with your actual job ID)
 # tail -f slurm_files/slurm-train-multitask_classifier-<jobid>.out
