@@ -523,11 +523,11 @@ def compute_bleu_like_score(reference_tokens, generated_tokens):
 
     # Calculate precision
     overlap = sum(min(generated_counter[word], reference_counter[word]) for word in generated_tokens)
-    precision = overlap / len(generated_tokens)
+    precision = overlap / len(generated_tokens) if len(generated_tokens) > 0 else 0
 
     # Calculate brevity penalty
     ref_len = len(reference_tokens)
-    gen_len = len(generated_tokens)
+    gen_len = len(generated_tokens) if len(generated_tokens) > 0 else 1
     brevity_penalty = exp(1 - ref_len / gen_len) if gen_len < ref_len else 1.0
 
     # Compute BLEU-like score
@@ -634,8 +634,6 @@ def train_model(model: BartForConditionalGeneration,
     Returns:
     BartForConditionalGeneration: The trained model.
     """
-
-
     # Set model to training mode
     model.train()
 

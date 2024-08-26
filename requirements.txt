@@ -17,3 +17,4 @@ matplotlib~=3.8.4
 typing~=3.10.0.0
 rouge~=1.0.1
 jedi~=0.18.1
+scikit-learn~=1.4.2
