@@ -604,9 +604,7 @@ The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, whic
 The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
 #### **4.4.2 The MCC Score**
 The MCC score is defined as:
-$$
-MCC = (TP * TN - FP * FN) \over (\sqrt(TP + FP)(TP + FN)(TN + FP)(TN + FN))
-$$
+$$MCC = (TP * TN - FP * FN) \over (\sqrt(TP + FP)(TP + FN)(TN + FP)(TN + FN))$$
 
 #### **4.4.3 Impact of Class Weights on accuracy and MMC score**
 | configuration                  |Accuracy             | MCC score          |
