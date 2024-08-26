@@ -51,11 +51,11 @@ class EarlyStopping:
     def __init__(self, patience=3):
         self.patience = patience
         self.counter = 0
-        self.matthew_score = -1
+        self.loss = float('-inf')
 
-    def early_stop(self, val_matthew_score):
-        if val_matthew_score > self.matthew_score:
-            self.matthew_score = val_matthew_score
+    def early_stop(self, val_loss):
+        if val_loss < self.loss:
+            self.loss = val_loss
             self.counter = 0
         else:
             self.counter += 1
@@ -122,8 +122,8 @@ def train_model(model: nn.Module,
                 train_data: DataLoader,
                 val_data: DataLoader,
                 device: torch.device,
-                scheduler: torch.optim.lr_scheduler,
-                optimizer: optimizer.Optimizer,
+                lr: float = 1e-5,
+                optimizer: str = 'SophiaG',
                 epochs: int = 3,
                 output_dir: str = "output.pt"
                 ) -> nn.Module:
@@ -137,15 +137,18 @@ def train_model(model: nn.Module,
         device (torch.device): Device to be used.
         epochs (int): Number of epochs.
         output_dir (str): Directory where the model is saved.
-        scheduler (torch.optim.lr_scheduler): LR Scheduler to be used
-        optimizer (optimizer.Optimizer) Optimizer to be used
+        optimizer (str): Optimizer to be used
+        lr (float): Learning rate.
 
     Returns:
         nn.Module: Trained model.
     """
     # Loss Function and Optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
-
+    if optimizer == 'SophiaG':
+        optimizer = SophiaG(model.parameters(), lr=lr)
+    if optimizer == 'AdamW':
+        optimizer = AdamW(model.parameters(), lr=lr)
 
     # Set best validation loss threshold
     best_matthews = float("-inf")
@@ -181,7 +184,7 @@ def train_model(model: nn.Module,
 
             train_loss += loss.item()
             num_batches += 1
-        scheduler.step()
+
         # Calculate Training loss
         train_loss = train_loss / num_batches
 
@@ -400,20 +403,8 @@ def finetune_paraphrase_detection(args: argparse.Namespace) -> None:
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    # implement CosineAnnealing Scheduler with warmup
-    if args.optimizer == 'SophiaG':
-        optimizer = SophiaG(model.parameters(), lr=args.lr)
-    if args.optimizer == 'AdamW':
-        optimizer = AdamW(model.parameters(), lr=args.lr)
-    warmup_epochs = 3
-    cosine_epochs = args.epochs - warmup_epochs
-    warmup_scheduler = LinearLR(optimizer=optimizer, start_factor=0.01, total_iters=cosine_epochs)
-    cosine_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=cosine_epochs, eta_min=0)
-    scheduler = SequentialLR(optimizer=optimizer, schedulers=[warmup_scheduler, cosine_scheduler],
-                             milestones=[warmup_epochs])
-
-    model = train_model(model, train_data, val_data, device, epochs=args.epochs, scheduler=scheduler,
-                        optimizer=optimizer)
+    model = train_model(model, train_data, val_data, device, epochs=args.epochs, lr=args.lr,
+                        optimizer=args.optimizer)
 
     print("Training finished.")
 
