@@ -550,6 +550,8 @@ These results obtained using a subset of the data as the training set and valida
 
 ### 4.3 BERT for Semantic Textual Similarity (STS)
 
+
+
 #### **4.3.1 Effectiveness of Pre-training on the Quora Dataset**
 
 Given the substantial size of the Quora dataset, I hypothesized that pre-training on this data could enhance the model's performance on the STS task through multitask learning. But as previously discussed, the pre-training on the Quora dataset should be conducted prior to fine-tuning on the STS dataset. This approach prevents the Quora dataset from overwriting the learned weights derived from the STS dataset, due to the relative size difference between the two datasets.
@@ -597,9 +599,9 @@ Next, I aimed to better adapt the sentence embeddings to the STS task by introdu
 1. **Combined Embedding**: A single embedding that represents both sentences together.
 2. **Independent Embeddings**: Separate embeddings for each sentence.
 
-For the independent embeddings strategy, I tested two approaches:
-- Using the same similarity prediction as in Phase 1 (linear similarity), by concatenating both embeddings and feeding them into a linear layer.
-- Applying cosine similarity between the two embeddings.
+For the independent embeddings strategy, I tested two approaches.
+- Applying linear layer similarity, which is the approach from Phase 1. The **predict_similarity** function concatenates both embeddings and feeding them into a linear layer to get a similarity score, which is then normalized to match the scoring domain, which is [0,5]. This approach is implemented calling the **multitask_classifier_independent_embeddings.py** classifier in the **run_train.sh** script.
+- Applying cosine similarity to both embeddings. The **predict_similarity** function obtains the cosine similarity of both embeddings, which belongs to the interval [-1,1], and normalizes it to match the scoring domain. This approach is implemented calling the **multitask_classifier_cosine_sim.py** classifier in the **run_train.sh** script.
 
 All other hyperparameters were configured as follows:  
 
