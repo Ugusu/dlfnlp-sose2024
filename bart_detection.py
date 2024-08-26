@@ -199,7 +199,6 @@ def train_model(model: nn.Module,
             optimizer.zero_grad()
             outputs = model.forward(input_ids=b_ids, attention_mask=b_mask)
             loss = loss_fn(outputs, b_labels)
-            print(outputs, b_labels)
             loss.backward()
             # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
@@ -335,7 +334,7 @@ def evaluate_model(model: nn.Module,
             attention_mask = attention_mask.to(device)
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            predicted_labels = (outputs > 0.5).int()
+            predicted_labels = (outputs > 0.7).int()
 
             all_pred.append(predicted_labels)
             all_labels.append(labels)
