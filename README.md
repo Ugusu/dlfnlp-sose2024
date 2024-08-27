@@ -845,7 +845,7 @@ Explain the contribution of each group member:
   - Trying methods from LLama 3 like rotary positional encoding and SwiGLU activation function.
   - Using gradual unfreezing and discriminative learning rates for training.
   - trying genetic algorithm for multi-objective optimization of hyperparameters optimizing for both best penalized_BLEU and loss.
-  - Implemented Reinforcement Learning for paraphrase generation. araphrase Generation with Deep Reinforcement Learning [Li, Jiang, Shang et al., 2018]
+  - Implemented Paraphrase Generation with Deep Reinforcement Learning [Li, Jiang, Shang et al., 2018]
 - 
 **Pablo Jahnen:**
 - Phase 1:
