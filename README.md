@@ -610,7 +610,7 @@ The correlation scores on the development dataset for each of these implementati
 | Model state                                  | 0.866              |
 | Model and optimizer state                    | 0.850              |
 
-
+These results suggest that loading only the state of the model is the best strategy. The AdamW optimizer retains gradient information from the paraphrase detection task, which was trained extensively on the large Quora dataset. While this extensive training allows the optimizer to be finely tuned to the paraphrase detection task, it can also lead to reduced flexibility when adapting to the STS task, despite their similarities. This is because the optimizer's state, having undergone many updates, might be more resistant to change, potentially making it harder for the optimizer to fully adjust to the nuances of the STS task. 
 
 
 #### **4.3.2 Effectiveness of Average Pooling**
