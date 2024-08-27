@@ -790,7 +790,7 @@ The results for the dev dataset.
 | Improvement 6                | ...                                | ...                            | ...                                   |
 
 
-Here Paraphrase Detection was trained for 1 epoch:
+Here Paraphrase Detection was trained for 1 epoch. The improvement for Semantic Textual Similarity was trained with the configuration described previously.
 
 | **Independent**                                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
 |------------------------------------------------|------------------------------------|--------------------------------|---------------------------------------|
@@ -799,7 +799,7 @@ Here Paraphrase Detection was trained for 1 epoch:
 | CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
 | Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
 | SMART                                          | 0.515                              | 0.867                          | 0.856                                 |
-| Improvement 5                                  | ...                                | ...                            | ...                                   |
+| Pre-training on quora with average pooling     | ...                                | ...                            | 0.870                                 |
 | Improvement 6                                  | ...                                | ...                            | ...                                   |
 
 
