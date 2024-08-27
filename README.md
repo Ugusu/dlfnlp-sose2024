@@ -546,16 +546,16 @@ The training process uses a combination of supervised learning (SL) and reinforc
 $$L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}$$
 #### 4.2.6 Results #### 
 
-The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
+The best model achieved a penalized BLEU score of 24.315 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality (human preference) paraphrases. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
 ##### Note: ##### 
-I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sence to a human as a good paraphrase. Therefore the penalized_bleu score may not be the best optomization target for the model. So I used a combination of loss and penalized_bleu score as the reward for the RL training.
+I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sense to a human as a good paraphrase. Therefore, the penalized_bleu score may not be the best optimization target for the model. So I used a combination of loss and penalized_bleu score to return the best model for the task.
 
 Examples:
 - Input: `Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.`
 - Target:  `Some 34.7 million shares have been tendered, Oracle said in a statement.`
 
-- Generated: `Oracle Corp (ORCL.N) said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered
+- Generated: `Oracle Corp (ORCL.N) said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered`
   - Penalized BLEU: 30.4961
   - Loss: 1.1998
 
