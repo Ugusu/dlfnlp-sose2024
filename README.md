@@ -668,7 +668,7 @@ Below are the steps to implement this approach:
 
 Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_state_dict(checkpoint['model'])` is commented out.
 
-2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** to `sts`.
+2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** `sts`.
 This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
 
 #### **4.3.3** Final Results
