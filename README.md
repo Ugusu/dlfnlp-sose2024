@@ -631,7 +631,7 @@ The correlation scores obtained on the development dataset for each of these imp
 
 
 #### **4.3.3 Improvement decission**
-Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To leverage these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
+Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To make the most of these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
 
 Below are the steps to implement this approach, which will later be compared with the baseline:
 
