@@ -142,7 +142,7 @@ BART has 2 tasks:
 - BART_generation: for this task, we used the BART model to generate paraphrases of a given sentence.
   - We used the `BartForConditionalGeneration` model from the `transformers` library the pretrained `bart-large` has been used.
   - The model was trained on the `etpc-paraphrase-train.csv` dataset, which contains 2019 paraphrase pairs.
-  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 6 epochs with a batch size of 64.
+  - The model was fine-tuned on the `etpc-paraphrase-train.csv` dataset for 5 epochs with a batch size of 16.
   - The model was evaluated on the `etpc-paraphrase-dev.csv` and `etpc-paraphrase-generation-test-student` datasets.
 
 - BART_detection: We used BART-large model to detect 7 differenct paraphrase types given a sentence. Tokenization was done using AutoTokenizer from the transformers library and using a pretrained BartModel from the same library, the model was fine-tuned on the etpc-paraphrase-train.csv using AdamW optimzer and CrossEntropyLoss loss function and validated on the etpc-paraphrase-dev.csv dataset for 5 epochs, learning rate 1e-5 and batch size 16. It is saved for best validation loss performance and was then tested on the etpc-paraphrase-generation-test-student dataset.
@@ -424,8 +424,6 @@ For an illustrative comparison, refer to the corresponding [box plot](sst_grid_s
 For a more in-depth analysis and additional results, refer to the accompanying Jupyter notebook, which we recommend to do
 locally.
 
-
-
 ### 4.2 BART for Paraphrase Generation
 
 #### **4.2.1 Data Overview**
@@ -513,10 +511,9 @@ if num_trainable == max_layers:
 
 
 
-#### 4.2.5 Reinforcement Learning for Paraphrase Generation
+#### **4.2.5 Reinforcement Learning for Paraphrase Generation**
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
-
 The reward function for the paraphrase generation model is defined as:
 $$R = 0.5 \cdot B + 0.5 \cdot C$$
 where $$(R)$$ is the total reward, $$(B)$$ is the BLEU-like score, and $$(C)$$ is the cosine similarity score.
@@ -546,16 +543,16 @@ The training process uses a combination of supervised learning (SL) and reinforc
 $$L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}$$
 #### 4.2.6 Results #### 
 
-The best model achieved a penalized BLEU score of 24.315 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality (human preference) paraphrases. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
+The best model achieved a penalized BLEU score of 24.211 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality paraphrases that closely matched the original sentences. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
 ##### Note: ##### 
-I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sense to a human as a good paraphrase. Therefore, the penalized_bleu score may not be the best optimization target for the model. So I used a combination of loss and penalized_bleu score to return the best model for the task.
+I observed the generations during training and noticed that outputs with neither low loss nor high penalized bleu score may not make sence to a human as a good paraphrase. Therefore the penalized_bleu score may not be the best optomization target for the model. So I used a combination of loss and penalized_bleu score as the reward for the RL training.
 
 Examples:
 - Input: `Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.`
 - Target:  `Some 34.7 million shares have been tendered, Oracle said in a statement.`
 
-- Generated: `Oracle Corp (ORCL.N) said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered`
+- Generated: `Oracle Corp (ORCL.N) said on Thursday that 34.75 million PeopleSoft Corp shares had been tendered
   - Penalized BLEU: 30.4961
   - Loss: 1.1998
 
