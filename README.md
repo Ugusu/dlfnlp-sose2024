@@ -782,7 +782,7 @@ The results for the dev dataset.
 | Extra CGA Layer              | 0.263                              | 0.865                          | 0.770                                 |
 | CGA-based Attention-Pooling  | 0.276                              | 0.867                          | 0.698                                 |
 | Optimal Hyperparameters Only | 0.328                              | 0.874                          | 0.797                                 |
-| Improvement 4                | ...                                | ...                            | ...                                   |
+| SMART                        | 0.301                              | 0.864                          | 0.787                                 |
 | Improvement 5                | ...                                | ...                            | ...                                   |
 | Improvement 6                | ...                                | ...                            | ...                                   |
 
