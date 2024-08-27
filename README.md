@@ -673,7 +673,17 @@ This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncom
 
 #### **4.3.3** Final Results
 To test if the transfer leraning strategy in the improvement described above increases performance, I decided to compare it with a baseline model that also uses average pooling but fine-tunes the model from scratch. The training of the baseline was conducted as follows:
-Run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the same configuration as in the improvement, but ensuring that the line `#model.load_state_dict(checkpoint['model'])` is commented out to fine-tune the model from scratch.
+1. **Baseline**. Run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the same configuration as in the improvement:
+   - **Epochs:** `10`
+   - **Batch Size:** `64`
+   - **Optimizer:** `AdamW`
+   - **Learning Rate:** `1e-05`
+   - **Option:** `finetune`
+   - **Seed:** `11711`
+   - **Subset Size:** `None`
+   - **Task:** `qqp`
+   But this time ensure that the line `#model.load_state_dict(checkpoint['model'])` is commented out to fine-tune the model from scratch.
+
 The final correlation achieved on the dev test, as well as the epoch where each model reached its peak performance are displayed in the following table:
 
 
