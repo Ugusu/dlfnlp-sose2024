@@ -1,0 +1,33 @@
+epochs: 10
+learning_rate: 3e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 3e-05, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 10
+max_length: 256
+gradual_unfreezing: True
+num_layers_to_freeze: 12
+rl_weight: 0.85
+dataset: etpc-paraphrase-train.csv
+subset: 1
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [22.518409407044334, 24.072659689520247, 20.350425299378205, 19.68642658444564, 18.774942900804543, 20.126456101117306, 19.784908595669897, 20.40329848089704, 19.812413956361315, 20.193890781742446]
+penalized_bleu_val: 24.211467405906028
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: True
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to half of the training dataThis is to make sure the model learns to generate the most important tokens, and also learnthat htis type of input may be None, as it is for the validation and test
+example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
+example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
+example_predictions: ['Oracle said on Thursday that 34.75 million PeopleSoft shares had been tendered. Through Thursday, ', 'But it was not clear, he said, whether the ban had been effective in reducing the problem.  CCONJ PRON VERB SCONJ DET ADJ NOUN AUX AUX ADJ ADP VERB DET', '10 in Indiana and five in Illinois. So far this year, health officials have reported 18 new cases in Wisconsin, ', 'The students are most likely to be taught by a 15 - year veteran with a growing workload and slightly less interest in staying in teaching.', 'Two of the six people who testified before Congress Wednesday were engaged in a dispute with the New York Yankees about airing Yankees games.  NUM ADP DET NUM NOUN PRON VERB ADP PROPN AUX']

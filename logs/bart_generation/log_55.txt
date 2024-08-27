@@ -1,0 +1,29 @@
+epochs: 6
+learning_rate: 3e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 3e-05, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 10
+max_length: 256
+gradual_unfreezing: True
+num_layers_to_freeze: 12
+dataset: etpc-paraphrase-train.csv
+subset: 0.1
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [0, 0, 22.392413071535024, 22.343390265109704, 23.60370615440936, 22.405379892114013]
+penalized_bleu_val: 24.73321249403079
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to the training data

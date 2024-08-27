@@ -1,0 +1,32 @@
+epochs: 6
+learning_rate: 3e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 3e-05, 'betas': (0.1, 0.001), 'rho': 0.04, 'weight_decay': 0.1}
+use_scheduler: False
+scheduler_step_size: 1
+scheduler_gamma: 0.675
+batch_size: 10
+max_length: 256
+gradual_unfreezing: False
+num_layers_to_freeze: 12
+dataset: etpc-paraphrase-train.csv
+subset: 0.01
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [31.244020684777205, 27.65569809711696, 29.74978071913908, 29.693715700720386, 28.100318876220015, 27.9578781912915]
+penalized_bleu_val: 27.68088690433567
+penalized_bleu_test: 0.0
+prefix: False
+prefix_length: 10
+prefix_method: indirect
+use_gpu: False
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: {masked_sentence} {tokenizer.sep_token} {' '.join(sentence1_tags)}
+target_format: {sentence2}
+other_details: masked a random verb, adjective, noun, and conjunction 
+rotated the sentence parts if there is , in betweenAdding the least frequent tokens between the two sentences to half of the training dataThis is to make sure the model learns to generate the most important tokens, and also learnthat htis type of input may be None, as it is for the validation and test
+example_inputs: ['Through Thursday, Oracle said 34.75 million PeopleSoft shares had been tendered.', 'But it said that the Danish ban had been effective in reducing the spread among food animals.', 'State health officials have reported 18 suspected cases in Wisconsin, 10 in Indiana and five in Illinois.', 'Overall, students are most likely to be taught by a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work-force portrait shows.', 'Two of the six people who testified before Congress Wednesday were engaged in a bitter dispute about airing Yankees games.']
+example_references: ['Some 34.7 million shares have been tendered, Oracle said in a statement.', 'But, in a 58-page report, WHO said the Danish ban had been effective in reducing the spread among food animals.', 'As of yesterday afternoon, 22 suspected cases had been reported in Wisconsin, 10 in Indiana and five in Illinois.', 'The average teacher is a 15-year veteran with a growing workload and slightly eroding interest in staying in teaching, the work force portrait shows.', 'Two of the six people that testified to Congress today were engaged in a bitter dispute over airing Yankees games.']
+example_predictions: ['Oracle (ORCL) says 34.75 million PeopleSoft (PYPL) shares had been tendered. Through Thursday,  PROPN VERB NUM NOUN AUX AUX VERB PUNCT ADP PR', 'But it was also reported that, the Danish ban had been successful in reducing the spread among humans and other animals.  CCONJ PRON VERB SCONJ DET ADJ NOUN AUX AUX ADJ ADP', '10 in Indiana and five in Illinois. So far this year, state health officials have reported 18 flu cases in Wisconsin, NUM ADP PROPN CCONJ NUM ADPPROPN PUNCT NOUN NOUN', 'students are most likely to be taught by a 15 - year veteran with a very high workload and slightly eroding interest in staying in teaching, the work - force portrait of which is not very flattering. Overall,  NOUN AU', 'Two of the six baseball executives who testified before Congress Wednesday were fired by the New York Yankees in a dispute about airing Yankees games.  NUM ADP DET NUM NOUN PRON VERB ADP PROPN AUX VERB']

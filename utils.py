@@ -1,20 +1,24 @@
+import ast
 import copy
 import fnmatch
 import json
 import os
+import random
 import shutil
 import sys
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from enum import Enum
 from functools import partial
 from hashlib import sha256
 from pathlib import Path
-from typing import BinaryIO, Dict, List, Optional, Tuple, Union
+from typing import BinaryIO, Dict, List, Optional, Tuple, Union, Any
 from urllib.parse import urlparse
 from zipfile import ZipFile, is_zipfile
 
 import importlib_metadata
+import numpy as np
 import requests
 import torch
 import torch.nn as nn
@@ -22,6 +26,17 @@ from filelock import FileLock
 from huggingface_hub.hf_api import HfFolder
 from torch import Tensor
 from tqdm.auto import tqdm
+from torch.nn import functional as F
+
+import re
+from num2words import num2words
+from transformers import AutoTokenizer
+from words2num import w2n as word2num
+
+import spacy
+
+from rouge import Rouge
+from collections import Counter
 
 __version__ = "4.0.0"
 _torch_version = importlib_metadata.version("torch")
@@ -378,3 +393,315 @@ def get_extended_attention_mask(attention_mask: Tensor, dtype) -> Tensor:
     extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
     extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
     return extended_attention_mask
+
+
+class SwiGLU1(nn.Module):
+    def __init__(self):
+        super(SwiGLU1, self).__init__()
+
+    def forward(self, x):
+        # Split input tensor into two halves along the last dimension
+        x1, x2 = x.chunk(2, dim=-1)
+        if x.shape[0] == 1:
+            output = F.silu(x)
+        else:
+            output = x1 * F.silu(x2)
+        if output.shape != x.shape:
+            output = output.view(x.shape[1::])
+        return output
+
+
+class SwiGLU2(nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(SwiGLU2, self).__init__()
+        self.linear1 = nn.Linear(input_dim, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, input_dim)
+        self.gate = nn.Linear(input_dim, hidden_dim)
+        self.activation = nn.GELU()
+
+    def forward(self, x):
+        return self.linear2(self.activation(self.linear1(x))) * torch.sigmoid(self.gate(x))
+
+class GELU(nn.Module):
+    def forward(self, x):
+        print(x.shape)
+        output = 0.5 * x * (1 + torch.tanh(torch.sqrt(2 / torch.tensor(torch.pi)) * (x + 0.044715 * torch.pow(x, 3))))
+        print(output.shape)
+        return output
+
+
+class SwiGLU(nn.Module):
+    def __init__(self):
+        super(SwiGLU, self).__init__()
+        self.silu = nn.SiLU()  # Swish activation function
+
+    def forward(self, x, gate):
+        return self.silu(x) * gate
+
+
+class SwiGLUFeedForward(nn.Module):
+    def __init__(self, config):
+        super(SwiGLUFeedForward, self).__init__()
+        self.config = config
+        self.linear1 = nn.Linear(config.d_model, config.decoder_ffn_dim)
+        self.linear2 = nn.Linear(config.decoder_ffn_dim, config.d_model)
+        self.gate_linear = nn.Linear(config.d_model, config.decoder_ffn_dim)
+        self.swiglu = SwiGLU()
+        self.dropout = nn.Dropout(config.dropout)
+
+    def forward(self, x):
+        input_shape = x.shape[-1]
+        gate = nn.Linear(input_shape, self.config.decoder_ffn_dim)(x)
+        x = nn.Linear(input_shape, self.config.decoder_ffn_dim)(x)
+        x = self.swiglu(x, gate)
+        x = self.dropout(x)
+        x = nn.Linear(self.config.decoder_ffn_dim, input_shape)(x)
+        x = self.dropout(x)
+        return x
+
+class RMSNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.eps = eps
+
+    def forward(self, x):
+        mean_square = torch.mean(x ** 2, dim=-1, keepdim=True)
+        x = x * torch.rsqrt(mean_square + self.eps)
+        return self.weight * x
+
+def rotate_half(x):
+    x1, x2 = x.chunk(2, dim=-1)
+    return torch.cat((-x2, x1), dim=-1)
+
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(self, dim, max_position_embeddings=2048, base=10000):
+        super().__init__()
+        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+        self.register_buffer("inv_freq", inv_freq)
+        self.max_seq_len_cached = max_position_embeddings
+        t = torch.arange(self.max_seq_len_cached).type_as(self.inv_freq)
+        freqs = torch.einsum("i,j->ij", t, self.inv_freq)
+        emb = torch.cat((freqs, freqs), dim=-1)
+        self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
+        self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+
+    def forward(self, x, seq_len=None):
+        if seq_len > self.max_seq_len_cached:
+            self.max_seq_len_cached = seq_len
+            t = torch.arange(self.max_seq_len_cached).type_as(self.inv_freq)
+            freqs = torch.einsum("i,j->ij", t, self.inv_freq)
+            emb = torch.cat((freqs, freqs), dim=-1)
+            self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
+            self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+        return (
+            self.cos_cached[:, :, :seq_len, ...].to(x.device),
+            self.sin_cached[:, :, :seq_len, ...].to(x.device),
+        )
+
+def apply_rotary_pos_emb(x, cos, sin):
+    cos = cos.repeat_interleave(2, dim=-1)
+    sin = sin.repeat_interleave(2, dim=-1)
+    return (x * cos) + (rotate_half(x) * sin)
+
+def nums2word_word2nums(sentence: str, input_type: str = "digits", num_tag: bool = True) -> str:
+    """
+    Replace numbers with letters.
+    :param sentence: Input sentence
+    :param input_type: Type of input sentence (digits or words) - words only works if there are <num> </num> tokens
+    :param num_tag: Tag the numbers with <num> </num> tokens
+    """
+
+    # TODO not perfect can be improved
+    """def create_number_dictionary():
+        number_dict = {}
+
+        # Single digits and teens
+        for i in range(0, 20):
+            number_dict[num2words(i)] = str(i)
+
+        # Tens
+        for i in range(20, 101, 10):
+            number_dict[num2words(i)] = str(i)
+
+        # Hundreds
+        for i in range(100, 1001, 100):
+            number_dict[num2words(i)] = str(i)
+
+        # Large numbers
+        large_numbers = [1000, 1000000, 1000000000, 1000000000000]
+        for num in large_numbers:
+            number_dict[num2words(num)] = str(num)
+
+        # Special cases
+        number_dict['a'] = '1'
+        number_dict['an'] = '1'
+        number_dict['zero'] = '0'
+        number_dict['oh'] = '0'
+        number_dict['point'] = '.'
+        number_dict['negative'] = '-'
+        number_dict['million'] = 'million'
+
+        return number_dict"""
+
+    text = sentence
+    def digits_to_words(match):
+
+        number = match.group(0)
+        #print(' I am the match: ', number)
+        # if there is a string in the number, it probably has a scale
+        scale = ''
+        splits = number.split()
+        if len(splits) > 1:
+            number = splits[0]
+            scale = ' ' + splits[1]
+
+        if '.' in number:
+            integer_part, decimal_part = number.split('.')
+            integer_words = num2words(int(integer_part))
+            decimal_words = ' point ' + num2words(int(decimal_part))
+            word_num = integer_words + decimal_words
+            if num_tag:
+                # add a special token so that we can distinguish between the synthetic numbers and the rest of the text
+                return '<num> ' + word_num + scale + ' </num>'
+            else:
+                return word_num + scale
+        else:
+            # add a special token so that we can distinguish between the synthetic numbers and the rest of the text
+            word_num = num2words(int(number))
+            if num_tag:
+                return '<num> ' + word_num + scale + ' </num>'
+            else:
+                return word_num + scale
+
+    def words_to_digits(text):
+        # find the tagged numbers
+        tagged_numbers = re.findall(r'<num> (.*?) <', text)
+        for num in tagged_numbers:
+            # convert the number to digits
+            digit = word2num(num, 'en')
+            #print('I am the digit: ', digit)
+            # replace the tagged number with the digit
+            text = text.replace(f'<num> {num} </num>', str(digit))
+
+        return text
+
+    if input_type == "digits":
+        text = re.sub(r'\b-?\d+(?:\.\d+)?\b', digits_to_words, sentence)
+        print("digit_to_word output: ", text)
+
+    elif input_type == "words":
+        text = words_to_digits(sentence)
+        print("word_to_digit output: ", text)
+
+    return text
+
+
+#nums2word_word2nums("I have 25 apples and 30.05 oranges. The temperature is -2.3 degrees Celsius.", input_type="digits")
+#nums2word_word2nums("I have <num> twenty-five </num> apples and <num> thirty point zero five </num> oranges. The temperature is -<num> two point three </num> degrees Celsius.", input_type="words")
+
+
+def tag_pos(sentence: str):
+    """
+    Using spacy to tag the POS of the sentence
+    """
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp(sentence)
+    w_tokens = []
+    w_pos = []
+
+    for token in doc:
+        w_tokens.append(token.text)
+        w_pos.append(token.pos_)
+
+    return w_tokens, w_pos
+
+
+
+def get_important_tokens(sentence1_tokenized: str, sentence2_tokenized: str, all_sentence1_tokens: list) -> List[Any]:
+    """
+    Find the two most important tokens from sentence2 using ROUGE metrics.
+
+    This function calculates the importance of tokens based on their ROUGE scores and frequency.
+    It considers tokens with length greater than 3 and returns the two most important ones from sentence2.
+
+    Args:
+        sentence1_tokenized (str): The first tokenized sentence as a string representation of a list.
+        sentence2_tokenized (str): The second tokenized sentence as a string representation of a list.
+
+    Returns:
+        List[Any]: A list containing up to two most important tokens from sentence2.
+
+    Raises:
+        ValueError: If there are fewer than two valid tokens (length > 3) in sentence2.
+    """
+    # Convert and clean the tokenized sentences
+    sentence1_tokenized = ast.literal_eval(sentence1_tokenized)
+    sentence2_tokenized = ast.literal_eval(sentence2_tokenized)
+
+    # Combine both sentences for reference, but only consider sentence2 for valid tokens
+    all_tokens = all_sentence1_tokens + sentence2_tokenized
+    valid_tokens = [token for token in sentence2_tokenized if len(token) > 3]
+
+    if len(valid_tokens) < 3:
+        raise ValueError("Insufficient number of valid tokens (length > 4) in sentence2.")
+
+    # Count occurrences of each valid token in sentence2
+    token_counts = Counter(valid_tokens)
+
+    # Calculate ROUGE scores for each token
+    rouge = Rouge()
+    reference = " ".join(all_tokens)
+    token_scores = {}
+
+    for token in set(valid_tokens):
+        hypothesis = token
+        scores = rouge.get_scores(hypothesis, reference)
+        # Use ROUGE-l F1-score as the primary metric
+        token_scores[token] = scores[0]['rouge-l']['f']
+
+    # Combine ROUGE scores with inverse frequency for final importance score
+    token_importance = {
+        token: (score / token_counts[token])
+        for token, score in token_scores.items()
+    }
+
+    # Sort tokens by importance score (descending) and return top 2
+    important_tokens = sorted(token_importance.items(), key=lambda x: x[1], reverse=True)
+    important_tokens = [token for token, _ in important_tokens[:2]]
+
+    excluded_tokens = set(sentence1_tokenized + important_tokens)
+    #print("Excluded tokens: ", excluded_tokens)
+    handpicked_token = [token for token in valid_tokens if token not in excluded_tokens]
+    if len(handpicked_token) > 1:
+        # take two random tokens
+        handpicked_token = random.sample(handpicked_token, 2)
+        important_tokens.extend(handpicked_token)
+        #print("Handpicked token: ", handpicked_token)
+    elif len(handpicked_token) > 0:
+        handpicked_token = random.choice(handpicked_token)
+        important_tokens.append(handpicked_token)
+    else:
+        pass
+
+    return important_tokens
+
+
+
+'''def mask_important_tokens(tokens: list, important_tokens: list) -> str:
+    """
+    Mask the important tokens in the sentence.
+    """
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    masked_tokens = [tokenizer.mask_token if token in important_tokens else token for token in tokens]
+    return tokenizer.convert_tokens_to_string(masked_tokens)'''
+
+class PoolingStrategy(Enum):
+    CLS = "cls"
+    AVERAGE = "average"
+    MAX = "max"
+    ATTENTION = "attention"
+
+class OptimizerType(Enum):
+    ADAMW = "adamw"
+    SOPHIA = "sophia"

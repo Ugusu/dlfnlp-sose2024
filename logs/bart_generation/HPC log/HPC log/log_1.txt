@@ -1,0 +1,27 @@
+epochs: 3
+learning_rate: 3e-05
+optimizer: SophiaG
+optimizer_params: {'lr': 1e-05, 'betas': (0.1, 0.001), 'eps': 1e-08, 'weight_decay': 0.01}
+use_scheduler: True
+scheduler_step_size: 1
+scheduler_gamma: 0.5
+batch_size: 16
+max_length: 256
+num_layers_to_freeze: 8
+dataset: etpc-paraphrase-train.csv
+subset: 1
+val_dataset: etpc-paraphrase-dev.csv
+test_dataset: etpc-paraphrase-generation-test-student.csv
+penalized_bleu_epochs: [24.62894707422068, 24.52774323524629, 24.639198800655517]
+penalized_bleu_val: 24.566533799272257
+penalized_bleu_test: 0.0
+prefix: True
+prefix_length: 10
+prefix_method: indirect
+use_gpu: True
+seed: 11711
+model: facebook/bart-large
+tokenizer: facebook/bart-large
+input_format: sentence1
+target_format: sentence2
+other_details: 

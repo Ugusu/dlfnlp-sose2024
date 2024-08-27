@@ -1,7 +1,9 @@
 import math
 from typing import Callable, Iterable, Tuple
 
+import numpy
 import torch
+from torch import nn
 from torch.optim import Optimizer
 
 
@@ -230,4 +232,3 @@ class SophiaG(Optimizer):
                 p.addcmul_(exp_avg.sign(), ratio, value=step_size_neg)
 
         return loss
-
