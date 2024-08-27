@@ -563,21 +563,20 @@ Another argument supporting this strategy is the fact that the tasks of paraphra
 
 The next question that arose was how to transfer the knowledge gained from the Paraphrase Detection task to the STS task. The saved model state includes not only its weights but also the state of the optimizer. To explore the best approach, I tested two different implementations: one where both the model state and the optimizer state were loaded, and another where only the model state was loaded.
 
-Using the scripts from the Phase 1 submission, the experiment was conducted as follows:
+The experiment was conducted as follows:
 
 1. **Paraphrase Detection Task**: I fine-tuned the pre-trained model using the following parameter configuration:  
    - **Epochs:** `10`
    - **Batch Size:** `64`
-   - **optimizer:** `AdamW`
-   - **learning rate:** `1e-05`
-   - **option:** 'finetune'
-   - **seed:** 11711
-   - **subset_size:** 20000
-   - **task:** qqp
+   - **Optimizer:** `AdamW`
+   - **Learning Rate:** `1e-05`
+   - **Option:** `finetune`
+   - **Seed:** `11711`
+   - **Subset Size:** `20,000`
+   - **Pooling Strategy:** `CLS`
+   - **Task:** `qqp`
 
-2. **STS Task**: I then evaluated the STS task using the same configuration, but using the whole dataset instead of a subset:  
-   
-   This evaluation was performed in three different ways:
+2. **STS Task**: Then I trained the model for the STS task using the same configuration, but with the whole dataset instead of a subset. This evaluation was performed in three different ways:
    - Without loading the state of the Quora Question Pairs (QQP) model.
    - Loading only the state of the model.
    - Loading both the state of the model and the optimizer.
@@ -593,15 +592,22 @@ The correlation scores on the development dataset for each of these implementati
 
 
 
-#### **4.3.2 Effectiveness of Average Pooling**
-Next, I aimed to better adapt the sentence embeddings to the STS task by introducing average pooling. Given that the STS task involves sentence pairs, I tested average pooling with two different embedding strategies: 
+### **4.3.2 Effectiveness of Average Pooling**
 
-1. **Combined Embedding**: A single embedding that represents both sentences together.
-2. **Independent Embeddings**: Separate embeddings for each sentence.
+To enhance the performance of sentence embeddings on the STS task, I decided to introduce average pooling. Average pooling was chosen because it helps smooth out variations within the embeddings of sentence pairs, potentially leading to more robust and generalizable representations. Since the STS task involves comparing sentence pairs, capturing the overall meaning of each sentence in a way that is less sensitive to specific word placements or noise can be beneficial.
 
-For the independent embeddings strategy, I tested two approaches.
-- Applying linear layer similarity, which is the approach from Phase 1. The `predict_similarity` function concatenates both embeddings and feeding them into a linear layer to get a similarity score, which is then normalized to match the scoring domain, which is [0,5]. This approach is implemented calling the `multitask_classifier_independent_embeddings.py` classifier in the `run_train.sh` script.
-- Applying cosine similarity to both embeddings. The `predict_similarity` function obtains the cosine similarity of both embeddings, which belongs to the interval [-1,1], and normalizes it to match the scoring domain. This approach is implemented calling the `multitask_classifier_cosine_sim.py` classifier in the `run_train.sh` script.
+I tested average pooling with two different embedding strategies:
+
+1. **Combined Embedding**: A single embedding that represents both sentences together. This approach combines the embeddings of both sentences into a single vector, which is then used to predict similarity.
+
+2. **Independent Embeddings**: Separate embeddings for each sentence. This approach treats each sentence individually, creating distinct embeddings that are compared in the similarity prediction process.
+
+For the independent embeddings strategy, I explored two approaches:
+
+- **Linear Layer Similarity (Implementation from Phase 1)**: In this approach, the `predict_similarity` function concatenates the independent embeddings of the two sentences and passes them through a linear layer to obtain a similarity score. This score is then normalized to fit the target scoring domain, which is the interval [0,5]. This approach is implemented by calling the `multitask_classifier_independent_embeddings.py` classifier in the `run_train.sh` script.
+
+- **Cosine Similarity**: In this approach, the `predict_similarity` function calculates the cosine similarity between the two independent embeddings. Cosine similarity naturally falls within the interval [-1,1], so it is normalized to match the scoring domain of [0,5]. This method is implemented by calling the `multitask_classifier_cosine_sim.py` classifier in the `run_train.sh` script.
+
 
 All other hyperparameters were configured as follows:  
 
@@ -609,25 +615,41 @@ All other hyperparameters were configured as follows:
 - **Batch Size:** `64`
 - **optimizer:** `AdamW`
 - **learning rate:** `1e-05`
-- **option:** 'finetune'
-- **seed:** 11711
-- **subset_size:** None
-- **task:** sts
+- **option:** `finetune`
+- **seed:** `11711`
+- **subset_size:** `None`
+- **task:** `sts`
 
 The correlation scores obtained on the development dataset for each of these implementations were:
  
-| Pooling Strategy                                     | STS Corr (Max)     |
-|------------------------------------------------------|--------------------|
-| CLS, combined, linear (default)                      | 0.864              |
-| Average, combined, linear                            | 0.867              |
-| Average, independent, linear                         | 0.406              |
-| Average, independent, cosine similarity              | 0.406              |
+| Pooling Strategy                                               | STS Corr (Max)     |
+|----------------------------------------------------------------|--------------------|
+| CLS, combined embedding, linear layer (default)                | 0.864              |
+| Average, combined embedding, linear layer                      | 0.867              |
+| Average, independent embeddings, linear layer                  | 0.406              |
+| Average, independent embeddings, cosine similarity             | 0.406              |
 
 
 #### **4.3.3 Improvement decission**
-Based on these results from **4.3.2 I decided to use average pooling on a combined embedding for both sentences. 
-The results from **4.3.1 suggest that loading the state of the model for the Paraphrase Detection task might further improve the performance on the STS task. Therefore, finally I decided to first
-Given 
+Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To leverage these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
+
+Below are the steps to implement this approach, which will later be compared with the baseline:
+
+1. **Paraphrase Detection Task**: First, run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the following configuration:
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Learning Rate:** `1e-05`
+- **Option:** `finetune`
+- **Seed:** `11711`
+- **Subset Size:** `None`
+- **Task:** `qqp`
+
+Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_state_dict(checkpoint['model'])` is commented out.
+
+2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** to `sts`.
+This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
+
 
 
 ---
