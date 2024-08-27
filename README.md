@@ -670,6 +670,7 @@ Run the `run_train.sh` script by calling `multitask_classifier.py` with the foll
 | Pre-training on Quora with Average Pooling             | 0.870                 | 2                  |
 
 As shown, the improvement strategy reached its peak performance at the second epoch, outperforming the baseline. This suggests that the transfer learning approach not only enhances the model's performance but also accelerates its convergence.
+This improvement will be used to generate the predictions on the development dataset for the STS task.
 
 
 
