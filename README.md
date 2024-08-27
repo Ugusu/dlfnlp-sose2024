@@ -566,20 +566,129 @@ Examples:
 
 These results obtained using a subset of the data as the training set and validating on a subset of dev dataset.
 
-### 4.3 BERT for Paraphrase Type Detection
+### 4.3 BERT for Semantic Textual Similarity (STS)
 
-#### **4.3.1 Effectiveness of Pooling Strategies**
- Average pooling was evaluated on two emmbedding strategies: a combined embedding for both sentences, independent embeddings for each sentence. The latter approach was tested with the default logit similarity prediction (concatenating both embeddings) and also with cosine similarity.
+
+
+#### **4.3.1 Effectiveness of Pre-training on the Quora Dataset**
+
+Given the substantial size of the Quora dataset, I hypothesized that pre-training on this data could enhance the model's performance on the STS task through multitask learning. But as previously discussed, the pre-training on the Quora dataset should be conducted prior to fine-tuning on the STS dataset. This approach prevents the Quora dataset from overwriting the learned weights derived from the STS dataset, due to the relative size difference between the two datasets.
+
+Another argument supporting this strategy is the fact that the tasks of paraphrase detection and semantic textual similarity share certain underlying similarities:
+
+- In the Paraphrase Detection task, the logits produced by the model's `predict_paraphrase` method represent the probability that a given sentence pair is a paraphrase.
+- In the STS task, the output of the `predict_similarity` method represents the semantic similarity between two phrases, where a score of 0 indicates that they have nothing in common, and a score of 5 indicates that they are paraphrases. By rescaling this similarity score to the interval [0,1], it can also be interpreted as the probability that both sentences are paraphrases.
+
+The next question that arose was how to transfer the knowledge gained from the Paraphrase Detection task to the STS task. The saved model state includes not only its weights but also the state of the optimizer. To explore the best approach, I tested two different implementations: one where both the model state and the optimizer state were loaded, and another where only the model state was loaded.
+
+The experiment was conducted as follows:
+
+1. **Paraphrase Detection Task**: I fine-tuned the pre-trained model using the following parameter configuration:  
+   - **Epochs:** `10`
+   - **Batch Size:** `64`
+   - **Optimizer:** `AdamW`
+   - **Learning Rate:** `1e-05`
+   - **Option:** `finetune`
+   - **Seed:** `11711`
+   - **Subset Size:** `20,000`
+   - **Pooling Strategy:** `CLS`
+   - **Task:** `qqp`
+
+2. **STS Task**: Then I trained the model for the STS task using the same configuration, but with the whole dataset instead of a subset. This evaluation was performed in three different ways:
+   - Without loading the state of the Quora Question Pairs (QQP) model.
+   - Loading only the state of the model.
+   - Loading both the state of the model and the optimizer.
+
+The correlation scores on the development dataset for each of these implementations were as follows:  
+
+| Strategy                                     | STS Corr (Max)     |
+|----------------------------------------------|--------------------|
+| No previous knowledge (default)              | 0.864              |
+| Model state                                  | 0.866              |
+| Model and optimizer state                    | 0.850              |
+
+
+
+
+#### **4.3.2 Effectiveness of Average Pooling**
+
+To enhance the performance of sentence embeddings on the STS task, I decided to introduce average pooling. Average pooling was chosen because it helps smooth out variations within the embeddings of sentence pairs, potentially leading to more robust and generalizable representations. Since the STS task involves comparing sentence pairs, capturing the overall meaning of each sentence in a way that is less sensitive to specific word placements or noise can be beneficial.
+
+I tested average pooling with two different embedding strategies:
+
+1. **Combined Embedding**: A single embedding that represents both sentences together. This approach combines the embeddings of both sentences into a single vector, which is then used to predict similarity.
+
+2. **Independent Embeddings**: Separate embeddings for each sentence. This approach treats each sentence individually, creating distinct embeddings that are compared in the similarity prediction process.
+
+For the independent embeddings strategy, I explored two approaches:
+
+- **Linear Layer Similarity (Implementation from Phase 1)**: In this approach, the `predict_similarity` function concatenates the independent embeddings of the two sentences and passes them through a linear layer to obtain a similarity score. This score is then normalized to fit the target scoring domain, which is the interval [0,5]. This approach is implemented by calling the `multitask_classifier_independent_embeddings.py` classifier in the `run_train.sh` script.
+
+- **Cosine Similarity**: In this approach, the `predict_similarity` function calculates the cosine similarity between the two independent embeddings. Cosine similarity naturally falls within the interval [-1,1], so it is normalized to match the scoring domain of [0,5]. This method is implemented by calling the `multitask_classifier_cosine_sim.py` classifier in the `run_train.sh` script.
+
+
+All other hyperparameters were configured as follows:  
+
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **optimizer:** `AdamW`
+- **learning rate:** `1e-05`
+- **option:** `finetune`
+- **seed:** `11711`
+- **subset_size:** `None`
+- **task:** `sts`
+
+The correlation scores obtained on the development dataset for each of these implementations were:
  
-| Pooling Strategy                                     | STS Corr (Max)     |
-|------------------------------------------------------|--------------------|
-| CLS, combined, logit (default)                       | 0.864              |
-| Average, combined, logit                             | 0.867              |
-| Average, independent, logit                          | 0.406              |
-| Average, independent, cosine similarity              | 0.406              |
+| Pooling Strategy                                               | STS Corr (Max)     |
+|----------------------------------------------------------------|--------------------|
+| CLS, combined embedding, linear layer (default)                | 0.864              |
+| Average, combined embedding, linear layer                      | 0.867              |
+| Average, independent embeddings, linear layer                  | 0.406              |
+| Average, independent embeddings, cosine similarity             | 0.406              |
 
 
-Based on these results, I decided to add the average pooling strategie to the model from phase 1, keeping the combined embedding strategie and the logit similarity prediction.
+#### **4.3.3 Pre-training on quora with average pooling**
+Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To make the most of these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
+
+Below are the steps to implement this approach:
+
+1. **Paraphrase Detection Task**: First, run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the following configuration:
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **Optimizer:** `AdamW`
+- **Learning Rate:** `1e-05`
+- **Option:** `finetune`
+- **Seed:** `11711`
+- **Subset Size:** `None`
+- **Task:** `qqp`
+
+Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_state_dict(checkpoint['model'])` is commented out.
+
+2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** to `sts`.
+This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
+
+#### **4.3.3** Final Results
+The results of the improvement described above were compared with those from the baseline, which were obtained as follows:
+
+Run the `run_train.sh` script by calling `multitask_classifier.py` with the following configuration:
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **Learning Rate:** `1e-05`
+- **Option:** `finetune`
+- **Seed:** `11711`
+- **Subset Size:** `None`
+- **Optimizer Type:** `AdamW`
+- **Pooling Strategy:** `average`
+- **Task:** `sts`
+
+| Strategy                                               | STS Correlation (Max) | Epoch              | 
+|--------------------------------------------------------|-----------------------|--------------------|
+| Baseline                                               | 0.867                 | 6                  |
+| Pre-training on Quora with Average Pooling             | 0.870                 | 2                  |
+
+As shown, the improvement strategy reached its peak performance at the second epoch, outperforming the baseline. This suggests that the transfer learning approach not only enhances the model's performance but also accelerates its convergence.
+This improvement will be used to generate the predictions on the development dataset for the STS task.
 
 ### 4.4 BART for Paraphrase Type Detection
 
