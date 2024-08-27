@@ -651,7 +651,7 @@ The correlation scores obtained on the development dataset for each of these imp
 | Average, independent embeddings, cosine similarity             | 0.406              |
 
 
-#### **4.3.3 Pre-training on quora with average pooling**
+#### **4.3.3 Pre-training on Quora with Average Pooling**
 Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To make the most of these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
 
 Below are the steps to implement this approach:
@@ -672,7 +672,7 @@ Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_stat
 This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
 
 #### **4.3.3** Final Results
-To test if the transfer leraning strategy in the improvement described above increases performance, I decided to compare it with a baseline model that also uses average pooling but fine-tunes the model from scratch. The training of the baseline was conducted as follows:
+To test if the transfer leraning strategy described in the improvement above increases performance, I compared it to a baseline model that also utilizes average pooling but is fine-tuned from scratch. The training of the baseline was conducted as follows:
 1. **Baseline**. Run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the same configuration as in the improvement:
    - **Epochs:** `10`
    - **Batch Size:** `64`
@@ -693,7 +693,7 @@ The final correlation achieved on the dev test, as well as the epoch where each 
 | Strategy                                               | STS Correlation (Max) | Epoch              | 
 |--------------------------------------------------------|-----------------------|--------------------|
 | Baseline                                               | 0.867                 | 6                  |
-| Pre-training on Quora with Average Pooling             | 0.870                 | 2                  |
+| Pre-training on Quora                                  | 0.870                 | 2                  |
 
 As shown, the improvement strategy reached its peak performance at the second epoch, outperforming the baseline. This suggests that the transfer learning approach not only enhances the model's performance but also accelerates its convergence.
 This improvement will be used to generate the predictions on the development dataset for the STS task.
@@ -791,7 +791,7 @@ The results for the dev dataset.
 | CGA-based Attention-Pooling                | 0.276                              | 0.867                          | 0.698                                 |
 | Optimal Hyperparameters Only               | 0.328                              | 0.874                          | 0.797                                 |
 | SMART                                      | 0.301                              | 0.864                          | 0.787                                 |
-| Pre-training on quora with average pooling | -                                  | -                              | -                                     |
+| Pre-training on Quora with Average Pooling | -                                  | -                              | -                                     |
 
 
 Here Paraphrase Detection was trained for 1 epoch. The improvement for Semantic Textual Similarity was trained with the configuration described previously.
@@ -803,7 +803,7 @@ Here Paraphrase Detection was trained for 1 epoch. The improvement for Semantic 
 | CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
 | Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
 | SMART                                          | 0.515                              | 0.867                          | 0.856                                 |
-| Pre-training on quora with average pooling     | -                                  | -                              | 0.870                                 |
+| Pre-training on Quora with Average Pooling     | -                                  | -                              | 0.870                                 |
 
 
 ---
