@@ -451,9 +451,17 @@ This configuration can be replicated by running the following script:
     
     
     python bart_generation.py --use_gpu
-    
 
-#### **4.2.3 PIP Prefix Method**
+
+#### **4.2.3 Input preprocessing**
+
+The BART model is designed to learn different representations of the sentence by randomly masking and splitting sentence parts, however during the training the model tends to converge towards generating an output close to the input. ( we checked for data leakage which was not the case here), so we extended this idea and masked some targets in the input sentences and rotated parts.
+For this, we used `spacy` package to extract part of speech tags and masked a random verb, noun, adjective and rotated by a comma/masked conjugation. This made the learning more challenging for the model.
+We Also passed 2-4 tokens from the target sentence that occurred least frequently in the dataset to the training inputs to help the model to learn words that may have never seen by the model during training.
+These variations made more flexible results possible for further tuning.
+
+
+#### **4.2.4 PIP Prefix Method**
 
 The Parse-Instructed Prefix (PIP) method was implemented to improve the quality of the generated paraphrases. The PIP method uses a parse tree to guide the generation of syntactically controlled paraphrases. The method was tested with different prefix lengths and methods to determine the optimal configuration for the BART model.
 In simple words, the PIP method uses a prefix to guide the model in generating paraphrases that adhere to the syntactic structure of the input sentence.
@@ -484,7 +492,7 @@ prefix_attention_mask = torch.ones(batch_size, self.prefix_length, device=attent
 attention_mask = torch.cat([prefix_attention_mask, attention_mask], dim=1)
 ```
 
-### **4.2.4 Gradual Unfreezing**
+### **4.2.5 Gradual Unfreezing**
 Gradual unfreezing is a technique used to fine-tune large pre-trained models more effectively. It involves progressively unfreezing layers of the model during training, starting from the top (output) layers and moving towards the bottom (input) layers.
 Key aspects of gradual unfreezing in this implementation:
 
@@ -513,7 +521,7 @@ if num_trainable == max_layers:
 
 
 
-#### 4.2.5 Reinforcement Learning for Paraphrase Generation
+#### 4.2.6 Reinforcement Learning for Paraphrase Generation
 
 Reinforcement Learning (RL) was implemented to further enhance the quality of the generated paraphrases. The RL method uses a reward function to provide feedback to the model during training, encouraging it to generate more accurate and diverse paraphrases based on the reward.
 
@@ -544,7 +552,7 @@ where $$(W)$$ is the set of unique words in both sentences, and $$(\text{tf}(w, 
 
 The training process uses a combination of supervised learning (SL) and reinforcement learning (RL) to optimize the paraphrase generation model. The loss function is a weighted sum of the SL loss and the RL loss.
 $$L_{total} = (1 - \alpha) L_{SL} + \alpha L_{RL}$$
-#### 4.2.6 Results #### 
+#### 4.2.7 Results #### 
 
 The best model achieved a penalized BLEU score of 24.315 on the `etpc-paraphrase-dev.csv` dataset. The model was able to generate high-quality (human preference) paraphrases. The PIP method and RL training significantly improved the quality of the generated paraphrases, demonstrating the effectiveness of these techniques in enhancing the performance of the BART model.
 
