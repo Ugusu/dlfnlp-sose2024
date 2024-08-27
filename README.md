@@ -779,15 +779,14 @@ For BERT model, fine-tuning was done 2 times. For Multitask the model learned al
 
 The results for the dev dataset.
 
-| **Multitask**                | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
-|------------------------------|------------------------------------|--------------------------------|---------------------------------------|
-| Baseline                     | 0.522                              | 0.877                          | 0.849                                 |
-| Extra CGA Layer              | 0.263                              | 0.865                          | 0.770                                 |
-| CGA-based Attention-Pooling  | 0.276                              | 0.867                          | 0.698                                 |
-| Optimal Hyperparameters Only | 0.328                              | 0.874                          | 0.797                                 |
-| SMART                        | 0.301                              | 0.864                          | 0.787                                 |
-| Improvement 5                | ...                                | ...                            | ...                                   |
-| Improvement 6                | ...                                | ...                            | ...                                   |
+| **Multitask**                              | **Sentiment Classification (acc)** | **Paraphrase Detection (acc)** | **Semantic Textual Similarity (cor)** |
+|--------------------------------------------|------------------------------------|--------------------------------|---------------------------------------|
+| Baseline                                   | 0.522                              | 0.877                          | 0.849                                 |
+| Extra CGA Layer                            | 0.263                              | 0.865                          | 0.770                                 |
+| CGA-based Attention-Pooling                | 0.276                              | 0.867                          | 0.698                                 |
+| Optimal Hyperparameters Only               | 0.328                              | 0.874                          | 0.797                                 |
+| SMART                                      | 0.301                              | 0.864                          | 0.787                                 |
+| Pre-training on quora with average pooling | -                                  | -                              | -                                     |
 
 
 Here Paraphrase Detection was trained for 1 epoch. The improvement for Semantic Textual Similarity was trained with the configuration described previously.
@@ -799,8 +798,7 @@ Here Paraphrase Detection was trained for 1 epoch. The improvement for Semantic 
 | CGA-based Attention-Pooling                    | 0.530                              | 0.854                          | 0.850                                 |
 | Using Grid Search Optimal Hyperparams (no CGA) | 0.530                              | 0.873                          | 0.861                                 |
 | SMART                                          | 0.515                              | 0.867                          | 0.856                                 |
-| Pre-training on quora with average pooling     | ...                                | ...                            | 0.870                                 |
-| Improvement 6                                  | ...                                | ...                            | ...                                   |
+| Pre-training on quora with average pooling     | -                                  | -                              | 0.870                                 |
 
 
 ---
