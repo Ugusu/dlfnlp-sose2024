@@ -630,10 +630,10 @@ The correlation scores obtained on the development dataset for each of these imp
 | Average, independent embeddings, cosine similarity             | 0.406              |
 
 
-#### **4.3.3 Improvement decission**
+#### **4.3.3 Pre-training on quora with average pooling**
 Based on the results from **4.3.2**, I decided to use average pooling on a combined embedding for both sentences. Additionally, the findings from **4.3.1** suggest that loading the model state from the Paraphrase Detection task could further enhance performance on the STS task. To make the most of these insights, I combined both strategies using the `multitask_classifier_quora_state.py` classifier, which incorporates the `bert_mean_pooling.py` module for average pooling embeddings.
 
-Below are the steps to implement this approach, which will later be compared with the baseline:
+Below are the steps to implement this approach:
 
 1. **Paraphrase Detection Task**: First, run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the following configuration:
 - **Epochs:** `10`
@@ -649,6 +649,28 @@ Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_stat
 
 2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** to `sts`.
 This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
+
+#### **4.3.3 Final Results
+The results of the improvement described above were compared with those from the baseline, which were obtained as follows:
+
+Run the `run_train.sh` script by calling `multitask_classifier.py` with the following configuration:
+- **Epochs:** `10`
+- **Batch Size:** `64`
+- **Learning Rate:** `1e-05`
+- **Option:** `finetune`
+- **Seed:** `11711`
+- **Subset Size:** `None`
+- **Optimizer Type:** `AdamW`
+- **Pooling Strategy:** `average`
+- **Task:** `sts`
+
+| Strategy                                               | STS Correlation (Max) | Epoch              | 
+|--------------------------------------------------------|-----------------------|--------------------|
+| Baseline                                               | 0.867                 | 6                  |
+| Pre-training on Quora with Average Pooling             | 0.870                 | 2                  |
+
+As shown, the improvement strategy reached its peak performance at the second epoch, outperforming the baseline. This suggests that the transfer learning approach not only enhances the model's performance but also accelerates its convergence.
+
 
 
 
