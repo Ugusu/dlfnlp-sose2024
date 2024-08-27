@@ -615,7 +615,8 @@ The correlation scores on the development dataset for each of these implementati
 
 #### **4.3.2 Effectiveness of Average Pooling**
 
-To enhance the performance of sentence embeddings on the STS task, I decided to introduce average pooling. Average pooling was chosen because it helps smooth out variations within the embeddings of sentence pairs, potentially leading to more robust and generalizable representations. Since the STS task involves comparing sentence pairs, capturing the overall meaning of each sentence in a way that is less sensitive to specific word placements or noise can be beneficial.
+To enhance the performance of sentence embeddings on the STS task, I decided to introduce a strategy to enhance the embeddings. I chose average pooling for two main reasons: First, incorporating all tokens within the embeddings of sentence pairs allows for more precise capture of semantic dependencies between words. Second, averaging over the non-padded tokens helps to smooth out variations, resulting in representations that are both more accurate and more robust. 
+
 
 I tested average pooling with two different embedding strategies:
 
