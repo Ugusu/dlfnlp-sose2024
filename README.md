@@ -681,8 +681,8 @@ To test if the transfer leraning strategy in the improvement described above inc
    - **Option:** `finetune`
    - **Seed:** `11711`
    - **Subset Size:** `None`
-   - **Task:** `qqp`
-   But this time ensure that the line `#model.load_state_dict(checkpoint['model'])` is commented out to fine-tune the model from scratch.
+   - **Task:** `sts`
+   \\ But this time ensure that the line `#model.load_state_dict(checkpoint['model'])` is commented out to fine-tune the model from scratch.
 
 The final correlation achieved on the dev test, as well as the epoch where each model reached its peak performance are displayed in the following table:
 
