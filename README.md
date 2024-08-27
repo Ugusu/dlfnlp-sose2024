@@ -656,7 +656,7 @@ Based on the results from **4.3.2**, I decided to use average pooling on a combi
 
 Below are the steps to implement this approach:
 
-1. **Paraphrase Detection Task**: First, run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the following configuration:
+1. **Fine tune the model for Paraphrase Detection Task**: First, run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the following configuration:
 - **Epochs:** `10`
 - **Batch Size:** `64`
 - **Optimizer:** `AdamW`
@@ -668,22 +668,14 @@ Below are the steps to implement this approach:
 
 Ensure that in `multitask_classifier_quora_state.py`, the line `#model.load_state_dict(checkpoint['model'])` is commented out.
 
-2. **STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** `sts`.
+2. **Load the model's state for STS Task**: Next, run the `run_train.sh` script again with the same configuration, but set the **Task:** `sts`.
 This time, ensure the line `model.load_state_dict(checkpoint['model'])` is uncommented to load the model state.
 
 #### **4.3.3** Final Results
-The results of the improvement described above were compared with those from the baseline, which were obtained as follows:
+To test if the transfer leraning strategy in the improvement described above increases performance, I decided to compare it with a baseline model that also uses average pooling but fine-tunes the model from scratch. The training of the baseline was conducted as follows:
+Run the `run_train.sh` script by calling `multitask_classifier_quora_state.py` with the same configuration as in the improvement, but ensuring that the line `#model.load_state_dict(checkpoint['model'])` is commented out to fine-tune the model from scratch.
+The final correlation achieved on the dev test, as well as the epoch where each model reached its peak performance are displayed in the following table:
 
-Run the `run_train.sh` script by calling `multitask_classifier.py` with the following configuration:
-- **Epochs:** `10`
-- **Batch Size:** `64`
-- **Learning Rate:** `1e-05`
-- **Option:** `finetune`
-- **Seed:** `11711`
-- **Subset Size:** `None`
-- **Optimizer Type:** `AdamW`
-- **Pooling Strategy:** `average`
-- **Task:** `sts`
 
 | Strategy                                               | STS Correlation (Max) | Epoch              | 
 |--------------------------------------------------------|-----------------------|--------------------|
