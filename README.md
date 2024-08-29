@@ -869,7 +869,8 @@ Explain the contribution of each group member:
 **Enno Weber:**
 - Phase 1: 
   - Implemented BART paraphrase detection transformer, training loop and test function.
-- Phase 2: ...
+- Phase 2:
+  - BART Paraphrase Type Detection - hyperparamter optimization via grid search.
 
 ---
 
