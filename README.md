@@ -701,7 +701,7 @@ The BART model was also trained on the `etpc-paraphrase-train.csv` dataset, whic
 The dev dataset has been generated from the `etpc-paraphrase-train.csv` dataset, by splitting it into 80% training and 20% validation data.
 #### **4.4.2 The MCC Score**
 The MCC score is defined as:
-$$MCC = (TP x TN - FP x FN) \over (\sqrt(TP))$$
+$$(TP * TN - FP * FN) \over (\sqrt(TP + FP)(TP + FN)(TN + FP)(TN + FN))$$
 
 #### **4.4.3 Impact of Class Weights on accuracy and MMC score**
 | configuration                  |Accuracy             | MCC score          |
@@ -710,18 +710,25 @@ $$MCC = (TP x TN - FP x FN) \over (\sqrt(TP))$$
 | Class weights with baseline    | 61.5                | 0.148              |
 | Best                           | 68.34               | 0.201              |
 
-As predicted, the Accuracy will go down, as a compromise, due to prioritizing the minority class, but is still acceptable. The biggest problem with Class Weight implementation, was that it was very sensitive to bad hyperparamerization, especially when using SophiaG optimizer. The AdamW optimizer performed better on average and was more robust, but choosing a too low or high learning rate or too low batch size can make the model easily collapse.
+As predicted, the Accuracy will go down, as a compromise, due to prioritizing the minority class, but is still acceptable, since the model doesn't randomly choose anymore. The biggest problem with Class Weight implementation, was that it was very sensitive to bad initialization, especially when using SophiaG optimizer. The AdamW optimizer performed better on average and was more robust, but choosing a too low or high learning rate or too low batch size can make the model easily collapse. Adding weight decay to as L2 regularization to AdamW optimizer improved the model significantly by 0.05 MCC score.
 
 #### **4.4.4 Overall best MCC score**
 The highest MCC score achieved was **0.201** with the following configuration:
-- **Pooling Strategy:** `Attention`
+- **Epochs:** `10`
 - **Extra Context Layer:** `False`
-- **Regularize Context:** `True`
-- **Learning Rate:** `5e-5`
-- **Hidden Dropout Probability:** `0.5`
-- **Batch Size:** `64`
+- **Scheduler:** `CosineAnnealingLR`
+- **Learning Rate:** `1e-4`
+- **weight_decay:** `0.01`
+- **Batch Size:** `96`
 - **Optimizer:** `AdamW`
-- **Epochs:** `5`
+- **Early Stopping:** `no`
+Can be replicated with:
+
+```sh
+$ python bart_detection.py --use_gpu --batch_size=96 --lr=0.0001 --epochs=10 --weight_decay=0.01 --optimizer=AdamW
+```
+
+
 
 ### 4.5 Smoothness-Inducing Adversarial Regularization (SMART)
 
@@ -855,7 +862,12 @@ Explain the contribution of each group member:
 **Enno Weber:**
 - Phase 1: 
   - Implemented BART paraphrase detection transformer, training loop and test function.
-- Phase 2: ...
+- Phase 2:
+  - Implemented Class Weights into CV Loss Function
+  - Extensive Hyperparameter Search
+  - Implemented Early Stopping and gradient clipping
+  - Compared and implemented different Learning Rate schedulers including CosineAnnealingLR and CosineAnnealingLR with warmup
+  - improved regularization by adding weight decay to optimizer
 
 ---
 
